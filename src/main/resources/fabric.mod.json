@@ -1,38 +1,45 @@
 {
-	"schemaVersion": 1,
-	"id": "elements-plus",
-	"version": "${version}",
-	"name": "Elements Plus",
-	"description": "Add more elements creations like Fe, Ag, etc. to Minecraft.",
-	"authors": [
-		"baileovo"
-	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
-	"license": "CC0-1.0",
-	"icon": "assets/elements-plus/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"com.elementsplus.ElementsPlus"
-		],
-		"client": [
-			"com.elementsplus.client.ElementsPlusClient"
-		]
-	},
-	"mixins": [
-		"elements-plus.mixins.json",
-		{
-			"config": "elements-plus.client.mixins.json",
-			"environment": "client"
-		}
-	],
-	"depends": {
-		"fabricloader": ">=0.19.3",
-		"minecraft": "~1.21.1",
-		"java": ">=21",
-		"fabric-api": "*"
-	}
+  "schemaVersion": 1,
+  "id": "elements-plus",
+  "version": "${version}",
+  "name": "Elements Plus",
+  "description": "Add more elements creations like Fe, Ag, etc. to Minecraft.",
+  "authors": [
+    "baileovo"
+  ],
+  "contact": {
+    "homepage": "https://fabricmc.net/",
+    "sources": "https://github.com/FabricMC/fabric-example-mod"
+  },
+  "license": "CC0-1.0",
+  "icon": "assets/elements-plus/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.elementsplus.ElementsPlus"
+    ],
+    "client": [
+      "com.elementsplus.client.ElementsPlusClient"
+    ]
+  },
+  "mixins": [
+    "elements-plus.mixins.json",
+    {
+      "config": "elements-plus.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "fabricLoader": {
+    "features": {
+      "resource": {
+        "reloading": true
+      }
+    }
+  }
 }

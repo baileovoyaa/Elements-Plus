@@ -1,41 +1,41 @@
 package com.elementsplus;
 
-import net.minecraft.core.Holder;
+import com.elementsplus.blocks.SteelPipeLBlock;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.effect.MobEffect;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.world.item.*;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import java.util.List;
 
-import static com.elementsplus.ModEffects.STEEL_PIPE_SHIELD;
-
 public class ModBlocks {
 
-    public static Item register(Item item, String id) {
-        ResourceLocation itemID = ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, id);
-        return Registry.register(BuiltInRegistries.ITEM, itemID, item);
+    public static Block register(Block block, String id) {
+        ResourceLocation blockID = ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, id);
+        return Registry.register(BuiltInRegistries.BLOCK, blockID, block);
     }
-    public static final Item STEEL_PIPE_L = register(
-            new Item(new Item.Properties()) {
-                @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe_l")
-                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
-                }
-            },
+
+    public static final Block STEEL_PIPE_L = register(
+            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
             "steel_pipe_l"
     );
+
     public static void initialize() {
-        // 物品已在静态块中注册
-        ElementsPlus.LOGGER.info("Registered items");
+        Items.registerBlock(new BlockItem(STEEL_PIPE_L, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe_l")
+                        .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
+            }
+        });
+        ElementsPlus.LOGGER.info("Registered blocks");
     }
 }

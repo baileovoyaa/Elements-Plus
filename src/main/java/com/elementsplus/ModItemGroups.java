@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ItemLike;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +32,7 @@ public class ModItemGroups {
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());
     }
     private static void registerTab(String tabId, Supplier<ItemStack> icon,
-                                    String translationKey, Item... items) {
+                                    String translationKey, ItemLike... items) {
         ResourceKey<CreativeModeTab> tabKey = ResourceKey.create(
                 BuiltInRegistries.CREATIVE_MODE_TAB.key(),
                 ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, tabId)
@@ -42,7 +43,7 @@ public class ModItemGroups {
                 .build();
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, tabKey, tab);
         ItemGroupEvents.modifyEntriesEvent(tabKey).register(itemGroup -> {
-            for (Item item : items) {
+            for (ItemLike item : items) {
                 if (item != null) {
                     itemGroup.accept(item);
                 }
@@ -68,6 +69,6 @@ public class ModItemGroups {
         });
         ElementsPlus.LOGGER.debug("Added {} item(s) to tab: {}", items.length, tabId);
     }
-    private record TabConfig(String tabId, ResourceKey<CreativeModeTab> tabKey, Item[] items) {
+    private record TabConfig(String tabId, ResourceKey<CreativeModeTab> tabKey, ItemLike[] items) {
     }
 }
