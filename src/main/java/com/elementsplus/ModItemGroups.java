@@ -28,7 +28,8 @@ public class ModItemGroups {
                 ModItems.STEEL_PIPE,
                 ModBlocks.STEEL_PIPE_L,
                 ModBlocks.STEEL_PIPE_I,
-                ModItems.SYRINGE
+                ModItems.SYRINGE,
+                ModBlocks.CRYSTALLIZER
                 // 可以继续添加更多物品
         );
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());

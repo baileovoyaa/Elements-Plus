@@ -1,8 +1,14 @@
 {
   "item.elements-plus.steel_pipe": "钢管",
-  "item.elements-plus.steel_pipe_l": "L形钢管",
+  "item.elements-plus.syringe": "注射器",
+  "block.elements-plus.steel_pipe_l": "L形钢管",
+  "block.elements-plus.steel_pipe_i": "I形钢管",
+  "block.elements-plus.crystallizer": "高压结晶器",
   "itemGroup.elements-plus.steel_pipe": "元素++",
   "tooltip.elements-plus.steel_pipe": "一个神奇的钢管，可能可以食用，但有一些§l副作用§r。",
-    "tooltip.elements-plus.steel_pipe_l": "一个L形的钢管，它可以传递红石信号",
+  "tooltip.elements-plus.steel_pipe_l": "一个L形的钢管，它可以传递红石信号",
+  "tooltip.elements-plus.steel_pipe_i": "一个I形的钢管，它可以传递红石信号",
+  "tooltip.elements-plus.crystallizer": "一个高压结晶器",
+  "tooltip.elements-plus.syringe": "一个注射器",
   "effect.elements-plus.steel_pipe_shield": "钢管护盾"
 }
