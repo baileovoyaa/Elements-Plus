@@ -61,7 +61,7 @@ public class ModBlocks {
                         .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
             }
         });
-        Items.registerBlock(new BlockItem(STEEL_PIPE_I, new Item.Properties()) {
+        Items.registerBlock(new BlockItem(CRYSTALLIZER, new Item.Properties()) {
             @Override
             public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
                 tooltip.add(Component.translatable("tooltip.elements-plus.crystallizer")
