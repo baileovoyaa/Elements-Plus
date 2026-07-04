@@ -1,0 +1,41 @@
+{
+	"textures": {
+		"0": "elements-plus:item/steel_pipe_L_outside",
+		"1": "elements-plus:item/steel_pipe_L_inside",
+		"particle": "elements-plus:item/steel_pipe_L_outside"
+	},
+	"elements": [
+		{
+			"from": [6, 0, 6],
+			"to": [10, 16, 10],
+			"rotation": {"angle": 0, "axis": "y", "origin": [6, 0, 6]},
+			"faces": {
+				"north": {"uv": [0, 0, 4, 8], "texture": "#0"},
+				"east": {"uv": [4, 0, 8, 8], "texture": "#0"},
+				"south": {"uv": [0, 8, 4, 16], "texture": "#0"},
+				"west": {"uv": [8, 0, 12, 8], "texture": "#0"},
+				"up": {"uv": [8, 12, 4, 8], "texture": "#0"},
+				"down": {"uv": [12, 8, 8, 12], "texture": "#0"}
+			}
+		},
+		{
+			"from": [7, 0, 7],
+			"to": [9, 16, 9],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7, 0, 7]},
+			"faces": {
+				"north": {"uv": [0, 0, 2, 8], "texture": "#1"},
+				"east": {"uv": [2, 0, 4, 8], "texture": "#1"},
+				"south": {"uv": [4, 0, 6, 8], "texture": "#1"},
+				"west": {"uv": [6, 0, 8, 8], "texture": "#1"},
+				"up": {"uv": [2, 10, 0, 8], "texture": "#1"},
+				"down": {"uv": [10, 0, 8, 2], "texture": "#1"}
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"translation": [0.25, -1.5, -1],
+			"scale": [0.5, 0.5, 0.5]
+		}
+	}
+}

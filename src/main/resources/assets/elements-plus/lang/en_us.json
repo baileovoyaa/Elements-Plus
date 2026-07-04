@@ -1,6 +1,8 @@
 {
   "item.elements-plus.steel_pipe": "Steel Pipe",
+  "item.elements-plus.steel_pipe_l": "Steel Pipe L",
   "itemGroup.elements-plus.steel_pipe": "Elements Plus",
   "tooltip.elements-plus.steel_pipe": "A Magical Steel Pipe, maybe edible with some §lside effects§r.",
+  "tooltip.elements-plus.steel_pipe_l": "A Steel Pipe with a shape of a L, it can carry redstone signal",
   "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield"
 }

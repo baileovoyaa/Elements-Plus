@@ -24,7 +24,8 @@ public class ModItemGroups {
                 "steel_pipe",
                 () -> new ItemStack(ModItems.STEEL_PIPE),
                 "itemGroup.elements-plus.steel_pipe",
-                ModItems.STEEL_PIPE
+                ModItems.STEEL_PIPE,
+                ModBlocks.STEEL_PIPE_L
                 // 可以继续添加更多物品
         );
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());

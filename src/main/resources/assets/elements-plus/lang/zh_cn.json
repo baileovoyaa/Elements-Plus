@@ -1,6 +1,8 @@
 {
   "item.elements-plus.steel_pipe": "钢管",
+  "item.elements-plus.steel_pipe_l": "L形钢管",
   "itemGroup.elements-plus.steel_pipe": "元素++",
   "tooltip.elements-plus.steel_pipe": "一个神奇的钢管，可能可以食用，但有一些§l副作用§r。",
+    "tooltip.elements-plus.steel_pipe_l": "一个L形的钢管，它可以传递红石信号",
   "effect.elements-plus.steel_pipe_shield": "钢管护盾"
 }
