@@ -38,7 +38,7 @@ public class ModBlocks {
     );
 
     public static final Block CRYSTALLIZER = register(
-            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+            new Block(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
