@@ -25,33 +25,34 @@ public class ModEffects {
         EFFECTS.add(holder);
         return holder;
     }
-    public static final Holder<MobEffect> STEEL_PIPE_SHIELD = registerEffect("steel_pipe_shield",
-            new MobEffect(MobEffectCategory.BENEFICIAL, 0xFFAA00) {
-                @Override
-                public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
-                    return true;
-                }
-
-                @Override
-                public boolean applyEffectTick(LivingEntity entity, int amplifier) {
-                    if (!entity.level().isClientSide() && entity instanceof Player player) {
-                        player.addEffect(new MobEffectInstance(
-                                MobEffects.DAMAGE_RESISTANCE,
-                                40, 1, true, true, true
-                        ));
-                        player.addEffect(new MobEffectInstance(
-                                MobEffects.FIRE_RESISTANCE,
-                                40, 0, true, true, true
-                        ));
-                    }
-                    return super.applyEffectTick(entity, amplifier);
-                }
-            }
-    );
+    public static Holder<MobEffect> STEEL_PIPE_SHIELD;
     public static List<Holder<MobEffect>> getEffects() {
         return EFFECTS;
     }
     public static void initialize() {
+        STEEL_PIPE_SHIELD = registerEffect("steel_pipe_shield",
+                new MobEffect(MobEffectCategory.BENEFICIAL, 0xFFAA00) {
+                    @Override
+                    public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean applyEffectTick(LivingEntity entity, int amplifier) {
+                        if (!entity.level().isClientSide() && entity instanceof Player player) {
+                            player.addEffect(new MobEffectInstance(
+                                    MobEffects.DAMAGE_RESISTANCE,
+                                    40, 1, true, true, true
+                            ));
+                            player.addEffect(new MobEffectInstance(
+                                    MobEffects.FIRE_RESISTANCE,
+                                    40, 0, true, true, true
+                            ));
+                        }
+                        return super.applyEffectTick(entity, amplifier);
+                    }
+                }
+        );
         ElementsPlus.LOGGER.info("Registered {} effect(s)", EFFECTS.size());
     }
 }
