@@ -27,6 +27,7 @@ public class ModItems {
         ResourceLocation itemID = ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, id);
         return Registry.register(BuiltInRegistries.ITEM, itemID, item);
     }
+
     public static final Item STEEL_PIPE = register(
             new Item(new Item.Properties()
                     .food(new FoodProperties.Builder()
@@ -41,6 +42,7 @@ public class ModItems {
                     tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe")
                             .withStyle(style -> style.withColor(0xFFD700))); // 金色
                 }
+
                 @Override
                 public @NotNull ItemStack finishUsingItem(ItemStack stack, Level level, net.minecraft.world.entity.LivingEntity entity) {
                     ItemStack result = super.finishUsingItem(stack, level, entity);
@@ -62,6 +64,8 @@ public class ModItems {
             "steel_pipe"
 
     );
+    public static final Item SYRINGE = register(new Item(new Item.Properties()), "syringe");
+
     public static void initialize() {
         // 物品已在静态块中注册
     }
