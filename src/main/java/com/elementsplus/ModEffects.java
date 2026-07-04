@@ -42,11 +42,11 @@ public class ModEffects {
                         if (!entity.level().isClientSide() && entity instanceof Player player) {
                             player.addEffect(new MobEffectInstance(
                                     MobEffects.DAMAGE_RESISTANCE,
-                                    1, 1, false, false, false
+                                    2, 1, false, false, false
                             ));
                             player.addEffect(new MobEffectInstance(
                                     MobEffects.FIRE_RESISTANCE,
-                                    1, 0, false, false, false
+                                    2, 0, false, false, false
                             ));
                         }
                         return super.applyEffectTick(entity, amplifier);
