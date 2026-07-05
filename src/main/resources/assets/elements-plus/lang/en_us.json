@@ -3,13 +3,16 @@
   "item.elements-plus.syringe": "Syringe",
   "block.elements-plus.steel_pipe_l": "Steel Pipe L",
   "block.elements-plus.steel_pipe_i": "Steel Pipe I",
+  "block.elements-plus.steel_pipe_t": "Steel Pipe T",
   "block.elements-plus.crystallizer": "Crystallizer",
   "itemGroup.elements-plus.steel_pipe": "Elements Plus",
   "tooltip.elements-plus.steel_pipe": "A Magical Steel Pipe, maybe edible with some §lside effects§r.",
   "tooltip.elements-plus.steel_pipe_l": "A Steel Pipe with a shape of a L, it can carry redstone signal",
   "tooltip.elements-plus.steel_pipe_i": "A Steel Pipe with a shape of a I, it can carry redstone signal",
+  "tooltip.elements-plus.steel_pipe_t": "A Steel Pipe with a shape of a T, it can carry redstone signal",
   "tooltip.elements-plus.crystallizer": "A Crystallizer",
   "tooltip.elements-plus.syringe": "A Syringe",
   "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield",
-  "effect.elements-plus.rust_proof": "Rust Proof"
+  "effect.elements-plus.rust_proof": "Rust Proof",
+  "container.elements-plus.crystallizer": "Crystallizer"
 }
