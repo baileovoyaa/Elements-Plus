@@ -1,6 +1,7 @@
 package com.elementsplus.blocks.entity;
 
 import com.elementsplus.ModBlockEntityTypes;
+import com.elementsplus.menu.CrystallizerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -24,6 +25,6 @@ public class CrystallizerBlockEntity extends AbstractFurnaceBlockEntity {
 
     @Override
     protected @NotNull AbstractContainerMenu createMenu(int i, Inventory inventory) {
-        return new FurnaceMenu(i, inventory, this, this.dataAccess);
+        return new CrystallizerMenu(i, inventory, this, this.dataAccess);
     }
 }
