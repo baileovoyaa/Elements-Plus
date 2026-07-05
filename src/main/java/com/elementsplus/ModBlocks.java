@@ -1,5 +1,6 @@
 package com.elementsplus;
 
+import com.elementsplus.blocks.CrystallizerBlock;
 import com.elementsplus.blocks.SteelPipeLBlock;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -47,7 +48,7 @@ public class ModBlocks {
     );
 
     public static final Block CRYSTALLIZER = register(
-            new Block(BlockBehaviour.Properties.of()
+            new CrystallizerBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()

@@ -17,6 +17,7 @@ public class ElementsPlus implements ModInitializer {
 		ModItemGroups.registerAll();
 		ModBlocks.initialize();
 		ModEffects.initialize();
+		ModBlockEntityTypes.initialize();
 		LOGGER.info("Hello Fabric world!");
 	}
 
