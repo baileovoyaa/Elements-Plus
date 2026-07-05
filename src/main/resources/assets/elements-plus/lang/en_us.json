@@ -10,5 +10,6 @@
   "tooltip.elements-plus.steel_pipe_i": "A Steel Pipe with a shape of a I, it can carry redstone signal",
   "tooltip.elements-plus.crystallizer": "A Crystallizer",
   "tooltip.elements-plus.syringe": "A Syringe",
-  "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield"
+  "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield",
+  "effect.elements-plus.rust_proof": "Rust Proof"
 }

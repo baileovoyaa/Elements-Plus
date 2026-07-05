@@ -26,6 +26,7 @@ public class ModEffects {
         return holder;
     }
     public static Holder<MobEffect> STEEL_PIPE_SHIELD;
+    public static Holder<MobEffect> RUST_PROOF;
     public static List<Holder<MobEffect>> getEffects() {
         return EFFECTS;
     }
@@ -41,15 +42,21 @@ public class ModEffects {
                     public boolean applyEffectTick(LivingEntity entity, int amplifier) {
                         if (!entity.level().isClientSide() && entity instanceof Player player) {
                             player.addEffect(new MobEffectInstance(
-                                    MobEffects.DAMAGE_RESISTANCE,
-                                    2, 1, false, false, false
+                                    MobEffects.DAMAGE_RESISTANCE, 2, 1, false, false, false
                             ));
                             player.addEffect(new MobEffectInstance(
-                                    MobEffects.FIRE_RESISTANCE,
-                                    2, 0, false, false, false
+                                    MobEffects.FIRE_RESISTANCE, 2, 0, false, false, false
                             ));
                         }
                         return super.applyEffectTick(entity, amplifier);
+                    }
+                }
+        );
+        RUST_PROOF = registerEffect("rust_proof",
+                new MobEffect(MobEffectCategory.BENEFICIAL, 0xFFAA00) {
+                    @Override
+                    public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
+                        return true;
                     }
                 }
         );
