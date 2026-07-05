@@ -47,6 +47,15 @@ public class ModBlocks {
             "steel_pipe_t"
     );
 
+    public static final Block STEEL_PIPE_X = register(
+            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "steel_pipe_x"
+    );
+
     public static final Block CRYSTALLIZER = register(
             new CrystallizerBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
@@ -75,6 +84,13 @@ public class ModBlocks {
             @Override
             public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
                 tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe_t")
+                        .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
+            }
+        });
+        Items.registerBlock(new BlockItem(STEEL_PIPE_X, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe_x")
                         .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
             }
         });

@@ -29,6 +29,7 @@ public class ModItemGroups {
                 ModBlocks.STEEL_PIPE_L,
                 ModBlocks.STEEL_PIPE_I,
                 ModBlocks.STEEL_PIPE_T,
+                ModBlocks.STEEL_PIPE_X,
                 ModItems.SYRINGE,
                 ModBlocks.CRYSTALLIZER
                 // 可以继续添加更多物品
