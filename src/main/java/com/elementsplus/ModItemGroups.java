@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 
 import java.util.ArrayList;
@@ -26,12 +27,25 @@ public class ModItemGroups {
                 () -> new ItemStack(ModItems.STEEL_PIPE),
                 "itemGroup.elements-plus.steel_pipe",
                 ModItems.STEEL_PIPE,
+                ModItems.SYRINGE,
+                ModItems.WRENCH,
                 ModBlocks.STEEL_PIPE_L,
                 ModBlocks.STEEL_PIPE_I,
                 ModBlocks.STEEL_PIPE_T,
-                ModBlocks.STEEL_PIPE_X,
-                ModItems.SYRINGE,
-                ModBlocks.CRYSTALLIZER
+                ModBlocks.STEEL_PIPE_X
+                // 可以继续添加更多物品
+        );
+        registerTab(
+                "circuit",
+                () -> new ItemStack(Items.AMETHYST_SHARD),
+                "itemGroup.elements-plus.circuit",
+                ModBlocks.CRYSTALLIZER,
+                ModItems.AMETHYST_TRANSISTOR,
+                ModItems.AMETHYST_DIODE,
+                ModItems.AMETHYST_CAPACITOR,
+                ModItems.AMETHYST_RESISTOR,
+                ModItems.AMETHYST_RESONATOR,
+                ModItems.AMETHYST_BATTERY
                 // 可以继续添加更多物品
         );
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());
