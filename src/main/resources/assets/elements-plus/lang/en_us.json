@@ -1,25 +1,37 @@
 {
   "item.elements-plus.steel_pipe": "Steel Pipe",
+  "tooltip.elements-plus.steel_pipe": "A Magical Steel Pipe, maybe edible with some §lside effects§r.",
+
   "item.elements-plus.syringe": "Syringe",
+  "tooltip.elements-plus.syringe": "A Syringe",
+
   "item.elements-plus.wrench": "Wrench",
+  "tooltip.elements-plus.wrench": "A wrench that can turn pipes",
+
   "block.elements-plus.steel_pipe_l": "Steel Pipe L",
   "block.elements-plus.steel_pipe_i": "Steel Pipe I",
   "block.elements-plus.steel_pipe_t": "Steel Pipe T",
   "block.elements-plus.steel_pipe_x": "Steel Pipe X",
-  "block.elements-plus.crystallizer": "Crystallizer",
-  "itemGroup.elements-plus.steel_pipe": "Elements Plus",
-  "itemGroup.elements-plus.circuit": "Electronic Circuit",
-  "tooltip.elements-plus.steel_pipe": "A Magical Steel Pipe, maybe edible with some §lside effects§r.",
-  "tooltip.elements-plus.wrench": "A wrench that can turn pipes",
   "tooltip.elements-plus.steel_pipe_l": "A Steel Pipe with a shape of a L, it can carry redstone signal",
   "tooltip.elements-plus.steel_pipe_i": "A Steel Pipe with a shape of a I, it can carry redstone signal",
   "tooltip.elements-plus.steel_pipe_t": "A Steel Pipe with a shape of a T, it can carry redstone signal",
   "tooltip.elements-plus.steel_pipe_x": "A Steel Pipe with a shape of a X, it can carry redstone signal",
+
+  "block.elements-plus.rust_steel_pipe_l": "Rust Steel Pipe L",
+  "block.elements-plus.rust_steel_pipe_i": "Rust Steel Pipe I",
+  "block.elements-plus.rust_steel_pipe_t": "Rust Steel Pipe T",
+  "block.elements-plus.rust_steel_pipe_x": "Rust Steel Pipe X",
+  "tooltip.elements-plus.rust_steel_pipe_l": "A Rust Steel Pipe with a shape of a L, it can carry redstone signal",
+  "tooltip.elements-plus.rust_steel_pipe_i": "A Rust Steel Pipe with a shape of a I, it can carry redstone signal",
+  "tooltip.elements-plus.rust_steel_pipe_t": "A Rust Steel Pipe with a shape of a T, it can carry redstone signal",
+  "tooltip.elements-plus.rust_steel_pipe_x": "A Rust Steel Pipe with a shape of a X, it can carry redstone signal",
+
+  "block.elements-plus.crystallizer": "Crystallizer",
   "tooltip.elements-plus.crystallizer": "A Crystallizer",
-  "tooltip.elements-plus.syringe": "A Syringe",
-  "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield",
-  "effect.elements-plus.rust_proof": "Rust Proof",
   "container.elements-plus.crystallizer": "Crystallizer",
+
+  "item.elements-plus.silver_ingot": "Silver Ingot",
+  "tooltip.elements-plus.silver_ingot": "A Silver Ingot",
 
   "item.elements-plus.amethyst_transistor": "Amethyst Transistor",
   "item.elements-plus.amethyst_diode": "Amethyst Diode",
@@ -32,5 +44,11 @@
   "tooltip.elements-plus.amethyst_capacitor": "A capacitor made of amethyst, it can store the redstone signal",
   "tooltip.elements-plus.amethyst_resistor": "A resistor made of amethyst, it can reduce the redstone signal",
   "tooltip.elements-plus.amethyst_resonator": "A resonator made of amethyst, it can resonate the redstone signal",
-    "tooltip.elements-plus.amethyst_battery": "A battery made of amethyst, it can provide the redstone signal"
+  "tooltip.elements-plus.amethyst_battery": "A battery made of amethyst, it can provide the redstone signal",
+
+  "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield",
+  "effect.elements-plus.rust_proof": "Rust Proof",
+
+  "itemGroup.elements-plus.steel_pipe": "Elements Plus",
+  "itemGroup.elements-plus.circuit": "Electronic Circuit"
 }

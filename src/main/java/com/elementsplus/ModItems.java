@@ -201,6 +201,18 @@ public class ModItems {
             "amethyst_battery"
     );
 
+    public static final Item SILVER_INGOT = register(
+            new Item(new Item.Properties()
+                    .stacksTo(1)
+            ) {
+                @Override
+                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                    tooltip.add(Component.translatable("tooltip.elements-plus.silver_ingot")
+                            .withStyle(style -> style.withColor(0xFFD700))); // 金色
+                }
+            },
+            "silver_ingot"
+    );
     public static void initialize() {
         // 物品已在静态块中注册
     }
