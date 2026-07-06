@@ -125,7 +125,7 @@ public class ModItems {
 
     public static final Item AMETHYST_TRANSISTOR = register(
             new Item(new Item.Properties()
-                    .stacksTo(1)
+                    .stacksTo(64)
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -138,7 +138,7 @@ public class ModItems {
 
     public static final Item AMETHYST_DIODE = register(
             new Item(new Item.Properties()
-                    .stacksTo(1)
+                    .stacksTo(64)
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -151,7 +151,7 @@ public class ModItems {
 
     public static final Item AMETHYST_CAPACITOR = register(
             new Item(new Item.Properties()
-                    .stacksTo(1)
+                    .stacksTo(64)
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -164,7 +164,7 @@ public class ModItems {
 
     public static final Item AMETHYST_RESISTOR = register(
             new Item(new Item.Properties()
-                    .stacksTo(1)
+                    .stacksTo(64)
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -177,7 +177,7 @@ public class ModItems {
 
     public static final Item AMETHYST_RESONATOR = register(
             new Item(new Item.Properties()
-                    .stacksTo(1)
+                    .stacksTo(64)
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -190,7 +190,7 @@ public class ModItems {
 
     public static final Item AMETHYST_BATTERY = register(
             new Item(new Item.Properties()
-                    .stacksTo(1)
+                    .stacksTo(64)
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -203,7 +203,7 @@ public class ModItems {
 
     public static final Item SILVER_INGOT = register(
             new Item(new Item.Properties()
-                    .stacksTo(1)
+                    .stacksTo(64)
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
