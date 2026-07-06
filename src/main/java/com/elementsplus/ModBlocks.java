@@ -3,7 +3,7 @@ package com.elementsplus;
 import com.elementsplus.blocks.CrystallizerBlock;
 import com.elementsplus.blocks.RustSteelPipe;
 import com.elementsplus.blocks.WeatheringRustSteelPipe;
-import com.elementsplus.blocks.SteelPipeLBlock;
+import com.elementsplus.blocks.SteelPipeBlock;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -15,6 +15,8 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import java.util.List;
 
+import static com.elementsplus.blocks.WeatheringRustSteelPipe.WeatherState.UNAFFECTED;
+
 public class ModBlocks {
 
     public static Block register(Block block, String id) {
@@ -24,7 +26,7 @@ public class ModBlocks {
 
     // ===== 铁管 4 种形状（未生锈） =====
     public static final Block STEEL_PIPE_L = register(
-            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
@@ -33,7 +35,7 @@ public class ModBlocks {
     );
 
     public static final Block STEEL_PIPE_I = register(
-            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
@@ -42,7 +44,7 @@ public class ModBlocks {
     );
 
     public static final Block STEEL_PIPE_T = register(
-            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
@@ -51,7 +53,7 @@ public class ModBlocks {
     );
 
     public static final Block STEEL_PIPE_X = register(
-            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
@@ -63,7 +65,7 @@ public class ModBlocks {
     // 使用 RustSteelPipeFullBlock，传入 WeatherState.UNAFFECTED（起始状态）
     // 会通过 randomTick 氧化为 RUST 状态
     public static final Block RUST_STEEL_PIPE_L = register(
-            new RustSteelPipe(WeatheringRustSteelPipe.WeatherState.UNAFFECTED,
+            new RustSteelPipe(
                     BlockBehaviour.Properties.of()
                             .strength(2.0f)
                             .sound(SoundType.STONE)
@@ -73,7 +75,7 @@ public class ModBlocks {
     );
 
     public static final Block RUST_STEEL_PIPE_I = register(
-            new RustSteelPipe(WeatheringRustSteelPipe.WeatherState.UNAFFECTED,
+            new RustSteelPipe(
                     BlockBehaviour.Properties.of()
                             .strength(2.0f)
                             .sound(SoundType.STONE)
@@ -83,7 +85,7 @@ public class ModBlocks {
     );
 
     public static final Block RUST_STEEL_PIPE_T = register(
-            new RustSteelPipe(WeatheringRustSteelPipe.WeatherState.UNAFFECTED,
+            new RustSteelPipe(
                     BlockBehaviour.Properties.of()
                             .strength(2.0f)
                             .sound(SoundType.STONE)
@@ -93,7 +95,7 @@ public class ModBlocks {
     );
 
     public static final Block RUST_STEEL_PIPE_X = register(
-            new RustSteelPipe(WeatheringRustSteelPipe.WeatherState.UNAFFECTED,
+            new RustSteelPipe(
                     BlockBehaviour.Properties.of()
                             .strength(2.0f)
                             .sound(SoundType.STONE)
