@@ -1,19 +1,54 @@
 {
   "item.elements-plus.steel_pipe": "钢管",
+  "tooltip.elements-plus.steel_pipe": "一根神奇的钢管，可能可以食用，但有一些§l副作用§r。",
+
   "item.elements-plus.syringe": "注射器",
-  "block.elements-plus.steel_pipe_l": "L形钢管",
-  "block.elements-plus.steel_pipe_i": "I形钢管",
-  "block.elements-plus.steel_pipe_t": "T形钢管",
+  "tooltip.elements-plus.syringe": "一根注射器",
+
+  "item.elements-plus.wrench": "扳手",
+  "tooltip.elements-plus.wrench": "一把可以旋转管道的扳手",
+
+  "block.elements-plus.steel_pipe_l": "钢管 L",
+  "block.elements-plus.steel_pipe_i": "钢管 I",
+  "block.elements-plus.steel_pipe_t": "钢管 T",
+  "block.elements-plus.steel_pipe_x": "钢管 X",
+  "tooltip.elements-plus.steel_pipe_l": "一根 L 形状的钢管，它可以传输红石信号",
+  "tooltip.elements-plus.steel_pipe_i": "一根 I 形状的钢管，它可以传输红石信号",
+  "tooltip.elements-plus.steel_pipe_t": "一根 T 形状的钢管，它可以传输红石信号",
+  "tooltip.elements-plus.steel_pipe_x": "一根 X 形状的钢管，它可以传输红石信号",
+
+  "block.elements-plus.rust_steel_pipe_i": "生锈的钢管 I",
+  "block.elements-plus.rust_steel_pipe_l": "生锈的钢管 L",
+  "block.elements-plus.rust_steel_pipe_t": "生锈的钢管 T",
+  "block.elements-plus.rust_steel_pipe_x": "生锈的钢管 X",
+  "tooltip.elements-plus.rust_steel_pipe_l": "一根 L 形状的生锈钢管，它可以传输红石信号",
+  "tooltip.elements-plus.rust_steel_pipe_i": "一根 I 形状的生锈钢管，它可以传输红石信号",
+  "tooltip.elements-plus.rust_steel_pipe_t": "一根 T 形状的生锈钢管，它可以传输红石信号",
+  "tooltip.elements-plus.rust_steel_pipe_x": "一根 X 形状的生锈钢管，它可以传输红石信号",
+
+  "item.elements-plus.silver_ingot": "银锭",
+  "tooltip.elements-plus.silver_ingot": "一块银锭",
+
   "block.elements-plus.crystallizer": "高压结晶器",
-  "itemGroup.elements-plus.steel_pipe": "元素++",
-  "tooltip.elements-plus.steel_pipe": "一个神奇的钢管，可能可以食用，但有一些§l副作用§r。",
-  "tooltip.elements-plus.steel_pipe_l": "一个L形的钢管，它可以传递红石信号",
-  "tooltip.elements-plus.steel_pipe_i": "一个I形的钢管，它可以传递红石信号",
-  "tooltip.elements-plus.steel_pipe_t": "一个T形的钢管，它可以传递红石信号",
-  "tooltip.elements-plus.steel_pipe_x": "一个X形的钢管，它可以传递红石信号",
   "tooltip.elements-plus.crystallizer": "一个高压结晶器",
-  "tooltip.elements-plus.syringe": "一个注射器",
+  "container.elements-plus.crystallizer": "高压结晶器",
+
+  "item.elements-plus.amethyst_transistor": "紫水晶晶体管",
+  "item.elements-plus.amethyst_diode": "紫水晶二极管",
+  "item.elements-plus.amethyst_capacitor": "紫水晶电容器",
+    "item.elements-plus.amethyst_resistor": "紫水晶电阻器",
+  "item.elements-plus.amethyst_resonator": "紫水晶谐振器",
+  "item.elements-plus.amethyst_battery": "紫水晶电池",
+  "tooltip.elements-plus.amethyst_transistor": "一个由紫水晶制成的晶体管，它可以放大红石信号",
+  "tooltip.elements-plus.amethyst_diode": "一个由紫水晶制成的二极管，它只能允许红石信号在一个方向上传输",
+  "tooltip.elements-plus.amethyst_capacitor": "一个由紫水晶制成的电容器，它可以储存红石信号",
+  "tooltip.elements-plus.amethyst_resistor": "一个由紫水晶制成的电阻器，它可以降低红石信号",
+  "tooltip.elements-plus.amethyst_resonator": "一个由紫水晶制成的谐振器，它可以共振红石信号",
+  "tooltip.elements-plus.amethyst_battery": "一个由紫水晶制成的电池，它可以提供红石信号",
+
   "effect.elements-plus.steel_pipe_shield": "钢管护盾",
   "effect.elements-plus.rust_proof": "防锈",
-  "container.elements-plus.crystallizer": "高压结晶器"
+
+  "itemGroup.elements-plus.steel_pipe": "元素++",
+  "itemGroup.elements-plus.circuit": "电子电路"
 }

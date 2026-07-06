@@ -110,7 +110,109 @@ public class ModItems {
             },
             "syringe"
     );
+    public static final Item WRENCH = register(
+            new Item(new Item.Properties()
+                    .stacksTo(1)
+            ) {
+                @Override
+                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                    tooltip.add(Component.translatable("tooltip.elements-plus.wrench")
+                            .withStyle(style -> style.withColor(0xFFD700))); // 金色
+                }
+            },
+            "wrench"
+    );
 
+    public static final Item AMETHYST_TRANSISTOR = register(
+            new Item(new Item.Properties()
+                    .stacksTo(1)
+            ) {
+                @Override
+                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_transistor")
+                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
+                }
+            },
+            "amethyst_transistor"
+    );
+
+    public static final Item AMETHYST_DIODE = register(
+            new Item(new Item.Properties()
+                    .stacksTo(1)
+            ) {
+                @Override
+                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_diode")
+                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
+                }
+            },
+            "amethyst_diode"
+    );
+
+    public static final Item AMETHYST_CAPACITOR = register(
+            new Item(new Item.Properties()
+                    .stacksTo(1)
+            ) {
+                @Override
+                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_capacitor")
+                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
+                }
+            },
+            "amethyst_capacitor"
+    );
+
+    public static final Item AMETHYST_RESISTOR = register(
+            new Item(new Item.Properties()
+                    .stacksTo(1)
+            ) {
+                @Override
+                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_resistor")
+                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
+                }
+            },
+            "amethyst_resistor"
+    );
+
+    public static final Item AMETHYST_RESONATOR = register(
+            new Item(new Item.Properties()
+                    .stacksTo(1)
+            ) {
+                @Override
+                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_resonator")
+                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
+                }
+            },
+            "amethyst_resonator"
+    );
+
+    public static final Item AMETHYST_BATTERY = register(
+            new Item(new Item.Properties()
+                    .stacksTo(1)
+            ) {
+                @Override
+                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_battery")
+                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
+                }
+            },
+            "amethyst_battery"
+    );
+
+    public static final Item SILVER_INGOT = register(
+            new Item(new Item.Properties()
+                    .stacksTo(1)
+            ) {
+                @Override
+                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                    tooltip.add(Component.translatable("tooltip.elements-plus.silver_ingot")
+                            .withStyle(style -> style.withColor(0xFFD700))); // 金色
+                }
+            },
+            "silver_ingot"
+    );
     public static void initialize() {
         // 物品已在静态块中注册
     }
