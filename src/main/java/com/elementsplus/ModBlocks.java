@@ -2,7 +2,6 @@ package com.elementsplus;
 
 import com.elementsplus.blocks.CrystallizerBlock;
 import com.elementsplus.blocks.RustSteelPipe;
-import com.elementsplus.blocks.WeatheringRustSteelPipe;
 import com.elementsplus.blocks.SteelPipeBlock;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
