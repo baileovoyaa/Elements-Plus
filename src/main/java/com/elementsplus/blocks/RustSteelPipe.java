@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
-public class RustSteelPipe extends Block {
+public class RustSteelPipe extends AbstractPipeBlock {
     public RustSteelPipe(BlockBehaviour.Properties properties) {
         super(properties);
     }

@@ -20,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
-public class SteelPipeBlock extends Block implements WeatheringRustSteelPipe {
+public class SteelPipeBlock extends AbstractPipeBlock implements WeatheringRustSteelPipe {
     private final WeatheringRustSteelPipe.WeatherState weatherState;
     public static final MapCodec<SteelPipeBlock> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
@@ -29,43 +29,15 @@ public class SteelPipeBlock extends Block implements WeatheringRustSteelPipe {
                     propertiesCodec()
             ).apply(instance, SteelPipeBlock::new)
     );
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
-    private static final VoxelShape BASE = Block.box(6.0, 0.0, 6.0, 10.0, 16.0, 10.0);
 
     public SteelPipeBlock(WeatheringRustSteelPipe.WeatherState weatherState, BlockBehaviour.Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
         this.weatherState = weatherState;
     }
 
     @Override
     protected @NotNull MapCodec<? extends Block> codec() {
         return CODEC;
-    }
-
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext blockPlaceContext) {
-        return this.defaultBlockState().setValue(FACING, blockPlaceContext.getHorizontalDirection().getClockWise());
-    }
-
-    @Override
-    protected @NotNull VoxelShape getShape(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos, CollisionContext collisionContext) {
-        return BASE;
-    }
-
-    @Override
-    protected @NotNull BlockState rotate(BlockState blockState, Rotation rotation) {
-        return blockState.setValue(FACING, rotation.rotate(blockState.getValue(FACING)));
-    }
-
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
-    }
-
-    @Override
-    protected boolean isPathfindable(BlockState blockState, PathComputationType pathComputationType) {
-        return false;
     }
 
     @Override
