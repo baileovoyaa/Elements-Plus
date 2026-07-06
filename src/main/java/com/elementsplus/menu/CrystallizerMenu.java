@@ -31,7 +31,7 @@ public class CrystallizerMenu extends AbstractContainerMenu {
     }
 
     protected CrystallizerMenu(MenuType<?> menuType, int i, Inventory inventory) {
-        this(menuType, i, inventory, new SimpleContainer(4), new SimpleContainerData(4));
+        this(menuType, i, inventory, new SimpleContainer(4), new SimpleContainerData(5));
     }
 
     protected CrystallizerMenu(
@@ -43,7 +43,7 @@ public class CrystallizerMenu extends AbstractContainerMenu {
     ) {
         super(menuType, i);
         checkContainerSize(container, 4);
-        checkContainerDataCount(containerData, 4);
+        checkContainerDataCount(containerData, 5);
         this.container = container;
         this.data = containerData;
         this.level = inventory.player.level();
@@ -82,63 +82,63 @@ public class CrystallizerMenu extends AbstractContainerMenu {
         ItemStack itemStack = ItemStack.EMPTY;
         Slot slot = this.slots.get(i);
         if (slot.hasItem()) {
-            ItemStack itemStack2 = slot.getItem();
-            itemStack = itemStack2.copy();
+            ItemStack slotItem = slot.getItem();
+            itemStack = slotItem.copy();
             if (i == 2) {
-                if (!this.moveItemStackTo(itemStack2, 3, 39, true)) {
+                if (!this.moveItemStackTo(slotItem, 3, 39, true)) {
                     return ItemStack.EMPTY;
                 }
 
-                slot.onQuickCraft(itemStack2, itemStack);
+                slot.onQuickCraft(slotItem, itemStack);
             } else if (i != 1 && i != 0) {
-                if (this.canSmelt(itemStack2)) {
-                    if (!this.moveItemStackTo(itemStack2, 0, 1, false)) {
+                if (canSmelt(slotItem)) {
+                    if (!this.moveItemStackTo(slotItem, 0, 1, false)) {
                         return ItemStack.EMPTY;
                     }
-                } else if (this.isFuel(itemStack2)) {
-                    if (!this.moveItemStackTo(itemStack2, 1, 2, false)) {
+                } else if (isFuel(slotItem)) {
+                    if (!this.moveItemStackTo(slotItem, 1, 2, false)) {
                         return ItemStack.EMPTY;
                     }
-                } else if (this.isPressurizer(itemStack2)) {
-                    if (!this.moveItemStackTo(itemStack2, 3, 30, false)) {
+                } else if (isPressurizer(slotItem)) {
+                    if (!this.moveItemStackTo(slotItem, 3, 30, false)) {
                         return ItemStack.EMPTY;
                     }
                 } else if (i >= 3 && i < 30) {
-                    if (!this.moveItemStackTo(itemStack2, 30, 39, false)) {
+                    if (!this.moveItemStackTo(slotItem, 30, 39, false)) {
                         return ItemStack.EMPTY;
                     }
-                } else if (i >= 30 && i < 39 && !this.moveItemStackTo(itemStack2, 3, 30, false)) {
+                } else if (i >= 30 && i < 39 && !this.moveItemStackTo(slotItem, 3, 30, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(itemStack2, 3, 39, false)) {
+            } else if (!this.moveItemStackTo(slotItem, 3, 39, false)) {
                 return ItemStack.EMPTY;
             }
 
-            if (itemStack2.isEmpty()) {
+            if (slotItem.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
             }
 
-            if (itemStack2.getCount() == itemStack.getCount()) {
+            if (slotItem.getCount() == itemStack.getCount()) {
                 return ItemStack.EMPTY;
             }
 
-            slot.onTake(player, itemStack2);
+            slot.onTake(player, slotItem);
         }
 
         return itemStack;
     }
 
-    public boolean canSmelt(ItemStack itemStack) {
+    public static boolean canSmelt(ItemStack itemStack) {
         return itemStack.is(Items.SAND);
     }
 
-    public boolean isFuel(ItemStack itemStack) {
+    public static boolean isFuel(ItemStack itemStack) {
         return AbstractFurnaceBlockEntity.isFuel(itemStack);
     }
 
-    public boolean isPressurizer(ItemStack itemStack) {
+    public static boolean isPressurizer(ItemStack itemStack) {
         return itemStack.is(Items.PISTON);
     }
 
@@ -155,6 +155,11 @@ public class CrystallizerMenu extends AbstractContainerMenu {
         }
 
         return Mth.clamp((float) this.data.get(0) / i, 0.0F, 1.0F);
+    }
+
+    public float getPressureProgress() {
+        int i = this.data.get(4);
+        return Mth.clamp((float) i / 100, 0.0F, 1.0F);
     }
 
     public boolean isLit() {

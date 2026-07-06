@@ -48,6 +48,7 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
                 case 1 -> litDuration;
                 case 2 -> cookingProgress;
                 case 3 -> cookingTotalTime;
+                case 4 -> pressure;
                 default -> 0;
             };
         }
@@ -66,12 +67,16 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
                     break;
                 case 3:
                     cookingTotalTime = j;
+                    break;
+                case 4:
+                    pressure = j;
+                    break;
             }
         }
 
         @Override
         public int getCount() {
-            return 4;
+            return 5;
         }
     };
     private final Object2IntOpenHashMap<ResourceLocation> recipesUsed = new Object2IntOpenHashMap<>();
@@ -88,6 +93,10 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
         return this.litTime > 0;
     }
 
+    private boolean hasPressure() {
+        return this.pressure > 0;
+    }
+
     @Override
     protected void loadAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
         super.loadAdditional(compoundTag, provider);
@@ -97,6 +106,7 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
         this.cookingProgress = compoundTag.getShort("CookTime");
         this.cookingTotalTime = compoundTag.getShort("CookTimeTotal");
         this.litDuration = this.getBurnDuration(this.items.get(1));
+        this.pressure = compoundTag.getShort("Pressure");
         CompoundTag compoundTag2 = compoundTag.getCompound("RecipesUsed");
 
         for (String string : compoundTag2.getAllKeys()) {
@@ -111,6 +121,7 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
         compoundTag.putShort("CookTime", (short) this.cookingProgress);
         compoundTag.putShort("CookTimeTotal", (short) this.cookingTotalTime);
         ContainerHelper.saveAllItems(compoundTag, this.items, provider);
+        compoundTag.putShort("Pressure", (short) this.pressure);
         CompoundTag compoundTag2 = new CompoundTag();
         this.recipesUsed.forEach((resourceLocation, integer) -> compoundTag2.putInt(resourceLocation.toString(), integer));
         compoundTag.put("RecipesUsed", compoundTag2);
@@ -123,22 +134,22 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
             crystallizerBlockEntity.litTime--;
         }
 
-        ItemStack itemStack = crystallizerBlockEntity.items.get(1);
-        ItemStack itemStack2 = crystallizerBlockEntity.items.get(0);
-        boolean hasIngredient = !itemStack2.isEmpty();
-        boolean hasFuel = !itemStack.isEmpty();
-        if (crystallizerBlockEntity.isLit() || hasFuel && hasIngredient) {
+        ItemStack fuel = crystallizerBlockEntity.items.get(1);
+        ItemStack ingredient = crystallizerBlockEntity.items.get(0);
+        boolean hasIngredient = !ingredient.isEmpty();
+        boolean hasFuel = !fuel.isEmpty();
+        if (crystallizerBlockEntity.isLit() || hasFuel && hasIngredient && crystallizerBlockEntity.hasPressure()) {
 
             int maxStackSize = crystallizerBlockEntity.getMaxStackSize();
-            if (!crystallizerBlockEntity.isLit() && canBurn(crystallizerBlockEntity.items, maxStackSize)) {
-                crystallizerBlockEntity.litTime = crystallizerBlockEntity.getBurnDuration(itemStack);
+            if (!crystallizerBlockEntity.isLit() && crystallizerBlockEntity.hasPressure() && canBurn(crystallizerBlockEntity.items, maxStackSize)) {
+                crystallizerBlockEntity.litTime = crystallizerBlockEntity.getBurnDuration(fuel);
                 crystallizerBlockEntity.litDuration = crystallizerBlockEntity.litTime;
                 if (crystallizerBlockEntity.isLit()) {
                     bl2 = true;
                     if (hasFuel) {
-                        Item item = itemStack.getItem();
-                        itemStack.shrink(1);
-                        if (itemStack.isEmpty()) {
+                        Item item = fuel.getItem();
+                        fuel.shrink(1);
+                        if (fuel.isEmpty()) {
                             Item item2 = item.getCraftingRemainingItem();
                             crystallizerBlockEntity.items.set(1, item2 == null ? ItemStack.EMPTY : new ItemStack(item2));
                         }
@@ -146,20 +157,29 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
                 }
             }
 
-            if (crystallizerBlockEntity.isLit() && canBurn(crystallizerBlockEntity.items, maxStackSize)) {
+            if (crystallizerBlockEntity.isLit() && crystallizerBlockEntity.hasPressure() && canBurn(crystallizerBlockEntity.items, maxStackSize)) {
                 crystallizerBlockEntity.cookingProgress++;
                 if (crystallizerBlockEntity.cookingProgress == crystallizerBlockEntity.cookingTotalTime) {
                     crystallizerBlockEntity.cookingProgress = 0;
                     crystallizerBlockEntity.cookingTotalTime = getTotalCookTime();
-                    burn(crystallizerBlockEntity.items, maxStackSize);
+                    burn(crystallizerBlockEntity, crystallizerBlockEntity.items, maxStackSize);
 
                     bl2 = true;
                 }
             } else {
                 crystallizerBlockEntity.cookingProgress = 0;
             }
-        } else if (!crystallizerBlockEntity.isLit() && crystallizerBlockEntity.cookingProgress > 0) {
+        } else if (!(crystallizerBlockEntity.isLit() && crystallizerBlockEntity.hasPressure()) && crystallizerBlockEntity.cookingProgress > 0) {
             crystallizerBlockEntity.cookingProgress = Mth.clamp(crystallizerBlockEntity.cookingProgress - 2, 0, crystallizerBlockEntity.cookingTotalTime);
+        }
+
+        ItemStack pressurizer = crystallizerBlockEntity.items.get(3);
+        boolean hasPressurizer = !pressurizer.isEmpty() && CrystallizerMenu.isPressurizer(pressurizer);
+        if (hasPressurizer) {
+            if (crystallizerBlockEntity.pressure <= 60) {
+                pressurizer.shrink(1);
+                crystallizerBlockEntity.pressure += 40;
+            }
         }
 
         if (bl != crystallizerBlockEntity.isLit()) {
@@ -174,17 +194,17 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
 
     private static boolean canBurn(NonNullList<ItemStack> nonNullList, int i) {
         if (!nonNullList.get(0).isEmpty()) {
-            ItemStack itemStack = Items.AMETHYST_SHARD.getDefaultInstance();
-            if (itemStack.isEmpty()) {
+            if (!CrystallizerMenu.canSmelt(nonNullList.get(0))) {
                 return false;
             } else {
-                ItemStack itemStack2 = nonNullList.get(2);
-                if (itemStack2.isEmpty()) {
+                ItemStack willOutput = Items.AMETHYST_SHARD.getDefaultInstance();
+                ItemStack output = nonNullList.get(2);
+                if (output.isEmpty()) {
                     return true;
-                } else if (!ItemStack.isSameItemSameComponents(itemStack2, itemStack)) {
+                } else if (!ItemStack.isSameItemSameComponents(output, willOutput)) {
                     return false;
                 } else {
-                    return itemStack2.getCount() < i && itemStack2.getCount() < itemStack2.getMaxStackSize() || itemStack2.getCount() < itemStack.getMaxStackSize();
+                    return output.getCount() < i && output.getCount() < output.getMaxStackSize() || output.getCount() < willOutput.getMaxStackSize();
                 }
             }
         } else {
@@ -192,22 +212,23 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
         }
     }
 
-    private static boolean burn(NonNullList<ItemStack> nonNullList, int i) {
+    private static boolean burn(CrystallizerBlockEntity crystallizerBlockEntity, NonNullList<ItemStack> nonNullList, int i) {
         if (canBurn(nonNullList, i)) {
-            ItemStack itemStack = nonNullList.get(0);
-            ItemStack itemStack2 = Items.AMETHYST_SHARD.getDefaultInstance();
-            ItemStack itemStack3 = nonNullList.get(2);
-            if (itemStack3.isEmpty()) {
-                nonNullList.set(2, itemStack2.copy());
-            } else if (ItemStack.isSameItemSameComponents(itemStack3, itemStack2)) {
-                itemStack3.grow(1);
+            ItemStack ingredient = nonNullList.get(0);
+            ItemStack willOutput = Items.AMETHYST_SHARD.getDefaultInstance();
+            ItemStack output = nonNullList.get(2);
+            if (output.isEmpty()) {
+                nonNullList.set(2, willOutput.copy());
+            } else if (ItemStack.isSameItemSameComponents(output, willOutput)) {
+                output.grow(1);
             }
 
-            if (itemStack.is(Blocks.WET_SPONGE.asItem()) && !nonNullList.get(1).isEmpty() && nonNullList.get(1).is(Items.BUCKET)) {
+            if (ingredient.is(Blocks.WET_SPONGE.asItem()) && !nonNullList.get(1).isEmpty() && nonNullList.get(1).is(Items.BUCKET)) {
                 nonNullList.set(1, new ItemStack(Items.WATER_BUCKET));
             }
 
-            itemStack.shrink(1);
+            ingredient.shrink(1);
+            crystallizerBlockEntity.pressure--;
             return true;
         } else {
             return false;

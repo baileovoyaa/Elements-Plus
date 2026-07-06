@@ -32,7 +32,7 @@ public class CrystallizerScreen extends AbstractContainerScreen<CrystallizerMenu
 
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float f, int i, int j) {
+    protected void renderBg(GuiGraphics guiGraphics, float f, int mouseX, int mouseY) {
         int k = this.leftPos;
         int l = this.topPos;
         guiGraphics.blit(TEXTURE, k, l, 0, 0, this.imageWidth, this.imageHeight);
@@ -45,5 +45,11 @@ public class CrystallizerScreen extends AbstractContainerScreen<CrystallizerMenu
         int m = 24;
         int n = Mth.ceil(this.menu.getBurnProgress() * 24.0F);
         guiGraphics.blitSprite(BURN_PROGRESS_SPRITE, 24, 16, 0, 0, k + 79, l + 34, n, 16);
+
+        int pressure = Mth.ceil(this.menu.getPressureProgress() * 30.0F);
+        if (pressure > 0) {
+            int startColor = Mth.lerpInt(this.menu.getPressureProgress(), 0x00, 0xFF);
+            guiGraphics.fillGradient(leftPos + 28, topPos + 44 - pressure, leftPos + 39, topPos + 44, 0xFF0000FF | (startColor << 8), 0xFF0000FF);
+        }
     }
 }
