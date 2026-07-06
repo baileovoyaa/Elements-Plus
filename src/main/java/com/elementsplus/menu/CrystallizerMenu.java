@@ -17,9 +17,6 @@ import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import org.jetbrains.annotations.NotNull;
 
 public class CrystallizerMenu extends AbstractContainerMenu {
-    public boolean isPressurizer(ItemStack itemStack) {
-        return itemStack.is(Items.PISTON);
-    }
 
     private final Container container;
     private final ContainerData data;
@@ -34,7 +31,7 @@ public class CrystallizerMenu extends AbstractContainerMenu {
     }
 
     protected CrystallizerMenu(MenuType<?> menuType, int i, Inventory inventory) {
-        this(menuType, i, inventory, new SimpleContainer(3), new SimpleContainerData(4));
+        this(menuType, i, inventory, new SimpleContainer(4), new SimpleContainerData(4));
     }
 
     protected CrystallizerMenu(
@@ -45,15 +42,15 @@ public class CrystallizerMenu extends AbstractContainerMenu {
             ContainerData containerData
     ) {
         super(menuType, i);
-        checkContainerSize(container, 3);
+        checkContainerSize(container, 4);
         checkContainerDataCount(containerData, 4);
         this.container = container;
         this.data = containerData;
         this.level = inventory.player.level();
         this.addSlot(new Slot(container, 0, 56, 17));
         this.addSlot(new CrystallizerFuelSlot(this, container, 1, 56, 53));
-        this.addSlot(new PressurizeSlot(this, container, 2, 26, 61));
-        this.addSlot(new FurnaceResultSlot(inventory.player, container, 3, 116, 35));
+        this.addSlot(new FurnaceResultSlot(inventory.player, container, 2, 116, 35));
+        this.addSlot(new PressurizeSlot(this, container, 3, 26, 61));
 
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 9; k++) {
@@ -102,6 +99,10 @@ public class CrystallizerMenu extends AbstractContainerMenu {
                     if (!this.moveItemStackTo(itemStack2, 1, 2, false)) {
                         return ItemStack.EMPTY;
                     }
+                } else if (this.isPressurizer(itemStack2)) {
+                    if (!this.moveItemStackTo(itemStack2, 3, 30, false)) {
+                        return ItemStack.EMPTY;
+                    }
                 } else if (i >= 3 && i < 30) {
                     if (!this.moveItemStackTo(itemStack2, 30, 39, false)) {
                         return ItemStack.EMPTY;
@@ -129,12 +130,16 @@ public class CrystallizerMenu extends AbstractContainerMenu {
         return itemStack;
     }
 
-    protected boolean canSmelt(ItemStack itemStack) {
+    public boolean canSmelt(ItemStack itemStack) {
         return itemStack.is(Items.SAND);
     }
 
     public boolean isFuel(ItemStack itemStack) {
         return AbstractFurnaceBlockEntity.isFuel(itemStack);
+    }
+
+    public boolean isPressurizer(ItemStack itemStack) {
+        return itemStack.is(Items.PISTON);
     }
 
     public float getBurnProgress() {
