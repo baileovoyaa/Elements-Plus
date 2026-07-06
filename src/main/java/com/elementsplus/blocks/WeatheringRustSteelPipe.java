@@ -7,6 +7,10 @@ import com.google.common.collect.ImmutableBiMap;
 import com.mojang.serialization.Codec;
 import java.util.Optional;
 import java.util.function.Supplier;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChangeOverTimeBlock;
@@ -54,6 +58,11 @@ public interface WeatheringRustSteelPipe extends ChangeOverTimeBlock<WeatheringR
     @Override
     default @NotNull Optional<BlockState> getNext(BlockState blockState) {
         return getNext(blockState.getBlock()).map(block -> block.withPropertiesOf(blockState));
+    }
+
+    @Override
+    default @NotNull Optional<BlockState> getNextState(BlockState blockState, ServerLevel serverLevel, BlockPos blockPos, RandomSource randomSource) {
+        return getNext(blockState);
     }
 
     @Override

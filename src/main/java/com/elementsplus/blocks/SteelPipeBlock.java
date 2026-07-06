@@ -1,8 +1,11 @@
 package com.elementsplus.blocks;
 
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.*;
@@ -15,14 +18,29 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
-public class SteelPipeLBlock extends Block {
-    public static final MapCodec<net.minecraft.world.level.block.AnvilBlock> CODEC = simpleCodec(net.minecraft.world.level.block.AnvilBlock::new);
+import java.util.Optional;
+
+public class SteelPipeBlock extends Block implements WeatheringRustSteelPipe {
+    private final WeatheringRustSteelPipe.WeatherState weatherState;
+    public static final MapCodec<SteelPipeBlock> CODEC = RecordCodecBuilder.mapCodec(
+            instance -> instance.group(
+                    WeatheringRustSteelPipe.WeatherState.CODEC.fieldOf("weathering_state")
+                            .forGetter(SteelPipeBlock::getAge),
+                    propertiesCodec()
+            ).apply(instance, SteelPipeBlock::new)
+    );
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     private static final VoxelShape BASE = Block.box(6.0, 0.0, 6.0, 10.0, 16.0, 10.0);
 
-    public SteelPipeLBlock(BlockBehaviour.Properties properties) {
+    public SteelPipeBlock(WeatheringRustSteelPipe.WeatherState weatherState, BlockBehaviour.Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+        this.weatherState = weatherState;
+    }
+
+    @Override
+    protected @NotNull MapCodec<? extends Block> codec() {
+        return CODEC;
     }
 
     @Override
@@ -48,6 +66,21 @@ public class SteelPipeLBlock extends Block {
     @Override
     protected boolean isPathfindable(BlockState blockState, PathComputationType pathComputationType) {
         return false;
+    }
+
+    @Override
+    protected void randomTick(BlockState blockState, ServerLevel serverLevel, BlockPos blockPos, RandomSource randomSource) {
+        this.changeOverTime(blockState, serverLevel, blockPos, randomSource);
+    }
+
+    @Override
+    protected boolean isRandomlyTicking(BlockState blockState) {
+        return WeatheringRustSteelPipe.getNext(blockState.getBlock()).isPresent();
+    }
+
+    @Override
+    public WeatheringRustSteelPipe.@NotNull WeatherState getAge() {
+        return this.weatherState;
     }
 
 }
