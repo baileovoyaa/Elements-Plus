@@ -1,8 +1,7 @@
 package com.elementsplus;
 
 import com.elementsplus.blocks.CrystallizerBlock;
-import com.elementsplus.blocks.RustSteelPipe;
-import com.elementsplus.blocks.SteelPipeBlock;
+import com.elementsplus.blocks.pipe.*;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -14,8 +13,6 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import java.util.List;
 
-import static com.elementsplus.blocks.WeatheringRustSteelPipe.WeatherState.UNAFFECTED;
-
 public class ModBlocks {
 
     public static Block register(Block block, String id) {
@@ -25,118 +22,132 @@ public class ModBlocks {
 
     // ===== 铁管 4 种形状（未生锈） =====
     public static final Block STEEL_PIPE_L = register(
-            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
+            new PipeLBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
-                    .noOcclusion()
+                    .noOcclusion(),
+                    PipeMaterials.STEEL
             ),
             "steel_pipe_l"
     );
 
     public static final Block STEEL_PIPE_I = register(
-            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
+            new PipeIBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
-                    .noOcclusion()
+                    .noOcclusion(),
+                    PipeMaterials.STEEL
             ),
             "steel_pipe_i"
     );
 
     public static final Block STEEL_PIPE_T = register(
-            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
+            new PipeTBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
-                    .noOcclusion()
+                    .noOcclusion(),
+                    PipeMaterials.STEEL
             ),
             "steel_pipe_t"
     );
 
     public static final Block STEEL_PIPE_X = register(
-            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
+            new PipeXBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
-                    .noOcclusion()
+                    .noOcclusion(),
+                    PipeMaterials.STEEL
             ),
             "steel_pipe_x"
     );
 
     // ===== 锈管 4 种形状（已生锈，可氧化） =====
-    // 使用 RustSteelPipeFullBlock，传入 WeatherState.UNAFFECTED（起始状态）
-    // 会通过 randomTick 氧化为 RUST 状态
     public static final Block RUST_STEEL_PIPE_L = register(
-            new RustSteelPipe(
+            new PipeLBlock(
                     BlockBehaviour.Properties.of()
                             .strength(2.0f)
                             .sound(SoundType.STONE)
-                            .noOcclusion()
+                            .noOcclusion(),
+                    PipeMaterials.RUST
             ),
             "rust_steel_pipe_l"
     );
 
     public static final Block RUST_STEEL_PIPE_I = register(
-            new RustSteelPipe(
+            new PipeIBlock(
                     BlockBehaviour.Properties.of()
                             .strength(2.0f)
                             .sound(SoundType.STONE)
-                            .noOcclusion()
+                            .noOcclusion(),
+                    PipeMaterials.RUST
             ),
             "rust_steel_pipe_i"
     );
 
     public static final Block RUST_STEEL_PIPE_T = register(
-            new RustSteelPipe(
+            new PipeTBlock(
                     BlockBehaviour.Properties.of()
                             .strength(2.0f)
                             .sound(SoundType.STONE)
-                            .noOcclusion()
+                            .noOcclusion(),
+                    PipeMaterials.RUST
             ),
             "rust_steel_pipe_t"
     );
 
     public static final Block RUST_STEEL_PIPE_X = register(
-            new RustSteelPipe(
+            new PipeXBlock(
                     BlockBehaviour.Properties.of()
                             .strength(2.0f)
                             .sound(SoundType.STONE)
-                            .noOcclusion()
+                            .noOcclusion(),
+                    PipeMaterials.RUST
             ),
             "rust_steel_pipe_x"
     );
 
     public static final Block SILVER_PIPE_I = register(
-            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
-                    .strength(2.0f)
-                    .sound(SoundType.STONE)
-                    .noOcclusion()
+            new PipeIBlock(
+                    BlockBehaviour.Properties.of()
+                            .strength(2.0f)
+                            .sound(SoundType.STONE)
+                            .noOcclusion(),
+                    PipeMaterials.SILVER
             ),
             "silver_pipe_i"
     );
 
     public static final Block SILVER_PIPE_L = register(
-            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
-                    .strength(2.0f)
-                    .sound(SoundType.STONE)
-                    .noOcclusion()
+            new PipeLBlock(
+                    BlockBehaviour.Properties.of()
+                            .strength(2.0f)
+                            .sound(SoundType.STONE)
+                            .noOcclusion(),
+                    PipeMaterials.SILVER
             ),
             "silver_pipe_l"
     );
 
 
     public static final Block SILVER_PIPE_T = register(
-            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
-                    .strength(2.0f)
-                    .sound(SoundType.STONE)
-                    .noOcclusion()
+            new PipeTBlock(
+                    BlockBehaviour.Properties.of()
+                            .strength(2.0f)
+                            .sound(SoundType.STONE)
+                            .noOcclusion(),
+                    PipeMaterials.SILVER
             ),
             "silver_pipe_t"
     );
 
 
     public static final Block SILVER_PIPE_X = register(
-            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
-                    .strength(2.0f)
-                    .sound(SoundType.STONE)
-                    .noOcclusion()
+            new PipeXBlock(
+                    BlockBehaviour.Properties.of()
+                            .strength(2.0f)
+                            .sound(SoundType.STONE)
+                            .noOcclusion(),
+                    PipeMaterials.SILVER
             ),
             "silver_pipe_x"
     );

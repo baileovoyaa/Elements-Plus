@@ -1,19 +1,16 @@
 {
 	"variants": {
-		"facing=north": {
+		"axis=y": {
 			"model": "elements-plus:block/rust_steel_pipe_i"
 		},
-		"facing=east": {
+		"axis=x": {
 			"model": "elements-plus:block/rust_steel_pipe_i",
+			"x": 90,
 			"y": 90
 		},
-		"facing=south": {
+		"axis=z": {
 			"model": "elements-plus:block/rust_steel_pipe_i",
-			"y": 180
-		},
-		"facing=west": {
-			"model": "elements-plus:block/rust_steel_pipe_i",
-			"y": 270
+			"x": 90
 		}
 	}
 }

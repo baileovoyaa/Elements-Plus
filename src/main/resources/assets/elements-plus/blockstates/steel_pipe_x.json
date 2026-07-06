@@ -1,19 +1,15 @@
 {
 	"variants": {
-		"facing=north": {
-			"model": "elements-plus:block/steel_pipe_x"
+		"axis=y": {
+			"model": "elements-plus:block/steel_pipe_x",
+			"x": 90
 		},
-		"facing=east": {
+		"axis=x": {
 			"model": "elements-plus:block/steel_pipe_x",
 			"y": 90
 		},
-		"facing=south": {
-			"model": "elements-plus:block/steel_pipe_x",
-			"y": 180
-		},
-		"facing=west": {
-			"model": "elements-plus:block/steel_pipe_x",
-			"y": 270
+		"axis=z": {
+			"model": "elements-plus:block/steel_pipe_x"
 		}
 	}
 }
