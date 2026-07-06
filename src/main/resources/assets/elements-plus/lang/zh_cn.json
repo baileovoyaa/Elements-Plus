@@ -26,6 +26,15 @@
   "tooltip.elements-plus.rust_steel_pipe_t": "一根 T 形状的生锈钢管，它可以传输红石信号",
   "tooltip.elements-plus.rust_steel_pipe_x": "一根 X 形状的生锈钢管，它可以传输红石信号",
 
+  "block.elements-plus.silver_pipe_l": "银管 L",
+  "block.elements-plus.silver_pipe_i": "银管 I",
+  "block.elements-plus.silver_pipe_t": "银管 T",
+  "block.elements-plus.silver_pipe_x": "银管 X",
+  "tooltip.elements-plus.silver_pipe_l": "一根 L 形状的银管，它可以传输红石信号",
+  "tooltip.elements-plus.silver_pipe_i": "一根 I 形状的银管，它可以传输红石信号",
+  "tooltip.elements-plus.silver_pipe_t": "一根 T 形状的银管，它可以传输红石信号",
+  "tooltip.elements-plus.silver_pipe_x": "一根 X 形状的银管，它可以传输红石信号",
+
   "item.elements-plus.silver_ingot": "银锭",
   "tooltip.elements-plus.silver_ingot": "一块银锭",
 

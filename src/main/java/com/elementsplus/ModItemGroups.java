@@ -37,6 +37,10 @@ public class ModItemGroups {
                 ModBlocks.RUST_STEEL_PIPE_I,
                 ModBlocks.RUST_STEEL_PIPE_T,
                 ModBlocks.RUST_STEEL_PIPE_X,
+                ModBlocks.SILVER_PIPE_L,
+                ModBlocks.SILVER_PIPE_I,
+                ModBlocks.SILVER_PIPE_T,
+                ModBlocks.SILVER_PIPE_X,
                 ModItems.SILVER_INGOT
                 // 可以继续添加更多物品
         );

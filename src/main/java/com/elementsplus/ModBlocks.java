@@ -102,6 +102,44 @@ public class ModBlocks {
             "rust_steel_pipe_x"
     );
 
+    public static final Block SILVER_PIPE_I = register(
+            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "silver_pipe_i"
+    );
+
+    public static final Block SILVER_PIPE_L = register(
+            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "silver_pipe_l"
+    );
+
+
+    public static final Block SILVER_PIPE_T = register(
+            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "silver_pipe_t"
+    );
+
+
+    public static final Block SILVER_PIPE_X = register(
+            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "silver_pipe_x"
+    );
+
     public static final Block CRYSTALLIZER = register(
             new CrystallizerBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
@@ -168,6 +206,34 @@ public class ModBlocks {
             @Override
             public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
                 tooltip.add(Component.translatable("tooltip.elements-plus.rust_steel_pipe_x")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+        Items.registerBlock(new BlockItem(SILVER_PIPE_I, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.silver_pipe_i")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+        Items.registerBlock(new BlockItem(SILVER_PIPE_L, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.silver_pipe_l")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+        Items.registerBlock(new BlockItem(SILVER_PIPE_T, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.silver_pipe_t")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+        Items.registerBlock(new BlockItem(SILVER_PIPE_X, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.silver_pipe_x")
                         .withStyle(style -> style.withColor(0xAAAAAA)));
             }
         });

@@ -26,6 +26,15 @@
   "tooltip.elements-plus.rust_steel_pipe_t": "A Rust Steel Pipe with a shape of a T, it can carry redstone signal",
   "tooltip.elements-plus.rust_steel_pipe_x": "A Rust Steel Pipe with a shape of a X, it can carry redstone signal",
 
+  "block.elements-plus.silver_pipe_l": "Silver Pipe L",
+  "block.elements-plus.silver_pipe_i": "Silver Pipe I",
+  "block.elements-plus.silver_pipe_t": "Silver Pipe T",
+  "block.elements-plus.silver_pipe_x": "Silver Pipe X",
+  "tooltip.elements-plus.silver_pipe_l": "A Silver Pipe with a shape of a L, it can carry redstone signal",
+  "tooltip.elements-plus.silver_pipe_i": "A Silver Pipe with a shape of a I, it can carry redstone signal",
+  "tooltip.elements-plus.silver_pipe_t": "A Silver Pipe with a shape of a T, it can carry redstone signal",
+  "tooltip.elements-plus.silver_pipe_x": "A Silver Pipe with a shape of a X, it can carry redstone signal",
+
   "block.elements-plus.crystallizer": "Crystallizer",
   "tooltip.elements-plus.crystallizer": "A Crystallizer",
   "container.elements-plus.crystallizer": "Crystallizer",

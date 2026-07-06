@@ -1,0 +1,19 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "elements-plus:block/silver_pipe_l"
+		},
+		"facing=east": {
+			"model": "elements-plus:block/silver_pipe_l",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "elements-plus:block/silver_pipe_l",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "elements-plus:block/silver_pipe_l",
+			"y": 270
+		}
+	}
+}
