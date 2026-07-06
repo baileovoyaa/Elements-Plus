@@ -2,7 +2,7 @@
 	"texture_size": [32, 32],
 	"textures": {
 		"0": "elements-plus:block/silver_pipe_i",
-		"particle": "silver_pipe_i"
+		"particle": "elements-plus:block/silver_pipe_i"
 	},
 	"elements": [
 		{

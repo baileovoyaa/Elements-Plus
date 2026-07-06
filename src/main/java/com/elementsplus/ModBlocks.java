@@ -2,7 +2,6 @@ package com.elementsplus;
 
 import com.elementsplus.blocks.CrystallizerBlock;
 import com.elementsplus.blocks.RustSteelPipe;
-import com.elementsplus.blocks.WeatheringRustSteelPipe;
 import com.elementsplus.blocks.SteelPipeBlock;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -105,7 +104,7 @@ public class ModBlocks {
     );
 
     public static final Block SILVER_PIPE_I = register(
-            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
@@ -114,7 +113,7 @@ public class ModBlocks {
     );
 
     public static final Block SILVER_PIPE_L = register(
-            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
@@ -124,7 +123,7 @@ public class ModBlocks {
 
 
     public static final Block SILVER_PIPE_T = register(
-            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
@@ -134,7 +133,7 @@ public class ModBlocks {
 
 
     public static final Block SILVER_PIPE_X = register(
-            new SteelPipeLBlock(BlockBehaviour.Properties.of()
+            new SteelPipeBlock(UNAFFECTED, BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
