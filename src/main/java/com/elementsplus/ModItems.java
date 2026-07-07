@@ -1,7 +1,9 @@
 package com.elementsplus;
 
+import com.elementsplus.item.WrenchItem;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -12,6 +14,7 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.DebugStickState;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
@@ -96,6 +99,7 @@ public class ModItems {
                     tooltip.add(Component.translatable("tooltip.elements-plus.syringe")
                             .withStyle(style -> style.withColor(0xFFD700))); // 金色
                 }
+
                 @Override
                 public @NotNull ItemStack finishUsingItem(ItemStack stack, Level level, net.minecraft.world.entity.LivingEntity entity) {
                     ItemStack result = super.finishUsingItem(stack, level, entity);
@@ -111,8 +115,9 @@ public class ModItems {
             "syringe"
     );
     public static final Item WRENCH = register(
-            new Item(new Item.Properties()
+            new WrenchItem(new Item.Properties()
                     .stacksTo(1)
+                    .component(DataComponents.DEBUG_STICK_STATE, DebugStickState.EMPTY)
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -213,6 +218,7 @@ public class ModItems {
             },
             "silver_ingot"
     );
+
     public static void initialize() {
         // 物品已在静态块中注册
     }
