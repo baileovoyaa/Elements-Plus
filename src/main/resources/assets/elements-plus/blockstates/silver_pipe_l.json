@@ -1,19 +1,57 @@
 {
-	"variants": {
-		"facing=north": {
-			"model": "elements-plus:block/silver_pipe_l"
-		},
-		"facing=east": {
-			"model": "elements-plus:block/silver_pipe_l",
-			"y": 90
-		},
-		"facing=south": {
-			"model": "elements-plus:block/silver_pipe_l",
-			"y": 180
-		},
-		"facing=west": {
-			"model": "elements-plus:block/silver_pipe_l",
-			"y": 270
-		}
-	}
+    "variants": {
+        "axis=x,facing=north": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "x": 180,
+            "y": 90
+        },
+        "axis=x,facing=east": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "y": 90
+        },
+        "axis=x,facing=south": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "y": 270
+        },
+        "axis=x,facing=west": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "x": 180,
+            "y": 270
+        },
+        "axis=y,facing=north": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "x": 90,
+            "y": 180
+        },
+        "axis=y,facing=east": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "x": 90,
+            "y": 270
+        },
+        "axis=y,facing=south": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "x": 90
+        },
+        "axis=y,facing=west": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "x": 90,
+            "y": 90
+        },
+        "axis=z,facing=north": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "x": 180,
+            "y": 180
+        },
+        "axis=z,facing=east": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "y": 180
+        },
+        "axis=z,facing=south": {
+            "model": "elements-plus:block/silver_pipe_l"
+        },
+        "axis=z,facing=west": {
+            "model": "elements-plus:block/silver_pipe_l",
+            "x": 180
+        }
+    }
 }

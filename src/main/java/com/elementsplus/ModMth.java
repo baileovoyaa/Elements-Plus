@@ -4,10 +4,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+
+import static net.minecraft.core.Direction.*;
 
 public class ModMth {
     public static List<Direction> orderedByNearest(Entity entity, Collection<Direction> directions) {
@@ -24,5 +23,13 @@ public class ModMth {
             return Double.compare(dot2, dot1); // 点积越大表示方向越接近，降序排列
         });
         return sorted;
+    }
+
+    public static Set<Direction> getAxisParallelDirections(Direction.Axis axis) {
+        return switch (axis) {
+            case X -> Set.of(NORTH, SOUTH, UP, DOWN);
+            case Y -> Set.of(NORTH, SOUTH, EAST, WEST);
+            case Z -> Set.of(EAST, WEST, UP, DOWN);
+        };
     }
 }
