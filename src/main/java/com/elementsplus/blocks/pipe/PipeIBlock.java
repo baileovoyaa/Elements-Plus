@@ -2,8 +2,6 @@ package com.elementsplus.blocks.pipe;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RotatedPillarBlock;
@@ -16,27 +14,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 
-public class PipeIBlock extends RotatedPillarBlock implements IPipeBlock {
-    private final PipeMaterial pipeMaterial;
+public class PipeIBlock extends AbstractPipeBlock {
 
     public PipeIBlock(Properties properties, PipeMaterial pipeMaterial) {
-        super(properties);
-        this.pipeMaterial = pipeMaterial;
-    }
-
-    @Override
-    public PipeMaterial getPipeMaterial() {
-        return pipeMaterial;
-    }
-
-    @Override
-    protected void randomTick(BlockState blockState, ServerLevel serverLevel, BlockPos blockPos, RandomSource randomSource) {
-        this.onRandomTick(blockState, serverLevel, blockPos, randomSource);
-    }
-
-    @Override
-    protected boolean isRandomlyTicking(BlockState blockState) {
-        return this.onIsRandomlyTicking(blockState);
+        super(properties, pipeMaterial);
     }
 
     @Override
@@ -61,4 +42,12 @@ public class PipeIBlock extends RotatedPillarBlock implements IPipeBlock {
         };
     }
 
+    @Override
+    public boolean isSideConnectable(BlockState blockState, Direction direction) {
+        return switch (direction) {
+            case EAST, WEST -> blockState.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.X;
+            case NORTH, SOUTH -> blockState.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.Z;
+            case UP, DOWN -> blockState.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.Y;
+        };
+    }
 }

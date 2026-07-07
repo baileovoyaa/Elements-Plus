@@ -3,8 +3,6 @@ package com.elementsplus.blocks.pipe;
 import com.elementsplus.ModMth;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -21,31 +19,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.Set;
 
-public class PipeTBlock extends RotatedPillarBlock implements IPipeBlock {
-    private final PipeMaterial pipeMaterial;
+public class PipeTBlock extends AbstractPipeBlock {
     public static final DirectionProperty HORIZONTAL_FACING = BlockStateProperties.HORIZONTAL_FACING;
 
 
     public PipeTBlock(Properties properties, PipeMaterial pipeMaterial) {
-        super(properties);
-        this.pipeMaterial = pipeMaterial;
-    }
-
-    @Override
-    public PipeMaterial getPipeMaterial() {
-        return pipeMaterial;
-    }
-
-    @Override
-    protected void randomTick(BlockState blockState, ServerLevel serverLevel, BlockPos blockPos, RandomSource randomSource) {
-        this.onRandomTick(blockState, serverLevel, blockPos, randomSource);
-    }
-
-    @Override
-    protected boolean isRandomlyTicking(BlockState blockState) {
-        return this.onIsRandomlyTicking(blockState);
+        super(properties, pipeMaterial);
     }
 
     @Override
@@ -139,5 +119,18 @@ public class PipeTBlock extends RotatedPillarBlock implements IPipeBlock {
             case EAST -> Block.box(8.0, 7.0, 7.0, 16.0, 9.0, 9.0);
         }, BooleanOp.ONLY_FIRST);
         return shape;
+    }
+
+
+    @Override
+    public boolean isSideConnectable(BlockState blockState, Direction direction) {
+        Direction mappedDirection = blockState.getValue(HORIZONTAL_FACING);
+        Direction realDirection = getAxisBasedDirections(blockState.getValue(RotatedPillarBlock.AXIS)).get(getHorizontalDirections().indexOf(mappedDirection));
+
+        return direction == realDirection.getOpposite() || switch (direction) {
+            case EAST, WEST -> blockState.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.X;
+            case NORTH, SOUTH -> blockState.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.Z;
+            case UP, DOWN -> blockState.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.Y;
+        };
     }
 }

@@ -12,4 +12,8 @@ public class PipeMaterial {
     public boolean isRandomlyTicking(BlockState blockState) {
         return false;
     }
+
+    public int getDecay(BlockState blockState) {
+        return 1;
+    }
 }

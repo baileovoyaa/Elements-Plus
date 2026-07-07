@@ -1,15 +1,16 @@
 {
-  "required": true,
-  "package": "com.elementsplus.mixin",
-  "compatibilityLevel": "JAVA_21",
-  "mixins": [
-    "ExampleMixin",
-    "LivingEntityMixin"
-  ],
-  "injectors": {
-    "defaultRequire": 1
-  },
-  "overwrites": {
-    "requireAnnotations": true
+    "required": true,
+    "package": "com.elementsplus.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "mixins": [
+        "ExampleMixin",
+        "LivingEntityMixin",
+        "RedStoneWireBlockMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    },
+    "overwrites": {
+        "requireAnnotations": true
 	}
 }

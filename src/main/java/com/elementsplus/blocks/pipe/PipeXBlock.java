@@ -8,33 +8,17 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
-public class PipeXBlock extends RotatedPillarBlock implements IPipeBlock {
-    private final PipeMaterial pipeMaterial;
+public class PipeXBlock extends AbstractPipeBlock {
 
     public PipeXBlock(Properties properties, PipeMaterial pipeMaterial) {
-        super(properties);
-        this.pipeMaterial = pipeMaterial;
-    }
-
-    @Override
-    public PipeMaterial getPipeMaterial() {
-        return pipeMaterial;
-    }
-
-    @Override
-    protected void randomTick(BlockState blockState, ServerLevel serverLevel, BlockPos blockPos, RandomSource randomSource) {
-        this.onRandomTick(blockState, serverLevel, blockPos, randomSource);
-    }
-
-    @Override
-    protected boolean isRandomlyTicking(BlockState blockState) {
-        return this.onIsRandomlyTicking(blockState);
+        super(properties, pipeMaterial);
     }
 
     @Override
@@ -74,6 +58,16 @@ public class PipeXBlock extends RotatedPillarBlock implements IPipeBlock {
                     Block.box(0.0, 7.0, 7.0, 16.0, 9.0, 9.0),
                     Block.box(7.0, 0.0, 7.0, 9.0, 16.0, 9.0)
             ), BooleanOp.ONLY_FIRST);
+        };
+    }
+
+
+    @Override
+    public boolean isSideConnectable(BlockState blockState, Direction direction) {
+        return switch (direction) {
+            case EAST, WEST -> blockState.getValue(RotatedPillarBlock.AXIS) != Direction.Axis.X;
+            case UP, DOWN -> blockState.getValue(RotatedPillarBlock.AXIS) != Direction.Axis.Y;
+            case NORTH, SOUTH -> blockState.getValue(RotatedPillarBlock.AXIS) != Direction.Axis.Z;
         };
     }
 }

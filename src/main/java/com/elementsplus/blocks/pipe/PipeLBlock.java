@@ -3,12 +3,9 @@ package com.elementsplus.blocks.pipe;
 import com.elementsplus.ModMth;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -21,29 +18,13 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
 
-public class PipeLBlock extends RotatedPillarBlock implements IPipeBlock {
+public class PipeLBlock extends AbstractPipeBlock {
     public static final DirectionProperty HORIZONTAL_FACING = BlockStateProperties.HORIZONTAL_FACING;
-    private final PipeMaterial pipeMaterial;
 
     public PipeLBlock(Properties properties, PipeMaterial pipeMaterial) {
-        super(properties);
-        this.pipeMaterial = pipeMaterial;
+        super(properties, pipeMaterial);
     }
 
-    @Override
-    public PipeMaterial getPipeMaterial() {
-        return pipeMaterial;
-    }
-
-    @Override
-    protected void randomTick(BlockState blockState, ServerLevel serverLevel, BlockPos blockPos, RandomSource randomSource) {
-        this.onRandomTick(blockState, serverLevel, blockPos, randomSource);
-    }
-
-    @Override
-    protected boolean isRandomlyTicking(BlockState blockState) {
-        return this.onIsRandomlyTicking(blockState);
-    }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
@@ -150,5 +131,12 @@ public class PipeLBlock extends RotatedPillarBlock implements IPipeBlock {
             );
         }
         return shape;
+    }
+
+    @Override
+    public boolean isSideConnectable(BlockState blockState, Direction direction) {
+        LShapePipeState state = LShapePipeState.fromAxisAndStartDirection(blockState.getValue(AXIS), blockState.getValue(HORIZONTAL_FACING));
+        Set<Direction> directions = state.getDirections();
+        return directions.contains(direction.getOpposite());
     }
 }

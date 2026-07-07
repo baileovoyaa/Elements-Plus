@@ -1,7 +1,7 @@
 package com.elementsplus.item;
 
 
-import com.elementsplus.blocks.pipe.IPipeBlock;
+import com.elementsplus.blocks.pipe.AbstractPipeBlock;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -21,6 +21,7 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -55,14 +56,14 @@ public class WrenchItem extends Item {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    private boolean handleInteraction(Player player, BlockState blockState, LevelAccessor levelAccessor, BlockPos blockPos, boolean bl, ItemStack itemStack) {
-        if (!(blockState.getBlock() instanceof IPipeBlock)) {
+    private boolean handleInteraction(Player player, BlockState blockState, LevelAccessor levelAccessor, BlockPos blockPos, boolean isRightClick, ItemStack itemStack) {
+        if (!(blockState.getBlock() instanceof AbstractPipeBlock)) {
             return false;
         }
 
         Holder<Block> holder = blockState.getBlockHolder();
         StateDefinition<Block, BlockState> stateDefinition = holder.value().getStateDefinition();
-        Collection<Property<?>> collection = stateDefinition.getProperties();
+        Collection<Property<?>> collection = stateDefinition.getProperties().stream().filter(property -> property != BlockStateProperties.POWER).toList();
         if (collection.isEmpty()) {
             message(player, Component.translatable(Items.DEBUG_STICK.getDescriptionId() + ".empty", holder.getRegisteredName()));
             return false;
@@ -74,13 +75,13 @@ public class WrenchItem extends Item {
         }
 
         Property<?> property = debugStickState.properties().get(holder);
-        if (bl) {
+        if (isRightClick) {
             if (property == null) {
                 property = collection.iterator().next();
             }
 
             BlockState blockState2 = cycleState(blockState, property, player.isSecondaryUseActive());
-            levelAccessor.setBlock(blockPos, blockState2, 18);
+            levelAccessor.setBlock(blockPos, blockState2, 3);
             message(player, Component.translatable(Items.DEBUG_STICK.getDescriptionId() + ".update", property.getName(), getNameHelper(blockState2, property)));
         } else {
             property = getRelative(collection, property, player.isSecondaryUseActive());
