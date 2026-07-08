@@ -88,9 +88,28 @@ public abstract class AbstractPipeBlock extends RotatedPillarBlock {
         }
     }
 
+    public int getBestNeighborSignal(BlockState blockState, Level level, BlockPos blockPos) {
+        int i = 0;
+
+        for (Direction direction : Direction.values()) {
+            if (isSideConnectable(blockState, direction.getOpposite())) {
+                int j = level.getSignal(blockPos.relative(direction), direction);
+                if (j >= 15) {
+                    return 15;
+                }
+
+                if (j > i) {
+                    i = j;
+                }
+            }
+        }
+
+        return i;
+    }
+
     private int calculateTargetStrength(BlockState blockState, Level level, BlockPos blockPos) {
         ((RedStoneWireBlockAccessor) Blocks.REDSTONE_WIRE).setShouldSignal(false);
-        int i = level.getBestNeighborSignal(blockPos);
+        int i = this.getBestNeighborSignal(blockState, level, blockPos);
         ((RedStoneWireBlockAccessor) Blocks.REDSTONE_WIRE).setShouldSignal(true);
         int j = 0;
         if (i < 15) {
@@ -100,13 +119,14 @@ public abstract class AbstractPipeBlock extends RotatedPillarBlock {
                     BlockState blockState2 = level.getBlockState(blockPos2);
                     if (direction == Direction.DOWN && blockState2.is(Blocks.REDSTONE_WIRE)) continue;
                     j = Math.max(j, getWireSignal(blockState2, direction));
+                }
 //                    BlockPos blockPos3 = blockPos.above();
 //                    if (blockState2.isRedstoneConductor(level, blockPos2) && !level.getBlockState(blockPos3).isRedstoneConductor(level, blockPos3)) {
 //                        j = Math.max(j, getWireSignal(level.getBlockState(blockPos2.above()), direction));
 //                    } else if (!blockState2.isRedstoneConductor(level, blockPos2)) {
 //                        j = Math.max(j, getWireSignal(level.getBlockState(blockPos2.below()), direction));
 //                    }
-                }
+
             }
         }
 

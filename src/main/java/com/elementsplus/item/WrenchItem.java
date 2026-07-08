@@ -17,12 +17,12 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.DebugStickState;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.redstone.NeighborUpdater;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,7 +56,7 @@ public class WrenchItem extends Item {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    private boolean handleInteraction(Player player, BlockState blockState, LevelAccessor levelAccessor, BlockPos blockPos, boolean isRightClick, ItemStack itemStack) {
+    private boolean handleInteraction(Player player, BlockState blockState, Level level, BlockPos blockPos, boolean isRightClick, ItemStack itemStack) {
         if (!(blockState.getBlock() instanceof AbstractPipeBlock)) {
             return false;
         }
@@ -81,7 +81,8 @@ public class WrenchItem extends Item {
             }
 
             BlockState blockState2 = cycleState(blockState, property, player.isSecondaryUseActive());
-            levelAccessor.setBlock(blockPos, blockState2, 3);
+            level.setBlock(blockPos, blockState2, 3);
+            NeighborUpdater.executeUpdate(level, blockState2, blockPos, blockState2.getBlock(), blockPos, false);
             message(player, Component.translatable(Items.DEBUG_STICK.getDescriptionId() + ".update", property.getName(), getNameHelper(blockState2, property)));
         } else {
             property = getRelative(collection, property, player.isSecondaryUseActive());

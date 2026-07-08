@@ -65,6 +65,9 @@ public class RedStoneWireBlockMixin {
                     j = Math.max(j, AbstractPipeBlock.getWireSignal(level.getBlockState(blockPos2.below()), direction, true));
                 }
             }
+            BlockPos blockPos2 = blockPos.relative(Direction.UP);
+            BlockState blockState = level.getBlockState(blockPos2);
+            j = Math.max(j, AbstractPipeBlock.getWireSignal(blockState, Direction.UP));
         }
 
         return Math.max(i, j - 1);
