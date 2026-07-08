@@ -1,5 +1,6 @@
 package com.elementsplus.blocks.pipe;
 
+import com.elementsplus.mixin.RedStoneWireBlockAccessor;
 import com.google.common.collect.Sets;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -19,7 +20,6 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AbstractPipeBlock extends RotatedPillarBlock {
     private final PipeMaterial pipeMaterial;
@@ -62,7 +62,7 @@ public abstract class AbstractPipeBlock extends RotatedPillarBlock {
 
     @Override
     public int getSignal(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos, Direction direction) {
-        if (!this.shouldSignal) return 0;
+        if (!((RedStoneWireBlockAccessor) Blocks.REDSTONE_WIRE).isShouldSignal()) return 0;
         return isSideConnectable(blockState, direction) ? blockState.getValue(POWER) : 0;
     }
 
@@ -88,25 +88,24 @@ public abstract class AbstractPipeBlock extends RotatedPillarBlock {
         }
     }
 
-    private boolean shouldSignal = false;
-
     private int calculateTargetStrength(BlockState blockState, Level level, BlockPos blockPos) {
-        this.shouldSignal = false;
+        ((RedStoneWireBlockAccessor) Blocks.REDSTONE_WIRE).setShouldSignal(false);
         int i = level.getBestNeighborSignal(blockPos);
-        this.shouldSignal = true;
+        ((RedStoneWireBlockAccessor) Blocks.REDSTONE_WIRE).setShouldSignal(true);
         int j = 0;
         if (i < 15) {
             for (Direction direction : Direction.values()) {
-                if (isSideConnectable(blockState, direction)) {
+                if (isSideConnectable(blockState, direction.getOpposite())) {
                     BlockPos blockPos2 = blockPos.relative(direction);
                     BlockState blockState2 = level.getBlockState(blockPos2);
-                    j = Math.max(j, this.getWireSignal(blockState2));
-                    BlockPos blockPos3 = blockPos.above();
-                    if (blockState2.isRedstoneConductor(level, blockPos2) && !level.getBlockState(blockPos3).isRedstoneConductor(level, blockPos3)) {
-                        j = Math.max(j, this.getWireSignal(level.getBlockState(blockPos2.above())));
-                    } else if (!blockState2.isRedstoneConductor(level, blockPos2)) {
-                        j = Math.max(j, this.getWireSignal(level.getBlockState(blockPos2.below())));
-                    }
+                    if (direction == Direction.DOWN && blockState2.is(Blocks.REDSTONE_WIRE)) continue;
+                    j = Math.max(j, getWireSignal(blockState2, direction));
+//                    BlockPos blockPos3 = blockPos.above();
+//                    if (blockState2.isRedstoneConductor(level, blockPos2) && !level.getBlockState(blockPos3).isRedstoneConductor(level, blockPos3)) {
+//                        j = Math.max(j, getWireSignal(level.getBlockState(blockPos2.above()), direction));
+//                    } else if (!blockState2.isRedstoneConductor(level, blockPos2)) {
+//                        j = Math.max(j, getWireSignal(level.getBlockState(blockPos2.below()), direction));
+//                    }
                 }
             }
         }
@@ -114,8 +113,12 @@ public abstract class AbstractPipeBlock extends RotatedPillarBlock {
         return Math.max(i, j - 1);
     }
 
-    private int getWireSignal(BlockState blockState) {
-        return (blockState.is(Blocks.REDSTONE_WIRE) || (blockState.getBlock() instanceof AbstractPipeBlock)) ? blockState.getValue(POWER) : 0;
+    public static int getWireSignal(BlockState blockState, Direction direction, boolean indirect) {
+        return (blockState.is(Blocks.REDSTONE_WIRE) || (!indirect && blockState.getBlock() instanceof AbstractPipeBlock abstractPipeBlock && abstractPipeBlock.isSideConnectable(blockState, direction))) ? blockState.getValue(POWER) : 0;
+    }
+
+    public static int getWireSignal(BlockState blockState, Direction direction) {
+        return getWireSignal(blockState, direction, false);
     }
 
 
@@ -165,7 +168,7 @@ public abstract class AbstractPipeBlock extends RotatedPillarBlock {
     }
 
     private void checkCornerChangeAt(Level level, BlockPos blockPos) {
-        if (level.getBlockState(blockPos).is(this)) {
+        if (level.getBlockState(blockPos).is(Blocks.REDSTONE_WIRE) || (level.getBlockState(blockPos).getBlock() instanceof AbstractPipeBlock)) {
             level.updateNeighborsAt(blockPos, this);
 
             for (Direction direction : Direction.values()) {
@@ -176,12 +179,19 @@ public abstract class AbstractPipeBlock extends RotatedPillarBlock {
 
     @Override
     protected int getDirectSignal(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos, Direction direction) {
-        return !this.shouldSignal ? 0 : blockState.getSignal(blockGetter, blockPos, direction);
+        return (((RedStoneWireBlockAccessor) Blocks.REDSTONE_WIRE).isShouldSignal() && isSideConnectable(blockState, direction)) ? blockState.getSignal(blockGetter, blockPos, direction) : 0;
     }
 
 
     @Override
     protected boolean isSignalSource(BlockState blockState) {
-        return this.shouldSignal;
+        return ((RedStoneWireBlockAccessor) Blocks.REDSTONE_WIRE).isShouldSignal();
+    }
+
+    @Override
+    protected void neighborChanged(BlockState blockState, Level level, BlockPos blockPos, Block block, BlockPos blockPos2, boolean bl) {
+        if (!level.isClientSide) {
+            this.updatePowerStrength(level, blockPos, blockState);
+        }
     }
 }

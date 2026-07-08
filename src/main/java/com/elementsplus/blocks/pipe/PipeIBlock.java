@@ -44,6 +44,7 @@ public class PipeIBlock extends AbstractPipeBlock {
 
     @Override
     public boolean isSideConnectable(BlockState blockState, Direction direction) {
+        if (direction == null) return false;
         return switch (direction) {
             case EAST, WEST -> blockState.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.X;
             case NORTH, SOUTH -> blockState.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.Z;

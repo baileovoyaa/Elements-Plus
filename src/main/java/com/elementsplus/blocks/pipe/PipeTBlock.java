@@ -124,6 +124,7 @@ public class PipeTBlock extends AbstractPipeBlock {
 
     @Override
     public boolean isSideConnectable(BlockState blockState, Direction direction) {
+        if (direction == null) return false;
         Direction mappedDirection = blockState.getValue(HORIZONTAL_FACING);
         Direction realDirection = getAxisBasedDirections(blockState.getValue(RotatedPillarBlock.AXIS)).get(getHorizontalDirections().indexOf(mappedDirection));
 

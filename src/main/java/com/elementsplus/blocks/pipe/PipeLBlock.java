@@ -135,6 +135,7 @@ public class PipeLBlock extends AbstractPipeBlock {
 
     @Override
     public boolean isSideConnectable(BlockState blockState, Direction direction) {
+        if (direction == null) return false;
         LShapePipeState state = LShapePipeState.fromAxisAndStartDirection(blockState.getValue(AXIS), blockState.getValue(HORIZONTAL_FACING));
         Set<Direction> directions = state.getDirections();
         return directions.contains(direction.getOpposite());
