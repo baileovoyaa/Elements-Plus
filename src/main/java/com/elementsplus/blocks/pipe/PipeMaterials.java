@@ -14,7 +14,12 @@ import java.util.function.Supplier;
 
 public class PipeMaterials {
 
-    public static final PipeMaterial RUST = new PipeMaterial();
+    public static final PipeMaterial RUST = new PipeMaterial() {
+        @Override
+        public int getDecay(BlockState blockState) {
+            return 3;
+        }
+    };
     public static final PipeMaterial STEEL = new PipeMaterial() {
         private static final Supplier<BiMap<Block, Block>> NEXT_BY_BLOCK = Suppliers.memoize(
                 () -> ImmutableBiMap.<Block, Block>builder()
@@ -24,6 +29,11 @@ public class PipeMaterials {
                         .put(ModBlocks.STEEL_PIPE_X, ModBlocks.RUST_STEEL_PIPE_X)
                         .build()
         );
+
+        @Override
+        public int getDecay(BlockState blockState) {
+            return 2;
+        }
 
         @Override
         public void onRandomTick(BlockState blockState, ServerLevel serverLevel, BlockPos blockPos, RandomSource randomSource) {

@@ -161,6 +161,34 @@ public class ModBlocks {
             "crystallizer"
     );
 
+    public static final Block ADVANCED_CRAFTING_TABLE = register(
+            new Block(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "advanced_crafting_table"
+    );
+
+    public static final Block METAL_CATALYST = register(
+            new Block(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "metal_catalyst"
+    );
+
+    public static final Block LITHOGRAPHY_MACHINE = register(
+            new Block(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "lithography_machine"
+    );
+
+
     public static void initialize() {
         // ===== 铁管 BlockItem =====
         Items.registerBlock(new BlockItem(STEEL_PIPE_L, new Item.Properties()) {
@@ -255,6 +283,33 @@ public class ModBlocks {
             @Override
             public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
                 tooltip.add(Component.translatable("tooltip.elements-plus.crystallizer")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+
+        // ===== 高级工作台 BlockItem =====
+        Items.registerBlock(new BlockItem(ADVANCED_CRAFTING_TABLE, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.advanced_crafting_table")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+
+        // ===== 金属催化器 BlockItem =====
+        Items.registerBlock(new BlockItem(METAL_CATALYST, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.metal_catalyst")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+
+        // ===== 光刻机 BlockItem =====
+        Items.registerBlock(new BlockItem(LITHOGRAPHY_MACHINE, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.lithography_machine")
                         .withStyle(style -> style.withColor(0xAAAAAA)));
             }
         });

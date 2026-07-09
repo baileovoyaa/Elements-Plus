@@ -1,0 +1,12 @@
+{
+    "parent": "minecraft:block/cube",
+    "textures": {
+        "down": "elements-plus:block/metal_catalyst/bottom",
+        "east": "elements-plus:block/metal_catalyst/left",
+        "north": "elements-plus:block/metal_catalyst/front",
+        "particle": "elements-plus:block/metal_catalyst/front",
+        "south": "elements-plus:block/metal_catalyst/back",
+        "up": "elements-plus:block/metal_catalyst/top",
+        "west": "elements-plus:block/metal_catalyst/right"
+    }
+}

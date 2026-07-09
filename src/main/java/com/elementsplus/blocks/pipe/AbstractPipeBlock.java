@@ -120,17 +120,10 @@ public abstract class AbstractPipeBlock extends RotatedPillarBlock {
                     if (direction == Direction.DOWN && blockState2.is(Blocks.REDSTONE_WIRE)) continue;
                     j = Math.max(j, getWireSignal(blockState2, direction));
                 }
-//                    BlockPos blockPos3 = blockPos.above();
-//                    if (blockState2.isRedstoneConductor(level, blockPos2) && !level.getBlockState(blockPos3).isRedstoneConductor(level, blockPos3)) {
-//                        j = Math.max(j, getWireSignal(level.getBlockState(blockPos2.above()), direction));
-//                    } else if (!blockState2.isRedstoneConductor(level, blockPos2)) {
-//                        j = Math.max(j, getWireSignal(level.getBlockState(blockPos2.below()), direction));
-//                    }
-
             }
         }
 
-        return Math.max(i, j - 1);
+        return Math.max(i, j - getPipeMaterial().getDecay(blockState));
     }
 
     public static int getWireSignal(BlockState blockState, Direction direction, boolean indirect) {
