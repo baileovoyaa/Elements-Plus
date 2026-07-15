@@ -1,8 +1,0 @@
-{
-	"format_version": "1.16.100",
-	"minecraft:texture_set": {
-		"color": "elements-plus:block/lithography_machine",
-		"metalness_emissive_roughness": "elements-plus:block/lithography_machine/mer",
-		"heightmap": "elements-plus:block/lithography_machine/height"
-	}
-}
