@@ -9,8 +9,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 public class ModBlockEntityTypes {
-    public static final BlockEntityType<CrystallizerBlockEntity> CRYSTALLIZER =
-            register("counter", CrystallizerBlockEntity::new, ModBlocks.CRYSTALLIZER);
+    public static final BlockEntityType<CrystallizerBlockEntity> CRYSTALLIZER = register("crystallizer", CrystallizerBlockEntity::new, ModBlocks.CRYSTALLIZER);
 
     private static <T extends BlockEntity> BlockEntityType<T> register(String name, BlockEntityType.BlockEntitySupplier<T> entityFactory, Block... blocks) {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, name);

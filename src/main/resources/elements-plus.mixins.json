@@ -6,7 +6,8 @@
         "ExampleMixin",
         "LivingEntityMixin",
         "RedStoneWireBlockAccessor",
-        "RedStoneWireBlockMixin"
+        "RedStoneWireBlockMixin",
+        "ShapedRecipePatternDataMixin"
     ],
     "injectors": {
         "defaultRequire": 1

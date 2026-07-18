@@ -1,5 +1,6 @@
 package com.elementsplus;
 
+import com.elementsplus.blocks.AdvancedCraftingTableBlock;
 import com.elementsplus.blocks.CrystallizerBlock;
 import com.elementsplus.blocks.pipe.*;
 import net.minecraft.core.Registry;
@@ -162,7 +163,7 @@ public class ModBlocks {
     );
 
     public static final Block ADVANCED_CRAFTING_TABLE = register(
-            new Block(BlockBehaviour.Properties.of()
+            new AdvancedCraftingTableBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()
