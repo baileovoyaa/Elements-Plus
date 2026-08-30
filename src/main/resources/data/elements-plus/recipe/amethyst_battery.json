@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "AAAAA",
+    "ACCCA",
+    "ACECA",
+    "ACCCA",
+    "AAAAA"
+  ],
+  "key": {
+    "E": {
+      "item": "elements-plus:etched_wafer"
+    },
+    "C": {
+      "item": "elements-plus:amethyst_capacitor"
+    },
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    }
+  },
+  "result": {
+    "id": "elements-plus:amethyst_battery"
+  }
+}

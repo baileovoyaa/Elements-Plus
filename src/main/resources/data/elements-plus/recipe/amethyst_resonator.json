@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " GGG ",
+    "T E T",
+    "T E T",
+    "C E C",
+    " HHH "
+  ],
+  "key": {
+    "G": {
+      "item": "elements-plus:gold_wire"
+    },
+    "E": {
+      "item": "elements-plus:etched_wafer"
+    },
+    "C": {
+      "item": "elements-plus:amethyst_capacitor"
+    },
+    "T": {
+      "item": "elements-plus:amethyst_transistor"
+    },
+    "H": {
+      "item": "elements-plus:heat_sink_substrate"
+    }
+  },
+  "result": {
+    "id": "elements-plus:amethyst_resonator"
+  }
+}

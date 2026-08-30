@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "C C C",
+    " N P ",
+    "  E  ",
+    " I I ",
+    "C C C"
+  ],
+  "key": {
+    "E": {
+      "item": "elements-plus:etched_wafer"
+    },
+    "I": {
+      "item": "elements-plus:insulating_layer"
+    },
+    "C": {
+      "item": "elements-plus:copper_wire"
+    },
+    "N": {
+      "item": "elements-plus:wafer_n"
+    },
+    "P": {
+      "item": "elements-plus:wafer_p"
+    }
+  },
+  "result": {
+    "id": "elements-plus:amethyst_resistor"
+  }
+}
