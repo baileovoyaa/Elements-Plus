@@ -1,33 +1,30 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "G G G",
-    " E E ",
-    "  W  ",
-    " I I ",
-    "C H C"
+    "G G",
+    "I I",
+    " W ",
+    "H H",
+    "C C"
   ],
   "key": {
     "G": {
       "item": "elements-plus:gold_wire"
     },
-    "E": {
-      "item": "elements-plus:etched_wafer"
-    },
-    "W": {
-      "item": "elements-plus:metallized_wafer"
-    },
     "I": {
       "item": "elements-plus:insulating_layer"
     },
-    "C": {
-      "item": "elements-plus:copper_wire"
+    "W": {
+      "item": "elements-plus:wafer_pn"
     },
     "H": {
       "item": "elements-plus:heat_sink_substrate"
+    },
+    "C": {
+      "item": "elements-plus:copper_wire"
     }
   },
   "result": {
-    "id": "elements-plus:amethyst_transistor"
+    "id": "elements-plus:amethyst_diode"
   }
 }

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "A A A",
+    "     ",
+    "A B A",
+    "     ",
+    "A B A"
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "B": {
+      "item": "minecraft:gold_nugget"
+    }
+  },
+  "result": {
+    "id": "elements-plus:amethyst_transistor"
+  }
+}

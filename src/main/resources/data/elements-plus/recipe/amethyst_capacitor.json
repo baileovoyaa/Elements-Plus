@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " CCC ",
+    " III ",
+    "CIEIC",
+    " III ",
+    " CCC "
+  ],
+  "key": {
+    "I": {
+      "item": "elements-plus:insulating_layer"
+    },
+    "E": {
+      "item": "elements-plus:etched_wafer"
+    },
+    "C": {
+      "item": "elements-plus:copper_wire"
+    }
+  },
+  "result": {
+    "id": "elements-plus:amethyst_capacitor"
+  }
+}
