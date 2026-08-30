@@ -39,6 +39,10 @@
   "tooltip.elements-plus.crystallizer": "A Crystallizer",
   "container.elements-plus.crystallizer": "Crystallizer",
 
+  "block.elements-plus.advanced_crafting_table": "Advanced Crafting Table",
+  "block.elements-plus.metal_catalyst": "Metal Catalyst",
+  "block.elements-plus.lithography_machine": "Lithography Machine",
+
   "item.elements-plus.silver_ingot": "Silver Ingot",
   "tooltip.elements-plus.silver_ingot": "A Silver Ingot",
 

@@ -141,22 +141,22 @@ public class AdvancedCraftingTableMenu extends RecipeBookMenu<CraftingInput, Cra
             itemStack = itemStack2.copy();
             if (i == 0) {
                 this.access.execute((level, blockPos) -> itemStack2.getItem().onCraftedBy(itemStack2, level, player));
-                if (!this.moveItemStackTo(itemStack2, 10, 46, true)) {
+                if (!this.moveItemStackTo(itemStack2, 26, 62, true)) {
                     return ItemStack.EMPTY;
                 }
 
                 slot.onQuickCraft(itemStack2, itemStack);
-            } else if (i >= 10 && i < 46) {
-                if (!this.moveItemStackTo(itemStack2, 1, 10, false)) {
-                    if (i < 37) {
-                        if (!this.moveItemStackTo(itemStack2, 37, 46, false)) {
+            } else if (i >= 26 && i < 62) {
+                if (!this.moveItemStackTo(itemStack2, 1, 26, false)) {
+                    if (i < 53) {
+                        if (!this.moveItemStackTo(itemStack2, 53, 62, false)) {
                             return ItemStack.EMPTY;
                         }
-                    } else if (!this.moveItemStackTo(itemStack2, 10, 37, false)) {
+                    } else if (!this.moveItemStackTo(itemStack2, 26, 53, false)) {
                         return ItemStack.EMPTY;
                     }
                 }
-            } else if (!this.moveItemStackTo(itemStack2, 10, 46, false)) {
+            } else if (!this.moveItemStackTo(itemStack2, 26, 62, false)) {
                 return ItemStack.EMPTY;
             }
 

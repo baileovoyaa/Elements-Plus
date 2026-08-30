@@ -42,6 +42,10 @@
   "tooltip.elements-plus.crystallizer": "一个高压结晶器",
   "container.elements-plus.crystallizer": "高压结晶器",
 
+  "block.elements-plus.advanced_crafting_table": "高级工作台",
+  "block.elements-plus.metal_catalyst": "金属催化器",
+  "block.elements-plus.lithography_machine": "光刻机",
+
   "item.elements-plus.amethyst_transistor": "紫水晶晶体管",
   "item.elements-plus.amethyst_diode": "紫水晶二极管",
   "item.elements-plus.amethyst_capacitor": "紫水晶电容器",

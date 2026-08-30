@@ -57,7 +57,28 @@ public class ModItemGroups {
                 ModItems.AMETHYST_CAPACITOR,
                 ModItems.AMETHYST_RESISTOR,
                 ModItems.AMETHYST_RESONATOR,
-                ModItems.AMETHYST_BATTERY
+                ModItems.AMETHYST_BATTERY,
+                ModItems.GOLD_WIRE,
+                ModItems.COPPER_WIRE,
+                ModItems.EMPTY_WAFER,
+                ModItems.WAFER_N,
+                ModItems.WAFER_P,
+                ModItems.WAFER_PN,
+                ModItems.ETCHED_WAFER,
+                ModItems.METALLIZED_WAFER,
+                ModItems.LITHOGRAPHY_CORE,
+                ModItems.EXPOSURE_ROOM,
+                ModItems.DEVELOPMENT_TANK,
+                ModItems.ION_IMPLANTER,
+                ModItems.DOPED_REDSTONE_DUST,
+                ModItems.DOPED_GLOWSTONE_DUST,
+                ModItems.HEAT_SINK_SUBSTRATE,
+                ModItems.HIGH_VOLTAGE_COIL,
+                ModItems.AMETHYST_LENS,
+                ModItems.INSULATING_LAYER,
+                ModItems.CATALYST,
+                ModItems.PHOTORESIST,
+                ModItems.LITHOGRAPHY_MASK
                 // 可以继续添加更多物品
         );
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());

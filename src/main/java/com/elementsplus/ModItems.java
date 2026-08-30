@@ -219,6 +219,38 @@ public class ModItems {
             "silver_ingot"
     );
 
+    // 引线
+    public static final Item GOLD_WIRE = register(new Item(new Item.Properties()), "gold_wire");
+    public static final Item COPPER_WIRE = register(new Item(new Item.Properties()), "copper_wire");
+
+    // 晶圆
+    public static final Item EMPTY_WAFER = register(new Item(new Item.Properties()), "empty_wafer");
+    public static final Item WAFER_N = register(new Item(new Item.Properties()), "wafer_n");
+    public static final Item WAFER_P = register(new Item(new Item.Properties()), "wafer_p");
+    public static final Item WAFER_PN = register(new Item(new Item.Properties()), "wafer_pn");
+    public static final Item ETCHED_WAFER = register(new Item(new Item.Properties()), "etched_wafer");
+    public static final Item METALLIZED_WAFER = register(new Item(new Item.Properties()), "metallized_wafer");
+
+    // 光刻机部件
+    public static final Item LITHOGRAPHY_CORE = register(new Item(new Item.Properties()), "lithography_core");
+    public static final Item EXPOSURE_ROOM = register(new Item(new Item.Properties()), "exposure_room");
+    public static final Item DEVELOPMENT_TANK = register(new Item(new Item.Properties()), "development_tank");
+    public static final Item ION_IMPLANTER = register(new Item(new Item.Properties()), "ion_implanter");
+
+    // 掺杂用品
+    public static final Item DOPED_REDSTONE_DUST = register(new Item(new Item.Properties()), "doped_redstone_dust");
+    public static final Item DOPED_GLOWSTONE_DUST = register(new Item(new Item.Properties()), "doped_glowstone_dust");
+
+    // 杂件
+    public static final Item HEAT_SINK_SUBSTRATE = register(new Item(new Item.Properties()), "heat_sink_substrate");
+    public static final Item HIGH_VOLTAGE_COIL = register(new Item(new Item.Properties()), "high_voltage_coil");
+    public static final Item AMETHYST_LENS = register(new Item(new Item.Properties()), "amethyst_lens");
+    public static final Item INSULATING_LAYER = register(new Item(new Item.Properties()), "insulating_layer");
+    public static final Item CATALYST = register(new Item(new Item.Properties()), "catalyst");
+    public static final Item PHOTORESIST = register(new Item(new Item.Properties()), "photoresist");
+    public static final Item LITHOGRAPHY_MASK = register(new Item(new Item.Properties()), "lithography_mask");
+
+
     public static void initialize() {
         // 物品已在静态块中注册
     }
