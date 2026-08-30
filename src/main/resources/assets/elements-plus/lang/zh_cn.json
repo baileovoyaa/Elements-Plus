@@ -59,6 +59,16 @@
   "tooltip.elements-plus.amethyst_resonator": "一个由紫水晶制成的谐振器，它可以共振红石信号",
   "tooltip.elements-plus.amethyst_battery": "一个由紫水晶制成的电池，它可以提供红石信号",
 
+  "item.elements-plus.gold_wire": "金引线",
+  "item.elements-plus.copper_wire": "铜引线",
+  "item.elements-plus.insulating_layer": "绝缘层",
+  "item.elements-plus.empty_wafer": "空白晶圆",
+  "item.elements-plus.wafer_n": "掺杂晶圆（N型）",
+  "item.elements-plus.wafer_p": "掺杂晶圆（P型）",
+  "item.elements-plus.wafer_pn": "PN结晶圆",
+  "item.elements-plus.etched_wafer": "刻蚀晶圆",
+  "item.elements-plus.metallized_wafer": "金属化晶圆",
+
   "effect.elements-plus.steel_pipe_shield": "钢管护盾",
   "effect.elements-plus.rust_proof": "防锈",
 

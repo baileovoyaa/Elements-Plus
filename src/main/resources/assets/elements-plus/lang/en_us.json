@@ -59,6 +59,16 @@
   "tooltip.elements-plus.amethyst_resonator": "A resonator made of amethyst, it can resonate the redstone signal",
   "tooltip.elements-plus.amethyst_battery": "A battery made of amethyst, it can provide the redstone signal",
 
+  "item.elements-plus.gold_wire": "Gold Wire",
+  "item.elements-plus.copper_wire": "Copper Wire",
+  "item.elements-plus.insulating_layer": "Insulating Layer",
+  "item.elements-plus.empty_wafer": "Empty Wafer",
+  "item.elements-plus.wafer_n": "Doped Wafer (Type N)",
+  "item.elements-plus.wafer_p": "Doped Wafer (Type P)",
+  "item.elements-plus.wafer_pn": "PN Junction Wafer",
+  "item.elements-plus.etched_wafer": "Etched Wafer",
+  "item.elements-plus.metallized_wafer": "Metallized Wafer",
+
   "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield",
   "effect.elements-plus.rust_proof": "Rust Proof",
 
