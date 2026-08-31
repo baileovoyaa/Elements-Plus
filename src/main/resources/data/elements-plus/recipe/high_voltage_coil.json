@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CIC",
+    "CLC",
+    "CIC"
+  ],
+  "key": {
+    "C": {
+      "item": "elements-plus:copper_wire"
+    },
+    "L": {
+      "item": "elements-plus:lightning_bottle"
+    },
+    "I": {
+      "item": "elements-plus:iron_ingot"
+    }
+  },
+  "result": {
+    "id": "elements-plus:high_voltage_coil",
+    "count": 6
+  }
+}

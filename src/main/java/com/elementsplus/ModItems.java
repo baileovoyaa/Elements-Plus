@@ -249,6 +249,7 @@ public class ModItems {
     public static final Item CATALYST = register(new Item(new Item.Properties()), "catalyst");
     public static final Item PHOTORESIST = register(new Item(new Item.Properties()), "photoresist");
     public static final Item LITHOGRAPHY_MASK = register(new Item(new Item.Properties()), "lithography_mask");
+    public static final Item LIGHTNING_BOTTLE = register(new Item(new Item.Properties()), "lightning_bottle");
 
 
     public static void initialize() {

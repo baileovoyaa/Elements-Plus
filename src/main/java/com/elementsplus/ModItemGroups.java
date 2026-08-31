@@ -78,7 +78,8 @@ public class ModItemGroups {
                 ModItems.INSULATING_LAYER,
                 ModItems.CATALYST,
                 ModItems.PHOTORESIST,
-                ModItems.LITHOGRAPHY_MASK
+                ModItems.LITHOGRAPHY_MASK,
+                ModItems.LIGHTNING_BOTTLE
                 // 可以继续添加更多物品
         );
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());
