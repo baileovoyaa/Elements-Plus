@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GCG",
+    "CEC",
+    "GCG"
+  ],
+  "key": {
+    "G": {
+      "item": "elements-plus:gold_wire"
+    },
+    "C": {
+      "item": "elements-plus:copper_wire"
+    },
+    "E": {
+      "item": "elements-plus:etched_wafer"
+    }
+  },
+  "result": {
+    "id": "elements-plus:metallized_wafer"
+  }
+}

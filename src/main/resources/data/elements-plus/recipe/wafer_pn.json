@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "elements-plus:wafer_n"
+    },
+    {
+      "item": "elements-plus:wafer_p"
+    }
+  ],
+  "result": {
+    "id": "elements-plus:wafer_pn"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "R R",
+    " W ",
+    "R R"
+  ],
+  "key": {
+    "R": {
+      "item": "elements-plus:doped_redstone_dust"
+    },
+    "W": {
+      "item": "elements-plus:empty_wafer"
+    }
+  },
+  "result": {
+    "id": "elements-plus:wafer_n"
+  }
+}

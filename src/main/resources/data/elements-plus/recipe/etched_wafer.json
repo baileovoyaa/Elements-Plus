@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "elements-plus:wafer_pn"
+    },
+    {
+      "item": "elements-plus:lithography_mask"
+    }
+  ],
+  "result": {
+    "id": "elements-plus:etched_wafer"
+  }
+}

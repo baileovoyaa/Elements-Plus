@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "G G",
+    " W ",
+    "G G"
+  ],
+  "key": {
+    "G": {
+      "item": "elements-plus:doped_glowstone_dust"
+    },
+    "W": {
+      "item": "elements-plus:empty_wafer"
+    }
+  },
+  "result": {
+    "id": "elements-plus:wafer_p"
+  }
+}
