@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RGR",
+    "GEG",
+    "TGT"
+  ],
+  "key": {
+    "R": {
+      "item": "elements-plus:amethyst_resonator"
+    },
+    "G": {
+      "item": "elements-plus:gold_wire"
+    },
+    "T": {
+      "item": "elements-plus:amethyst_transistor"
+    },
+    "E": {
+      "item": "elements-plus:etched_wafer"
+    }
+  },
+  "result": {
+    "id": "elements-plus:lithography_core"
+  }
+}

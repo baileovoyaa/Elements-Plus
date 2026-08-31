@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " B ",
+    " R ",
+    "SSS"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:slime_ball"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "S": {
+      "item": "minecraft:sugar"
+    }
+  },
+  "result": {
+    "id": "elements-plus:photoresist",
+    "count": 4
+  }
+}

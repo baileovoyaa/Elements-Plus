@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "H H",
+    "CRC",
+    "P P"
+  ],
+  "key": {
+    "H": {
+      "item": "elements-plus:high_voltage_coil"
+    },
+    "C": {
+      "item": "elements-plus:amethyst_capacitor"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    },
+    "P": {
+      "item": "elements-plus:steel_pipe_i"
+    }
+  },
+  "result": {
+    "id": "elements-plus:ion_implanter"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PLP",
+    "LRL",
+    "PLP"
+  ],
+  "key": {
+    "P": {
+      "item": "elements-plus:steel_pipe_i"
+    },
+    "L": {
+      "item": "elements-plus:amethyst_lens"
+    },
+    "R": {
+      "item": "elements-plus:amethyst_resonator"
+    }
+  },
+  "result": {
+    "id": "elements-plus:exposure_room"
+  }
+}

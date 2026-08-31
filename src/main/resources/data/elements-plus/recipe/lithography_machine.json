@@ -1,0 +1,39 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PHIHP",
+    "HRERH",
+    "LLCLL",
+    "HRDRH",
+    "PHLHP"
+  ],
+  "key": {
+    "E": {
+      "item": "elements-plus:exposure_room"
+    },
+    "R": {
+      "item": "elements-plus:amethyst_resonator"
+    },
+    "H": {
+      "item": "elements-plus:high_voltage_coil"
+    },
+    "P": {
+      "item": "elements-plus:steel_pipe_i"
+    },
+    "I": {
+      "item": "elements-plus:ion_implanter"
+    },
+    "L": {
+      "item": "elements-plus:amethyst_lens"
+    },
+    "C": {
+      "item": "elements-plus:lithography_core"
+    },
+    "D": {
+      "item": "elements-plus:development_tank"
+    }
+  },
+  "result": {
+    "id": "elements-plus:lithography_machine"
+  }
+}

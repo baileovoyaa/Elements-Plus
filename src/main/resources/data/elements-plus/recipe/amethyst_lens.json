@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "N N",
+    " A ",
+    "N N"
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:glass_pane"
+    },
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    }
+  },
+  "result": {
+    "id": "elements-plus:amethyst_lens"
+  }
+}
