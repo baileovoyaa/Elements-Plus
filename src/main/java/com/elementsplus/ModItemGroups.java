@@ -77,6 +77,7 @@ public class ModItemGroups {
                 ModItems.AMETHYST_LENS,
                 ModItems.INSULATING_LAYER,
                 ModItems.CATALYST,
+                ModItems.NETHERITE_FRAGMENT,
                 ModItems.PHOTORESIST,
                 ModItems.LITHOGRAPHY_MASK,
                 ModItems.LIGHTNING_BOTTLE

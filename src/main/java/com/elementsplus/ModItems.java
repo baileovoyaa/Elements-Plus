@@ -247,6 +247,7 @@ public class ModItems {
     public static final Item AMETHYST_LENS = register(new Item(new Item.Properties()), "amethyst_lens");
     public static final Item INSULATING_LAYER = register(new Item(new Item.Properties()), "insulating_layer");
     public static final Item CATALYST = register(new Item(new Item.Properties()), "catalyst");
+    public static final Item NETHERITE_FRAGMENT = register(new Item(new Item.Properties()), "netherite_fragment");
     public static final Item PHOTORESIST = register(new Item(new Item.Properties()), "photoresist");
     public static final Item LITHOGRAPHY_MASK = register(new Item(new Item.Properties()), "lithography_mask");
     public static final Item LIGHTNING_BOTTLE = register(new Item(new Item.Properties()), "lightning_bottle");
