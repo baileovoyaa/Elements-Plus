@@ -1,6 +1,7 @@
 package com.elementsplus;
 
 import com.elementsplus.blocks.AdvancedCraftingTableBlock;
+import com.elementsplus.blocks.ChargedLightningRodBlock;
 import com.elementsplus.blocks.CrystallizerBlock;
 import com.elementsplus.blocks.pipe.*;
 import net.minecraft.core.Registry;
@@ -9,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
@@ -189,6 +191,19 @@ public class ModBlocks {
             "lithography_machine"
     );
 
+    public static final Block CHARGED_LIGHTNING_ROD = register(
+            new ChargedLightningRodBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+                    .isValidSpawn(Blocks::never)
+                    .isRedstoneConductor(Blocks::never)
+                    .isSuffocating(Blocks::never)
+                    .isViewBlocking(Blocks::never)
+            ),
+            "charged_lightning_rod"
+    );
+
 
     public static void initialize() {
         // ===== 铁管 BlockItem =====
@@ -314,6 +329,16 @@ public class ModBlocks {
                         .withStyle(style -> style.withColor(0xAAAAAA)));
             }
         });
+
+        // ===== 充能避雷针 BlockItem =====
+        Items.registerBlock(new BlockItem(CHARGED_LIGHTNING_ROD, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.charged_lightning_rod")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+
 
         ElementsPlus.LOGGER.info("Registered blocks");
     }

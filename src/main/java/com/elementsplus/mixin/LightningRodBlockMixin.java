@@ -1,6 +1,7 @@
 package com.elementsplus.mixin;
 
 import com.elementsplus.ElementsPlus;
+import com.elementsplus.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -24,17 +25,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LightningRodBlock.class)
 public class LightningRodBlockMixin {
-    @Inject(method = "onLightningStrike", at = @At("HEAD"))
+    @Inject(method = "onLightningStrike", at = @At("RETURN"))
     public void onLightningStrike(BlockState blockState, Level level, BlockPos blockPos, CallbackInfo ci) {
         ElementsPlus.LOGGER.info("Lightning rod struck at {}", blockPos);
-        if (level.getEntitiesOfClass(Marker.class, new AABB(blockPos)).isEmpty()) {
-            Marker marker = EntityType.MARKER.create(level);
-            if (marker != null) {
-                marker.setPos(Vec3.atCenterOf(blockPos));
-                marker.setCustomName(Component.literal("Lightning Strike"));
-                marker.addTag("lightning_strike");
-            }
-            level.addFreshEntity(marker);
-        }
+        level.setBlockAndUpdate(blockPos, ModBlocks.CHARGED_LIGHTNING_ROD.withPropertiesOf(blockState));
     }
 }

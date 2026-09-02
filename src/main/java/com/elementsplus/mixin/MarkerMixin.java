@@ -13,11 +13,4 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Marker.class)
 public class MarkerMixin {
 
-    @Inject(method = "tick", at = @At("HEAD"))
-    public void tick(CallbackInfo ci) {
-        Marker marker = (Marker) (Object) this;
-        if (marker.getTags().contains("lightning_strike") && !marker.level().getBlockState(marker.blockPosition()).is(Blocks.LIGHTNING_ROD)) {
-            marker.remove(Entity.RemovalReason.DISCARDED);
-        }
-    }
 }

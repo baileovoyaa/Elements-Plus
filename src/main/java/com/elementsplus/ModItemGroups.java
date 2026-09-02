@@ -41,7 +41,8 @@ public class ModItemGroups {
                 ModBlocks.SILVER_PIPE_I,
                 ModBlocks.SILVER_PIPE_T,
                 ModBlocks.SILVER_PIPE_X,
-                ModItems.SILVER_INGOT
+                ModItems.SILVER_INGOT,
+                ModBlocks.CHARGED_LIGHTNING_ROD
                 // 可以继续添加更多物品
         );
         registerTab(

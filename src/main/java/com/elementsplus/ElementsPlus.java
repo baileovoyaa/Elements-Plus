@@ -37,21 +37,18 @@ public class ElementsPlus implements ModInitializer {
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
             if (!world.isClientSide) {
-                if (player.getItemInHand(hand).is(Items.GLASS_BOTTLE) && hitResult.getType() == HitResult.Type.BLOCK && world.getBlockState(hitResult.getBlockPos()).is(Blocks.LIGHTNING_ROD)) {
-                    List<Marker> markers = world.getEntitiesOfClass(Marker.class, new AABB(hitResult.getBlockPos()));
-                    if (!markers.isEmpty()) {
-                        markers.forEach(marker -> marker.remove(Entity.RemovalReason.DISCARDED));
-                        ItemStack itemStack = player.getItemInHand(hand);
-                        itemStack.shrink(1);
-                        world.playSound(player, player.getX(), player.getY(), player.getZ(), SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
-                        if (itemStack.isEmpty()) {
-                            player.setItemInHand(hand, new ItemStack(ModItems.LIGHTNING_BOTTLE));
-                        } else if (!player.getInventory().add(new ItemStack(ModItems.LIGHTNING_BOTTLE))) {
-                            player.drop(new ItemStack(ModItems.LIGHTNING_BOTTLE), false);
-                        }
-                        world.gameEvent(player, GameEvent.FLUID_PICKUP, hitResult.getBlockPos());
-                        return InteractionResult.CONSUME;
+                if (player.getItemInHand(hand).is(Items.GLASS_BOTTLE) && hitResult.getType() == HitResult.Type.BLOCK && world.getBlockState(hitResult.getBlockPos()).is(ModBlocks.CHARGED_LIGHTNING_ROD)) {
+                    world.setBlockAndUpdate(hitResult.getBlockPos(), Blocks.LIGHTNING_ROD.withPropertiesOf(world.getBlockState(hitResult.getBlockPos())));
+                    ItemStack itemStack = player.getItemInHand(hand);
+                    itemStack.shrink(1);
+                    world.playSound(player, player.getX(), player.getY(), player.getZ(), SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
+                    if (itemStack.isEmpty()) {
+                        player.setItemInHand(hand, new ItemStack(ModItems.LIGHTNING_BOTTLE));
+                    } else if (!player.getInventory().add(new ItemStack(ModItems.LIGHTNING_BOTTLE))) {
+                        player.drop(new ItemStack(ModItems.LIGHTNING_BOTTLE), false);
                     }
+                    world.gameEvent(player, GameEvent.FLUID_PICKUP, hitResult.getBlockPos());
+                    return InteractionResult.CONSUME;
                 }
             }
             return InteractionResult.PASS;
