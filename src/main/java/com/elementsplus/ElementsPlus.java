@@ -1,9 +1,11 @@
 package com.elementsplus;
 
+import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.minecraft.core.dispenser.DispenseItemBehavior;
 import net.minecraft.resources.ResourceLocation;
 
 import net.minecraft.sounds.SoundEvents;
@@ -14,6 +16,7 @@ import net.minecraft.world.entity.Marker;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -53,6 +56,8 @@ public class ElementsPlus implements ModInitializer {
             }
             return InteractionResult.PASS;
         });
+
+        DispenserBlock.registerBehavior(Items.GLASS_BOTTLE, new MyCustomBottleBehavior());
     }
 
     public static ResourceLocation id(String path) {
