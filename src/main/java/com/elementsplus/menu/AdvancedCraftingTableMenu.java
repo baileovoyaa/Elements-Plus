@@ -37,22 +37,22 @@ public class AdvancedCraftingTableMenu extends RecipeBookMenu<CraftingInput, Cra
         super(ModMenuTypes.ADVANCED_CRAFTING_TABLE, i);
         this.access = containerLevelAccess;
         this.player = inventory.player;
-        this.addSlot(new ResultSlot(inventory.player, this.craftSlots, this.resultSlots, 0, 143, 35));
+        this.addSlot(new ResultSlot(inventory.player, this.craftSlots, this.resultSlots, 0, 143, 53));
 
         for (int j = 0; j < 5; j++) {
             for (int k = 0; k < 5; k++) {
-                this.addSlot(new Slot(this.craftSlots, k + j * 5, 13 + k * 18, -1 + j * 18));
+                this.addSlot(new Slot(this.craftSlots, k + j * 5, 13 + k * 18, 17 + j * 18));
             }
         }
 
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 9; k++) {
-                this.addSlot(new Slot(inventory, k + j * 9 + 9, 8 + k * 18, 102 + j * 18));
+                this.addSlot(new Slot(inventory, k + j * 9 + 9, 8 + k * 18, 120 + j * 18));
             }
         }
 
         for (int j = 0; j < 9; j++) {
-            this.addSlot(new Slot(inventory, j, 8 + j * 18, 160));
+            this.addSlot(new Slot(inventory, j, 8 + j * 18, 178));
         }
     }
 

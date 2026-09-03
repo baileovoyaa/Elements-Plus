@@ -31,6 +31,7 @@ public class AdvancedCraftingTableScreen extends AbstractContainerScreen<Advance
 
     @Override
     protected void init() {
+        this.imageHeight = 202;
         super.init();
         this.widthTooNarrow = this.width < 379;
         this.recipeBookComponent.init(this.width, this.height, this.minecraft, this.widthTooNarrow, this.menu);
@@ -42,9 +43,8 @@ public class AdvancedCraftingTableScreen extends AbstractContainerScreen<Advance
         }));
         this.addWidget(this.recipeBookComponent);
         this.titleLabelX = 12;
-        this.titleLabelY = -12;
-        this.imageHeight = 202;
-        this.inventoryLabelY = this.imageHeight - 111;
+        this.titleLabelY = 6;
+        this.inventoryLabelY = this.imageHeight - 93;
     }
 
     @Override
