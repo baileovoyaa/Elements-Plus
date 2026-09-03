@@ -88,5 +88,7 @@
   "effect.elements-plus.rust_proof": "防锈",
 
   "itemGroup.elements-plus.steel_pipe": "元素++",
-  "itemGroup.elements-plus.circuit": "电子电路"
+  "itemGroup.elements-plus.circuit": "电子电路",
+
+  "gui.jei.category.elements-plus.advanced_crafting": "高级合成"
 }

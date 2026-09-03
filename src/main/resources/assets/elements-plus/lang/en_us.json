@@ -89,5 +89,7 @@
   "effect.elements-plus.rust_proof": "Rust Proof",
 
   "itemGroup.elements-plus.steel_pipe": "Elements Plus",
-  "itemGroup.elements-plus.circuit": "Electronic Circuit"
+  "itemGroup.elements-plus.circuit": "Electronic Circuit",
+
+  "gui.jei.category.elements-plus.advanced_crafting": "Advanced Crafting"
 }

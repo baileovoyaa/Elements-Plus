@@ -20,6 +20,9 @@
     ],
     "client": [
       "com.elementsplus.client.ElementsPlusClient"
+    ],
+    "jei_mod_plugin": [
+      "com.elementsplus.compat.jei.ElementsPlusJEIPlugin"
     ]
   },
   "mixins": [
