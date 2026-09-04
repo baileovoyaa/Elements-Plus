@@ -20,6 +20,12 @@ public class PipeMaterials {
             return 3;
         }
     };
+    public static final PipeMaterial WAXED_STEEL = new PipeMaterial() {
+        @Override
+        public int getDecay(BlockState blockState) {
+            return 2;
+        }
+    };
     public static final PipeMaterial STEEL = new PipeMaterial() {
         private static final Supplier<BiMap<Block, Block>> NEXT_BY_BLOCK = Suppliers.memoize(
                 () -> ImmutableBiMap.<Block, Block>builder()

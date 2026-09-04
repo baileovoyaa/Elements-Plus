@@ -1,0 +1,12 @@
+{
+    "parent": "minecraft:block/cube",
+    "textures": {
+        "down": "elements-plus:block/silver_ore/bottom",
+        "east": "elements-plus:block/silver_ore/left",
+        "north": "elements-plus:block/silver_ore/front",
+        "particle": "elements-plus:block/silver_ore/front",
+        "south": "elements-plus:block/silver_ore/back",
+        "up": "elements-plus:block/silver_ore/top",
+        "west": "elements-plus:block/silver_ore/right"
+    }
+}

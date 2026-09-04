@@ -17,6 +17,15 @@
   "tooltip.elements-plus.steel_pipe_t": "一根 T 形状的钢管，它可以传输红石信号",
   "tooltip.elements-plus.steel_pipe_x": "一根 X 形状的钢管，它可以传输红石信号",
 
+  "block.elements-plus.waxed_steel_pipe_l": "涂蜡的钢管 L",
+  "block.elements-plus.waxed_steel_pipe_i": "涂蜡的钢管 I",
+  "block.elements-plus.waxed_steel_pipe_t": "涂蜡的钢管 T",
+  "block.elements-plus.waxed_steel_pipe_x": "涂蜡的钢管 X",
+  "tooltip.elements-plus.waxed_steel_pipe_l": "一根 L 形状的涂蜡钢管，它可以传输红石信号，且不会锈蚀",
+  "tooltip.elements-plus.waxed_steel_pipe_i": "一根 I 形状的涂蜡钢管，它可以传输红石信号，且不会锈蚀",
+  "tooltip.elements-plus.waxed_steel_pipe_t": "一根 T 形状的涂蜡钢管，它可以传输红石信号，且不会锈蚀",
+  "tooltip.elements-plus.waxed_steel_pipe_x": "一根 X 形状的涂蜡钢管，它可以传输红石信号，且不会锈蚀",
+
   "block.elements-plus.rust_steel_pipe_i": "生锈的钢管 I",
   "block.elements-plus.rust_steel_pipe_l": "生锈的钢管 L",
   "block.elements-plus.rust_steel_pipe_t": "生锈的钢管 T",
@@ -46,6 +55,7 @@
   "block.elements-plus.metal_catalyst": "金属催化器",
   "block.elements-plus.lithography_machine": "光刻机",
   "block.elements-plus.charged_lightning_rod": "充能避雷针",
+  "block.elements-plus.silver_ore": "银矿石",
 
   "item.elements-plus.amethyst_transistor": "紫水晶晶体管",
   "item.elements-plus.amethyst_diode": "紫水晶二极管",

@@ -17,6 +17,16 @@
   "tooltip.elements-plus.steel_pipe_t": "A Steel Pipe with a shape of a T, it can carry redstone signal",
   "tooltip.elements-plus.steel_pipe_x": "A Steel Pipe with a shape of a X, it can carry redstone signal",
 
+
+  "block.elements-plus.waxed_steel_pipe_l": "Waxed Steel Pipe L",
+  "block.elements-plus.waxed_steel_pipe_i": "Waxed Steel Pipe I",
+  "block.elements-plus.waxed_steel_pipe_t": "Waxed Steel Pipe T",
+  "block.elements-plus.waxed_steel_pipe_x": "Waxed Steel Pipe X",
+  "tooltip.elements-plus.waxed_steel_pipe_l": "A Waxed Steel Pipe with a shape of a L, it can carry redstone signal, and won't rust",
+  "tooltip.elements-plus.waxed_steel_pipe_i": "A Waxed Steel Pipe with a shape of a I, it can carry redstone signal, and won't rust",
+  "tooltip.elements-plus.waxed_steel_pipe_t": "A Waxed Steel Pipe with a shape of a T, it can carry redstone signal, and won't rust",
+  "tooltip.elements-plus.waxed_steel_pipe_x": "A Waxed Steel Pipe with a shape of a X, it can carry redstone signal, and won't rust",
+
   "block.elements-plus.rust_steel_pipe_l": "Rust Steel Pipe L",
   "block.elements-plus.rust_steel_pipe_i": "Rust Steel Pipe I",
   "block.elements-plus.rust_steel_pipe_t": "Rust Steel Pipe T",
@@ -43,6 +53,7 @@
   "block.elements-plus.metal_catalyst": "Metal Catalyst",
   "block.elements-plus.lithography_machine": "Lithography Machine",
   "block.elements-plus.charged_lightning_rod": "Charged Lightning Rod",
+  "block.elements-plus.silver_ore": "Silver Ore",
 
   "item.elements-plus.silver_ingot": "Silver Ingot",
   "tooltip.elements-plus.silver_ingot": "A Silver Ingot",

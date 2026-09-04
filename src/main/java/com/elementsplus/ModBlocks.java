@@ -8,9 +8,13 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.UniformFloat;
+import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DropExperienceBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
@@ -62,6 +66,47 @@ public class ModBlocks {
                     PipeMaterials.STEEL
             ),
             "steel_pipe_x"
+    );
+
+
+    public static final Block WAXED_STEEL_PIPE_L = register(
+            new PipeLBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion(),
+                    PipeMaterials.WAXED_STEEL
+            ),
+            "waxed_steel_pipe_l"
+    );
+
+    public static final Block WAXED_STEEL_PIPE_I = register(
+            new PipeIBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion(),
+                    PipeMaterials.WAXED_STEEL
+            ),
+            "waxed_steel_pipe_i"
+    );
+
+    public static final Block WAXED_STEEL_PIPE_T = register(
+            new PipeTBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion(),
+                    PipeMaterials.WAXED_STEEL
+            ),
+            "waxed_steel_pipe_t"
+    );
+
+    public static final Block WAXED_STEEL_PIPE_X = register(
+            new PipeXBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion(),
+                    PipeMaterials.WAXED_STEEL
+            ),
+            "waxed_steel_pipe_x"
     );
 
     // ===== 锈管 4 种形状（已生锈，可氧化） =====
@@ -173,6 +218,17 @@ public class ModBlocks {
             "advanced_crafting_table"
     );
 
+    public static final Block SILVER_ORE = register(
+            new DropExperienceBlock(
+                    UniformInt.of(3, 7),
+                    BlockBehaviour.Properties.of()
+                            .strength(2.0f)
+                            .sound(SoundType.STONE)
+                            .requiresCorrectToolForDrops()
+            ),
+            "silver_ore"
+    );
+
     public static final Block METAL_CATALYST = register(
             new Block(BlockBehaviour.Properties.of()
                     .strength(2.0f)
@@ -232,6 +288,36 @@ public class ModBlocks {
             @Override
             public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
                 tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe_x")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+
+        // ===== 涂蜡钢管 BlockItem =====
+        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_L, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.waxed_steel_pipe_l")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_I, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.waxed_steel_pipe_i")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_T, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.waxed_steel_pipe_t")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_X, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.waxed_steel_pipe_x")
                         .withStyle(style -> style.withColor(0xAAAAAA)));
             }
         });
@@ -339,6 +425,14 @@ public class ModBlocks {
             }
         });
 
+        // ===== 银矿石 BlockItem =====
+        Items.registerBlock(new BlockItem(SILVER_ORE, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.silver_ore")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
 
         ElementsPlus.LOGGER.info("Registered blocks");
     }

@@ -33,6 +33,10 @@ public class ModItemGroups {
                 ModBlocks.STEEL_PIPE_I,
                 ModBlocks.STEEL_PIPE_T,
                 ModBlocks.STEEL_PIPE_X,
+                ModBlocks.WAXED_STEEL_PIPE_L,
+                ModBlocks.WAXED_STEEL_PIPE_I,
+                ModBlocks.WAXED_STEEL_PIPE_T,
+                ModBlocks.WAXED_STEEL_PIPE_X,
                 ModBlocks.RUST_STEEL_PIPE_L,
                 ModBlocks.RUST_STEEL_PIPE_I,
                 ModBlocks.RUST_STEEL_PIPE_T,
@@ -42,6 +46,7 @@ public class ModItemGroups {
                 ModBlocks.SILVER_PIPE_T,
                 ModBlocks.SILVER_PIPE_X,
                 ModItems.SILVER_INGOT,
+                ModBlocks.SILVER_ORE,
                 ModBlocks.CHARGED_LIGHTNING_ROD
                 // 可以继续添加更多物品
         );

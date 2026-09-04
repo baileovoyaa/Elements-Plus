@@ -1,0 +1,15 @@
+{
+	"variants": {
+		"axis=y": {
+			"model": "elements-plus:block/steel_pipe_x",
+			"x": 90
+		},
+		"axis=x": {
+			"model": "elements-plus:block/steel_pipe_x",
+			"y": 90
+		},
+		"axis=z": {
+			"model": "elements-plus:block/steel_pipe_x"
+		}
+	}
+}

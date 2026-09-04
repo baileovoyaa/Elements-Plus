@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "# ",
+    "##",
+    "# "
+  ],
+  "key": {
+    "#": {
+      "item": "elements-plus:silver_ingot"
+    }
+  },
+  "result": {
+    "id": "elements-plus:silver_pipe_t"
+  }
+}
