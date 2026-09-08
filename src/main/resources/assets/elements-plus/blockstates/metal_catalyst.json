@@ -1,7 +1,19 @@
 {
-  "variants": {
-    "": {
-      "model": "elements-plus:block/metal_catalyst"
+    "variants": {
+        "facing=north": {
+            "model": "elements-plus:block/metal_catalyst"
+        },
+        "facing=east": {
+            "model": "elements-plus:block/metal_catalyst",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "elements-plus:block/metal_catalyst",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "elements-plus:block/metal_catalyst",
+            "y": 270
+        }
     }
-  }
 }
