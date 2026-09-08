@@ -27,10 +27,23 @@ public class MetalCatalystRecipe implements Recipe<MetalCatalystRecipe.Input> {
     });
     public static final RecipeSerializer<MetalCatalystRecipe> SERIALIZER = RecipeSerializer.register(TYPE_ID.toString(), new Serializer());
 
-    private final List<Ingredient> inputs;
+    public record InputEntry(Ingredient ingredient, int count) {
+        public static final MapCodec<InputEntry> CODEC = RecordCodecBuilder.mapCodec(instance ->
+                instance.group(
+                        Ingredient.CODEC.fieldOf("item").forGetter(InputEntry::ingredient),
+                        com.mojang.serialization.Codec.INT.optionalFieldOf("count", 1).forGetter(InputEntry::count)
+                ).apply(instance, InputEntry::new)
+        );
+
+        public boolean test(ItemStack stack) {
+            return ingredient.test(stack) && stack.getCount() >= count;
+        }
+    }
+
+    private final List<InputEntry> inputs;
     private final ItemStack output;
 
-    public MetalCatalystRecipe(List<Ingredient> inputs, ItemStack output) {
+    public MetalCatalystRecipe(List<InputEntry> inputs, ItemStack output) {
         this.inputs = inputs;
         this.output = output;
     }
@@ -83,7 +96,7 @@ public class MetalCatalystRecipe implements Recipe<MetalCatalystRecipe.Input> {
         return TYPE;
     }
 
-    public List<Ingredient> getInputs() {
+    public List<InputEntry> getInputs() {
         return inputs;
     }
 
@@ -123,7 +136,7 @@ public class MetalCatalystRecipe implements Recipe<MetalCatalystRecipe.Input> {
 
         public static final MapCodec<MetalCatalystRecipe> CODEC = RecordCodecBuilder.mapCodec(instance ->
                 instance.group(
-                        Ingredient.CODEC.listOf().fieldOf("inputs").forGetter(r -> r.inputs),
+                        InputEntry.CODEC.codec().listOf().fieldOf("inputs").forGetter(r -> r.inputs),
                         ItemStack.CODEC.fieldOf("result").forGetter(r -> r.output)
                 ).apply(instance, MetalCatalystRecipe::new)
         );
@@ -131,16 +144,19 @@ public class MetalCatalystRecipe implements Recipe<MetalCatalystRecipe.Input> {
         public static final StreamCodec<RegistryFriendlyByteBuf, MetalCatalystRecipe> STREAM_CODEC = StreamCodec.of(
                 (buf, recipe) -> {
                     buf.writeVarInt(recipe.inputs.size());
-                    for (Ingredient ingredient : recipe.inputs) {
-                        Ingredient.CONTENTS_STREAM_CODEC.encode(buf, ingredient);
+                    for (InputEntry entry : recipe.inputs) {
+                        Ingredient.CONTENTS_STREAM_CODEC.encode(buf, entry.ingredient());
+                        buf.writeVarInt(entry.count());
                     }
                     ItemStack.STREAM_CODEC.encode(buf, recipe.output);
                 },
                 (buf) -> {
                     int count = buf.readVarInt();
-                    List<Ingredient> inputs = new ArrayList<>();
+                    List<InputEntry> inputs = new ArrayList<>();
                     for (int i = 0; i < count; i++) {
-                        inputs.add(Ingredient.CONTENTS_STREAM_CODEC.decode(buf));
+                        Ingredient ingredient = Ingredient.CONTENTS_STREAM_CODEC.decode(buf);
+                        int entryCount = buf.readVarInt();
+                        inputs.add(new InputEntry(ingredient, entryCount));
                     }
                     ItemStack output = ItemStack.STREAM_CODEC.decode(buf);
                     return new MetalCatalystRecipe(inputs, output);

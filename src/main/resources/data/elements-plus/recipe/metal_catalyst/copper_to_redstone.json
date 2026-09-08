@@ -1,12 +1,14 @@
 {
-  "type": "elements-plus:metal_catalyst",
-  "inputs": [
-    {
-      "item": "minecraft:copper_ingot"
+    "type": "elements-plus:metal_catalyst",
+    "inputs": [
+        {
+            "item": {
+                "item": "minecraft:copper_ingot"
+            }
+        }
+    ],
+    "result": {
+        "id": "minecraft:redstone",
+        "count": 1
     }
-  ],
-  "result": {
-    "id": "minecraft:redstone",
-    "count": 1
-  }
 }

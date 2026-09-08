@@ -142,7 +142,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
         if (!blockEntity.items.get(0).isEmpty()) inputs.add(blockEntity.items.get(0));
         if (!blockEntity.items.get(1).isEmpty()) inputs.add(blockEntity.items.get(1));
 
-        boolean canWork = !blockEntity.isOverfilled() && hasFuel && MetalCatalystRecipe.canCraft(inputs, level);
+        boolean canWork = !blockEntity.isOverfilled() && hasFuel && canBurn(blockEntity, inputs, level);
 
         if (blockEntity.isLit() || canWork) {
             int maxStackSize = blockEntity.getMaxStackSize();
@@ -160,7 +160,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
                 }
             }
 
-            if (blockEntity.isLit() && !blockEntity.isOverfilled() && MetalCatalystRecipe.canCraft(inputs, level)) {
+            if (blockEntity.isLit() && !blockEntity.isOverfilled() && canBurn(blockEntity, inputs, level)) {
                 blockEntity.cookingProgress++;
                 if (blockEntity.cookingProgress == blockEntity.cookingTotalTime) {
                     blockEntity.cookingProgress = 0;
@@ -197,7 +197,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
         } else if (!ItemStack.isSameItemSameComponents(output, willOutput)) {
             return false;
         } else {
-            return output.getCount() < blockEntity.getMaxStackSize() && output.getCount() < output.getMaxStackSize();
+            return output.getCount() < blockEntity.getMaxStackSize() && output.getCount() < output.getMaxStackSize() && willOutput.getCount() + output.getCount() <= willOutput.getMaxStackSize();
         }
     }
 
@@ -219,8 +219,9 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
         }
 
         for (int i = 0; i < inputs.size(); i++) {
-            if (i < blockEntity.items.size() - 2) {
-                blockEntity.items.get(i).shrink(1);
+            if (i < recipe.getInputs().size()) {
+                int shrinkAmount = recipe.getInputs().get(i).count();
+                blockEntity.items.get(i).shrink(shrinkAmount);
             }
         }
 
