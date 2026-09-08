@@ -1,6 +1,7 @@
 package com.elementsplus;
 
 import com.elementsplus.blocks.entity.CrystallizerBlockEntity;
+import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -10,6 +11,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 
 public class ModBlockEntityTypes {
     public static final BlockEntityType<CrystallizerBlockEntity> CRYSTALLIZER = register("crystallizer", CrystallizerBlockEntity::new, ModBlocks.CRYSTALLIZER);
+    public static final BlockEntityType<MetalCatalystBlockEntity> METAL_CATALYST = register("metal_catalyst", MetalCatalystBlockEntity::new, ModBlocks.METAL_CATALYST);
 
     private static <T extends BlockEntity> BlockEntityType<T> register(String name, BlockEntityType.BlockEntitySupplier<T> entityFactory, Block... blocks) {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, name);

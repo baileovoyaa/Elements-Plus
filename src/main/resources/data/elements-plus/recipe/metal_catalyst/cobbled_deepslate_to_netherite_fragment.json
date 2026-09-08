@@ -1,0 +1,13 @@
+{
+    "type": "elements-plus:metal_catalyst",
+    "inputs": [
+        {
+            "item": "minecraft:cobbled_deepslate",
+            "count": 64
+        }
+    ],
+    "result": {
+        "id": "elements-plus:netherite_fragment",
+        "count": 1
+    }
+}

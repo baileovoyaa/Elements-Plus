@@ -1,6 +1,7 @@
 package com.elementsplus;
 
 import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
+import com.elementsplus.recipe.MetalCatalystRecipe;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
@@ -50,6 +51,7 @@ public class ElementsPlus implements ModInitializer {
         ModBlocks.initialize();
         ModEffects.initialize();
         ModBlockEntityTypes.initialize();
+        MetalCatalystRecipe.TYPE.toString();
         LOGGER.info("Hello Fabric world!");
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {

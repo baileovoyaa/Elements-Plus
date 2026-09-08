@@ -49,6 +49,11 @@
   "tooltip.elements-plus.crystallizer": "A Crystallizer",
   "container.elements-plus.crystallizer": "Crystallizer",
 
+  "block.elements-plus.metal_catalyst": "Metal Catalyst",
+  "tooltip.elements-plus.metal_catalyst": "A Metal Catalyst",
+  "container.elements-plus.metal_catalyst": "Metal Catalyst",
+  "gui.elements-plus.metal_catalyst.clear_waste": "Clear Waste",
+
   "block.elements-plus.advanced_crafting_table": "Advanced Crafting Table",
   "block.elements-plus.metal_catalyst": "Metal Catalyst",
   "block.elements-plus.lithography_machine": "Lithography Machine",
@@ -104,5 +109,6 @@
   "itemGroup.elements-plus.steel_pipe": "Elements Plus",
   "itemGroup.elements-plus.circuit": "Electronic Circuit",
 
-  "gui.jei.category.elements-plus.advanced_crafting": "Advanced Crafting"
+  "gui.jei.category.elements-plus.advanced_crafting": "Advanced Crafting",
+  "gui.jei.category.elements-plus.high_pressure_crystallizer": "High Pressure Crystallizer"
 }

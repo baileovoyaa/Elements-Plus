@@ -3,7 +3,9 @@ package com.elementsplus;
 import com.elementsplus.blocks.AdvancedCraftingTableBlock;
 import com.elementsplus.blocks.ChargedLightningRodBlock;
 import com.elementsplus.blocks.CrystallizerBlock;
+import com.elementsplus.blocks.MetalCatalystBlock;
 import com.elementsplus.blocks.pipe.*;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -12,10 +14,7 @@ import net.minecraft.util.valueproviders.IntProvider;
 import net.minecraft.util.valueproviders.UniformFloat;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.item.*;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.DropExperienceBlock;
-import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import java.util.List;
@@ -230,7 +229,7 @@ public class ModBlocks {
     );
 
     public static final Block METAL_CATALYST = register(
-            new Block(BlockBehaviour.Properties.of()
+            new MetalCatalystBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()

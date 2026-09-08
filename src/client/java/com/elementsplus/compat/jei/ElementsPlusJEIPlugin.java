@@ -12,10 +12,10 @@ import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -34,7 +34,8 @@ public class ElementsPlusJEIPlugin implements IModPlugin {
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
         registration.addRecipeCategories(
-                new AdvancedCraftingCategory(registration.getJeiHelpers().getGuiHelper())
+                new AdvancedCraftingCategory(registration.getJeiHelpers().getGuiHelper()),
+                new HighPressureCrystallizerCategory(registration.getJeiHelpers().getGuiHelper())
         );
     }
 
@@ -65,6 +66,11 @@ public class ElementsPlusJEIPlugin implements IModPlugin {
         }
 
         registration.addRecipes(AdvancedCraftingRecipeDisplay.TYPE, largeRecipes);
+
+        List<HighPressureCrystallizerDisplay> crystallizerRecipes = List.of(
+                HighPressureCrystallizerDisplay.create(Items.SAND, Items.AMETHYST_SHARD)
+        );
+        registration.addRecipes(HighPressureCrystallizerDisplay.TYPE, crystallizerRecipes);
     }
 
     @Override
@@ -75,6 +81,9 @@ public class ElementsPlusJEIPlugin implements IModPlugin {
 
         // Advanced crafting category: only the advanced crafting table.
         registration.addRecipeCatalyst(ModBlocks.ADVANCED_CRAFTING_TABLE, AdvancedCraftingRecipeDisplay.TYPE);
+
+        // High pressure crystallizer category: the crystallizer block.
+        registration.addRecipeCatalyst(ModBlocks.CRYSTALLIZER, HighPressureCrystallizerDisplay.TYPE);
     }
 
     @Override

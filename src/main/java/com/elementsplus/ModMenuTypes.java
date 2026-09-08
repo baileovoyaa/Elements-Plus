@@ -2,6 +2,7 @@ package com.elementsplus;
 
 import com.elementsplus.menu.AdvancedCraftingTableMenu;
 import com.elementsplus.menu.CrystallizerMenu;
+import com.elementsplus.menu.MetalCatalystMenu;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -15,6 +16,7 @@ import static com.elementsplus.ElementsPlus.MOD_ID;
 public class ModMenuTypes {
     public static final MenuType<CrystallizerMenu> CRYSTALLIZER = register("crystallizer", CrystallizerMenu::new);
     public static final MenuType<AdvancedCraftingTableMenu> ADVANCED_CRAFTING_TABLE = register("advanced_crafting_table", AdvancedCraftingTableMenu::new);
+    public static final MenuType<MetalCatalystMenu> METAL_CATALYST = register("metal_catalyst", MetalCatalystMenu::new);
 
     private static <T extends AbstractContainerMenu> MenuType<T> register(String string, MenuType.MenuSupplier<T> menuSupplier) {
         return Registry.register(BuiltInRegistries.MENU, ResourceLocation.fromNamespaceAndPath(MOD_ID, string), new MenuType<>(menuSupplier, FeatureFlags.VANILLA_SET));

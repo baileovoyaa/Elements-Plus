@@ -51,6 +51,11 @@
   "tooltip.elements-plus.crystallizer": "一个高压结晶器",
   "container.elements-plus.crystallizer": "高压结晶器",
 
+  "block.elements-plus.metal_catalyst": "金属催化器",
+  "tooltip.elements-plus.metal_catalyst": "一个金属催化器",
+  "container.elements-plus.metal_catalyst": "金属催化器",
+  "gui.elements-plus.metal_catalyst.clear_waste": "清空废液",
+
   "block.elements-plus.advanced_crafting_table": "高级工作台",
   "block.elements-plus.metal_catalyst": "金属催化器",
   "block.elements-plus.lithography_machine": "光刻机",
@@ -103,5 +108,6 @@
   "itemGroup.elements-plus.steel_pipe": "元素++",
   "itemGroup.elements-plus.circuit": "电子电路",
 
-  "gui.jei.category.elements-plus.advanced_crafting": "高级合成"
+  "gui.jei.category.elements-plus.advanced_crafting": "高级合成",
+  "gui.jei.category.elements-plus.high_pressure_crystallizer": "高压结晶器"
 }
