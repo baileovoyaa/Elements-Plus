@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "elements-plus:silver_block"
+    }
+  ],
+  "result": {
+    "id": "elements-plus:silver_ingot",
+    "count": 9
+  }
+}

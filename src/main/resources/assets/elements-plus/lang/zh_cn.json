@@ -56,6 +56,8 @@
   "block.elements-plus.lithography_machine": "光刻机",
   "block.elements-plus.charged_lightning_rod": "充能避雷针",
   "block.elements-plus.silver_ore": "银矿石",
+  "block.elements-plus.silver_block": "银块",
+  "block.elements-plus.experiment_table": "实验桌",
 
   "item.elements-plus.amethyst_transistor": "紫水晶晶体管",
   "item.elements-plus.amethyst_diode": "紫水晶二极管",
@@ -93,6 +95,7 @@
   "item.elements-plus.photoresist": "光刻胶",
   "item.elements-plus.lithography_mask": "光刻掩膜板",
   "item.elements-plus.lightning_bottle": "瓶装闪电",
+  "item.elements-plus.computer": "电脑",
 
   "effect.elements-plus.steel_pipe_shield": "钢管护盾",
   "effect.elements-plus.rust_proof": "防锈",

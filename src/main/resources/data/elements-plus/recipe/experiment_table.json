@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LHLHL",
+    "HLLLH",
+    "LLCLL",
+    "HLFLH",
+    "LHLHL"
+  ],
+  "key": {
+    "L": {
+      "item": "elements-plus:amethyst_lens"
+    },
+    "H": {
+      "item": "elements-plus:high_voltage_coil"
+    },
+    "C": {
+      "item": "elements-plus:computer"
+    },
+    "F": {
+      "item": "furnace"
+    }
+  },
+  "result": {
+    "id": "elements-plus:experiment_table"
+  }
+}

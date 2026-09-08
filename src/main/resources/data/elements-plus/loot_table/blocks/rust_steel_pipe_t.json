@@ -1,0 +1,21 @@
+{
+    "type": "minecraft:block",
+    "pools": [
+        {
+            "bonus_rolls": 0.0,
+            "conditions": [
+                {
+                    "condition": "minecraft:survives_explosion"
+                }
+            ],
+            "entries": [
+                {
+                    "type": "minecraft:item",
+                    "name": "elements-plus:rust_steel_pipe_t"
+                }
+            ],
+            "rolls": 1.0
+        }
+    ],
+    "random_sequence": "elements-plus:blocks/rust_steel_pipe_t"
+}

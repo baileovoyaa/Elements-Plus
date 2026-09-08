@@ -212,7 +212,7 @@ public class ModBlocks {
     public static final Block ADVANCED_CRAFTING_TABLE = register(
             new AdvancedCraftingTableBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
-                    .sound(SoundType.STONE)
+                    .sound(SoundType.WOOD)
                     .noOcclusion()
             ),
             "advanced_crafting_table"
@@ -247,6 +247,16 @@ public class ModBlocks {
             "lithography_machine"
     );
 
+    public static final Block EXPERIMENT_TABLE = register(
+            new Block(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "experiment_table"
+    );
+
+
     public static final Block CHARGED_LIGHTNING_ROD = register(
             new ChargedLightningRodBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
@@ -260,6 +270,14 @@ public class ModBlocks {
             "charged_lightning_rod"
     );
 
+    public static final Block SILVER_BLOCK = register(
+            new Block(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+                    .noOcclusion()
+            ),
+            "silver_block"
+    );
 
     public static void initialize() {
         // ===== 铁管 BlockItem =====
@@ -416,6 +434,15 @@ public class ModBlocks {
             }
         });
 
+        // ===== 实验桌 BlockItem =====
+        Items.registerBlock(new BlockItem(EXPERIMENT_TABLE, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.experiment_table")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+
         // ===== 充能避雷针 BlockItem =====
         Items.registerBlock(new BlockItem(CHARGED_LIGHTNING_ROD, new Item.Properties()) {
             @Override
@@ -430,6 +457,15 @@ public class ModBlocks {
             @Override
             public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
                 tooltip.add(Component.translatable("tooltip.elements-plus.silver_ore")
+                        .withStyle(style -> style.withColor(0xAAAAAA)));
+            }
+        });
+
+        // ===== 银块 BlockItem =====
+        Items.registerBlock(new BlockItem(SILVER_BLOCK, new Item.Properties()) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(Component.translatable("tooltip.elements-plus.silver_block")
                         .withStyle(style -> style.withColor(0xAAAAAA)));
             }
         });

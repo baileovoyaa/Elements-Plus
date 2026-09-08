@@ -1,6 +1,29 @@
 {
-  "replace": false,
-  "values": [
-    "elements-plus:silver_ore"
-  ]
+    "replace": false,
+    "values": [
+        "elements-plus:silver_ore",
+        "elements-plus:silver_block",
+        "elements-plus:crystallizer",
+        "elements-plus:lithography_machine",
+        "elements-plus:experiment_table",
+        "elements-plus:metal_catalyst",
+        "elements-plus:advanced_crafting_table",
+        "elements-plus:steel_pipe_l",
+        "elements-plus:steel_pipe_i",
+        "elements-plus:steel_pipe_t",
+        "elements-plus:steel_pipe_x",
+        "elements-plus:waxed_steel_pipe_l",
+        "elements-plus:waxed_steel_pipe_i",
+        "elements-plus:waxed_steel_pipe_t",
+        "elements-plus:waxed_steel_pipe_x",
+        "elements-plus:rust_steel_pipe_l",
+        "elements-plus:rust_steel_pipe_i",
+        "elements-plus:rust_steel_pipe_t",
+        "elements-plus:rust_steel_pipe_x",
+        "elements-plus:silver_pipe_l",
+        "elements-plus:silver_pipe_i",
+        "elements-plus:silver_pipe_t",
+        "elements-plus:silver_pipe_x",
+        "elements-plus:charged_lightning_rod"
+    ]
 }

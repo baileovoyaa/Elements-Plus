@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IRNRI",
+    "RPAPR",
+    "NABAN",
+    "RPTPR",
+    "IRNRI"
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "I": {
+      "item": "minecraft:iron_block"
+    },
+    "N":{
+      "item": "elements-plus:silver_block"
+    },
+    "R": {
+      "item": "elements-plus:amethyst_resonator"
+    },
+    "P": {
+      "item": "minecraft:glass_pane"
+    },
+    "B": {
+      "item": "minecraft:writable_book"
+    },
+    "T": {
+      "item": "elements-plus:amethyst_battery"
+    }
+  },
+  "result": {
+    "id": "elements-plus:computer"
+  }
+}

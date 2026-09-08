@@ -54,6 +54,8 @@
   "block.elements-plus.lithography_machine": "Lithography Machine",
   "block.elements-plus.charged_lightning_rod": "Charged Lightning Rod",
   "block.elements-plus.silver_ore": "Silver Ore",
+  "block.elements-plus.silver_block": "Silver Block",
+  "block.elements-plus.experiment_table": "Experiment Table",
 
   "item.elements-plus.silver_ingot": "Silver Ingot",
   "tooltip.elements-plus.silver_ingot": "A Silver Ingot",
@@ -94,7 +96,7 @@
   "item.elements-plus.photoresist": "Photoresist",
   "item.elements-plus.lithography_mask": "Lithography Mask",
   "item.elements-plus.lightning_bottle": "Lightning Bottle",
-
+  "item.elements-plus.computer": "Computer",
 
   "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield",
   "effect.elements-plus.rust_proof": "Rust Proof",

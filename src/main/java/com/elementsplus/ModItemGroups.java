@@ -47,6 +47,7 @@ public class ModItemGroups {
                 ModBlocks.SILVER_PIPE_X,
                 ModItems.SILVER_INGOT,
                 ModBlocks.SILVER_ORE,
+                ModBlocks.SILVER_BLOCK,
                 ModBlocks.CHARGED_LIGHTNING_ROD
                 // 可以继续添加更多物品
         );
@@ -58,6 +59,7 @@ public class ModItemGroups {
                 ModBlocks.ADVANCED_CRAFTING_TABLE,
                 ModBlocks.METAL_CATALYST,
                 ModBlocks.LITHOGRAPHY_MACHINE,
+                ModBlocks.EXPERIMENT_TABLE,
                 ModItems.AMETHYST_TRANSISTOR,
                 ModItems.AMETHYST_DIODE,
                 ModItems.AMETHYST_CAPACITOR,
@@ -86,7 +88,8 @@ public class ModItemGroups {
                 ModItems.NETHERITE_FRAGMENT,
                 ModItems.PHOTORESIST,
                 ModItems.LITHOGRAPHY_MASK,
-                ModItems.LIGHTNING_BOTTLE
+                ModItems.LIGHTNING_BOTTLE,
+                ModItems.COMPUTER
                 // 可以继续添加更多物品
         );
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());
