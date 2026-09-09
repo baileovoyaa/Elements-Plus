@@ -32,7 +32,7 @@ import java.util.Map;
 public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements WorldlyContainer, StackedContentsCompatible {
     private static final int[] SLOTS_FOR_UP = new int[]{0};
     private static final int[] SLOTS_FOR_DOWN = new int[]{2, 1};
-    private static final int[] SLOTS_FOR_SIDES = new int[]{1};
+    private static final int[] SLOTS_FOR_SIDES = new int[]{1, 3};
     protected NonNullList<ItemStack> items = NonNullList.withSize(4, ItemStack.EMPTY);
     int litTime;
     int litDuration;

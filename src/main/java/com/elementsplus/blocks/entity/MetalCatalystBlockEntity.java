@@ -36,7 +36,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
 
     private static final int[] SLOTS_FOR_UP = new int[]{0, 1};
     private static final int[] SLOTS_FOR_DOWN = new int[]{4, 2};
-    private static final int[] SLOTS_FOR_SIDES = new int[]{2, 3};
+    private static final int[] SLOTS_FOR_SIDES = new int[]{2, 3, 0, 1};
     protected NonNullList<ItemStack> items = NonNullList.withSize(5, ItemStack.EMPTY);
     int litTime;
     int litDuration;
@@ -162,7 +162,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
 
             if (blockEntity.isLit() && !blockEntity.isOverfilled() && canBurn(blockEntity, inputs, level)) {
                 blockEntity.cookingProgress++;
-                if (blockEntity.cookingProgress == blockEntity.cookingTotalTime) {
+                if (blockEntity.cookingProgress >= blockEntity.cookingTotalTime) {
                     blockEntity.cookingProgress = 0;
                     blockEntity.cookingTotalTime = getTotalCookTime();
                     burn(blockEntity, level, inputs);
@@ -260,12 +260,27 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
 
     @Override
     public boolean canPlaceItemThroughFace(int i, ItemStack itemStack, @Nullable Direction direction) {
-        return this.canPlaceItem(i, itemStack);
+        if (direction == Direction.UP) {
+            return i == 0 || i == 1;
+        }
+        if (direction == Direction.DOWN) {
+            return false;
+        }
+        if (isFuel(itemStack)) {
+            return i == 2;
+        }
+        if (itemStack.is(com.elementsplus.ModItems.CATALYST)) {
+            return i == 3;
+        }
+        return i == 0 || i == 1;
     }
 
     @Override
     public boolean canTakeItemThroughFace(int i, ItemStack itemStack, Direction direction) {
-        return direction == Direction.DOWN;
+        if (direction == Direction.DOWN) {
+            return i == 4 || i == 2 && itemStack.is(Items.BUCKET);
+        }
+        return false;
     }
 
     @Override
