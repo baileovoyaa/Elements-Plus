@@ -241,6 +241,18 @@ public class ModItems {
     public static final Item DOPED_REDSTONE_DUST = register(new Item(new Item.Properties()), "doped_redstone_dust");
     public static final Item DOPED_GLOWSTONE_DUST = register(new Item(new Item.Properties()), "doped_glowstone_dust");
 
+    // 电路载体
+    public static final Item CIRCUIT_BOARD = register(new Item(new Item.Properties().stacksTo(1)), "circuit_board");
+    public static final Item CIRCUIT_DIAGRAM = register(new Item(new Item.Properties().stacksTo(1)), "circuit_diagram");
+    public static final Item SMALL_EMPTY_CHIP = register(new Item(new Item.Properties()), "small_empty_chip");
+    public static final Item MEDIUM_EMPTY_CHIP = register(new Item(new Item.Properties()), "medium_empty_chip");
+    public static final Item LARGE_EMPTY_CHIP = register(new Item(new Item.Properties()), "large_empty_chip");
+    public static final Item HUGE_EMPTY_CHIP = register(new Item(new Item.Properties()), "huge_empty_chip");
+    public static final Item SMALL_CHIP = register(new Item(new Item.Properties().stacksTo(1)), "small_chip");
+    public static final Item MEDIUM_CHIP = register(new Item(new Item.Properties().stacksTo(1)), "medium_chip");
+    public static final Item LARGE_CHIP = register(new Item(new Item.Properties().stacksTo(1)), "large_chip");
+    public static final Item HUGE_CHIP = register(new Item(new Item.Properties().stacksTo(1)), "huge_chip");
+
     // 杂件
     public static final Item HEAT_SINK_SUBSTRATE = register(new Item(new Item.Properties()), "heat_sink_substrate");
     public static final Item HIGH_VOLTAGE_COIL = register(new Item(new Item.Properties()), "high_voltage_coil");
@@ -252,7 +264,7 @@ public class ModItems {
     public static final Item LITHOGRAPHY_MASK = register(new Item(new Item.Properties()), "lithography_mask");
     public static final Item LIGHTNING_BOTTLE = register(new Item(new Item.Properties()), "lightning_bottle");
     public static final Item COMPUTER = register(new Item(new Item.Properties()), "computer");
-
+    public static final Item WASTE_BOTTLE = register(new Item(new Item.Properties()), "waste_bottle");
 
     public static void initialize() {
         // 物品已在静态块中注册

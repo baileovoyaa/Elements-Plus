@@ -95,6 +95,19 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
         return this.waste >= 90;
     }
 
+    public int getWaste() {
+        return this.waste;
+    }
+
+    public boolean extractWaste(int amount) {
+        if (this.waste < amount) {
+            return false;
+        }
+        this.waste -= amount;
+        setChanged(level, worldPosition, getBlockState());
+        return true;
+    }
+
     public void clearWaste() {
         this.waste = 0;
         setChanged(level, worldPosition, getBlockState());
@@ -215,7 +228,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
         if (output.isEmpty()) {
             blockEntity.items.set(4, willOutput.copy());
         } else if (ItemStack.isSameItemSameComponents(output, willOutput)) {
-            output.grow(1);
+            output.grow(willOutput.getCount());
         }
 
         for (int i = 0; i < inputs.size(); i++) {

@@ -1,5 +1,6 @@
 package com.elementsplus;
 
+import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
 import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
 import com.elementsplus.recipe.MetalCatalystRecipe;
 import net.fabricmc.api.ModInitializer;
@@ -29,6 +30,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.levelgen.GenerationStep;
@@ -68,6 +70,22 @@ public class ElementsPlus implements ModInitializer {
                     }
                     world.gameEvent(player, GameEvent.FLUID_PICKUP, hitResult.getBlockPos());
                     return InteractionResult.CONSUME;
+                }
+                if (player.getItemInHand(hand).is(Items.GLASS_BOTTLE) && hitResult.getType() == HitResult.Type.BLOCK && world.getBlockState(hitResult.getBlockPos()).is(ModBlocks.METAL_CATALYST)) {
+                    BlockEntity blockEntity = world.getBlockEntity(hitResult.getBlockPos());
+                    if (blockEntity instanceof MetalCatalystBlockEntity metalCatalyst && metalCatalyst.getWaste() >= 50) {
+                        ItemStack itemStack = player.getItemInHand(hand);
+                        itemStack.shrink(1);
+                        world.playSound(player, player.getX(), player.getY(), player.getZ(), SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
+                        if (itemStack.isEmpty()) {
+                            player.setItemInHand(hand, new ItemStack(ModItems.WASTE_BOTTLE));
+                        } else if (!player.getInventory().add(new ItemStack(ModItems.WASTE_BOTTLE))) {
+                            player.drop(new ItemStack(ModItems.WASTE_BOTTLE), false);
+                        }
+                        metalCatalyst.extractWaste(50);
+                        world.gameEvent(player, GameEvent.FLUID_PICKUP, hitResult.getBlockPos());
+                        return InteractionResult.CONSUME;
+                    }
                 }
                 if (player.getItemInHand(hand).is(Items.HONEYCOMB) && hitResult.getType() == HitResult.Type.BLOCK) {
                     ServerPlayer serverPlayer = (ServerPlayer) player;

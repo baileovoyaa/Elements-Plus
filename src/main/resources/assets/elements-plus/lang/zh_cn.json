@@ -56,6 +56,8 @@
   "container.elements-plus.metal_catalyst": "金属催化器",
   "gui.elements-plus.metal_catalyst.clear_waste": "清空废液",
 
+  "container.elements-plus.lithography_machine": "光刻机",
+
   "block.elements-plus.advanced_crafting_table": "高级工作台",
   "block.elements-plus.metal_catalyst": "金属催化器",
   "block.elements-plus.lithography_machine": "光刻机",
@@ -101,6 +103,7 @@
   "item.elements-plus.lithography_mask": "光刻掩膜板",
   "item.elements-plus.lightning_bottle": "瓶装闪电",
   "item.elements-plus.computer": "电脑",
+  "item.elements-plus.waste_bottle": "废液瓶",
 
   "effect.elements-plus.steel_pipe_shield": "钢管护盾",
   "effect.elements-plus.rust_proof": "防锈",

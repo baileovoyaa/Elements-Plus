@@ -2,6 +2,7 @@ package com.elementsplus.core.dispenser;
 
 import com.elementsplus.ModBlocks;
 import com.elementsplus.ModItems;
+import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.dispenser.BlockSource;
@@ -10,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import org.jetbrains.annotations.NotNull;
@@ -36,6 +38,16 @@ public class MyCustomBottleBehavior extends OptionalDispenseItemBehavior {
             this.setSuccess(true);
             // 返回使用后的物品，例如一个空瓶
             return this.consumeWithRemainder(blockSource, stack, ModItems.LIGHTNING_BOTTLE.getDefaultInstance());
+        }
+
+        if (targetBlockState.is(ModBlocks.METAL_CATALYST)) {
+            BlockEntity blockEntity = level.getBlockEntity(targetPos);
+            if (blockEntity instanceof MetalCatalystBlockEntity metalCatalyst && metalCatalyst.getWaste() >= 50) {
+                metalCatalyst.extractWaste(50);
+                level.gameEvent(null, GameEvent.FLUID_PICKUP, blockSource.pos());
+                this.setSuccess(true);
+                return this.consumeWithRemainder(blockSource, stack, ModItems.WASTE_BOTTLE.getDefaultInstance());
+            }
         }
 
         // 5. 如果不是自定义方块，执行水瓶的默认行为

@@ -1,0 +1,21 @@
+{
+    "type": "elements-plus:metal_catalyst",
+    "inputs": [
+        {
+            "item": {
+                "item": "minecraft:basalt"
+            },
+            "count": 32
+        },
+        {
+            "item": {
+                "item": "minecraft:basalt"
+            },
+            "count": 32
+        }
+    ],
+    "result": {
+        "id": "elements-plus:silver_ingot",
+        "count": 1
+    }
+}

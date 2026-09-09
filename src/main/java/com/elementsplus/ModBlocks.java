@@ -1,9 +1,6 @@
 package com.elementsplus;
 
-import com.elementsplus.blocks.AdvancedCraftingTableBlock;
-import com.elementsplus.blocks.ChargedLightningRodBlock;
-import com.elementsplus.blocks.CrystallizerBlock;
-import com.elementsplus.blocks.MetalCatalystBlock;
+import com.elementsplus.blocks.*;
 import com.elementsplus.blocks.pipe.*;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
@@ -238,7 +235,7 @@ public class ModBlocks {
     );
 
     public static final Block LITHOGRAPHY_MACHINE = register(
-            new Block(BlockBehaviour.Properties.of()
+            new LithographyMachineBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()

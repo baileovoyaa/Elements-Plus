@@ -68,6 +68,12 @@ public class ModItemGroups {
                 ModItems.AMETHYST_BATTERY,
                 ModItems.GOLD_WIRE,
                 ModItems.COPPER_WIRE,
+                ModItems.CIRCUIT_BOARD,
+                ModItems.CIRCUIT_DIAGRAM,
+                ModItems.SMALL_EMPTY_CHIP,
+                ModItems.MEDIUM_EMPTY_CHIP,
+                ModItems.LARGE_EMPTY_CHIP,
+                ModItems.HUGE_EMPTY_CHIP,
                 ModItems.EMPTY_WAFER,
                 ModItems.WAFER_N,
                 ModItems.WAFER_P,
@@ -84,11 +90,12 @@ public class ModItemGroups {
                 ModItems.HIGH_VOLTAGE_COIL,
                 ModItems.AMETHYST_LENS,
                 ModItems.INSULATING_LAYER,
-                ModItems.CATALYST,
                 ModItems.NETHERITE_FRAGMENT,
                 ModItems.PHOTORESIST,
                 ModItems.LITHOGRAPHY_MASK,
+                ModItems.CATALYST,
                 ModItems.LIGHTNING_BOTTLE,
+                ModItems.WASTE_BOTTLE,
                 ModItems.COMPUTER
                 // 可以继续添加更多物品
         );

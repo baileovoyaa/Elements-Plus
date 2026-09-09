@@ -54,8 +54,9 @@
   "container.elements-plus.metal_catalyst": "Metal Catalyst",
   "gui.elements-plus.metal_catalyst.clear_waste": "Clear Waste",
 
+  "container.elements-plus.lithography_machine": "Lithography Machine",
+
   "block.elements-plus.advanced_crafting_table": "Advanced Crafting Table",
-  "block.elements-plus.metal_catalyst": "Metal Catalyst",
   "block.elements-plus.lithography_machine": "Lithography Machine",
   "block.elements-plus.charged_lightning_rod": "Charged Lightning Rod",
   "block.elements-plus.silver_ore": "Silver Ore",
@@ -102,6 +103,7 @@
   "item.elements-plus.lithography_mask": "Lithography Mask",
   "item.elements-plus.lightning_bottle": "Lightning Bottle",
   "item.elements-plus.computer": "Computer",
+  "item.elements-plus.waste_bottle": "Waste Bottle",
 
   "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield",
   "effect.elements-plus.rust_proof": "Rust Proof",
