@@ -8,6 +8,7 @@ public class GuiUtil {
         NONE,
         SOLID,
         BORDERED,
+        BOX,
         CONVEX,
         CONCAVE
     }
@@ -108,10 +109,12 @@ public class GuiUtil {
             case BORDERED -> {
                 fillContext.fillRelative(1, 1, -2, -2, colorMultiply);
 
-                fillContext.fillRelative(0, 1, 1, -2, 0xFF000000);
-                fillContext.fillRelative(1, 0, -2, 1, 0xFF000000);
-                fillContext.fillRelative(-2, 1, -1, -2, 0xFF000000);
-                fillContext.fillRelative(1, -2, -2, -1, 0xFF000000);
+                int color = multiplyColor(0xFF555555, colorMultiply);
+
+                fillContext.fillRelative(0, 1, 1, -2, color);
+                fillContext.fillRelative(1, 0, -2, 1, color);
+                fillContext.fillRelative(-2, 1, -1, -2, color);
+                fillContext.fillRelative(1, -2, -2, -1, color);
             }
             case SOLID -> {
                 fillContext.fillRelative(0, 0, -1, -1, colorMultiply);
@@ -123,6 +126,10 @@ public class GuiUtil {
                 fillContext.fillRelative(0, 0, -1, 1, 0xFFE0E0E0);
                 fillContext.fillRelative(-2, 1, -1, -1, 0xFF555555);
                 fillContext.fillRelative(1, -3, -1, -1, 0xFF555555);
+            }
+            case BOX -> {
+                fillContext.fill(0xFF000000);
+                fillContext.fillRelative(1, 1, -2, -2, colorMultiply);
             }
         }
     }

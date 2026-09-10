@@ -70,22 +70,35 @@ public class ScrollPanelWidget extends AbstractWidget {
 
         // 裁剪到面板区域
         g.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
-        g.pose().pushPose();
-        g.pose().translate(0.0F, (float) -scrollAmount, 0.0F);
+//        g.pose().pushPose();
+//        g.pose().translate(getX(), (float) getY() - scrollAmount, 0.0F);
 
         // 鼠标在"内容坐标系"里的位置
-        double localX = mouseX;
-        double localY = mouseY + scrollAmount;
+        double localX = mouseX - getX();
+        double localY = mouseY + scrollAmount - getY();
 
         for (AbstractWidget child : children) {
-            // 可见性剔除：只渲染与可视区域有交集的子 widget
-            if (child.getY() + child.getHeight() < getY() + scrollAmount) continue;
-            if (child.getY() > getY() + scrollAmount + getHeight()) continue;
+            int contentX = child.getX();          // 面板内容空间坐标
+            int contentY = child.getY();
+            int screenX = getX() + contentX;      // 屏幕坐标
+            int screenY = getY() + contentY - (int) scrollAmount;
 
-            child.render(g, (int) localX, (int) localY, partialTick);
+            // 可见性剔除
+            if (screenY + child.getHeight() < getY()) continue;
+            if (screenY > getY() + getHeight()) continue;
+
+            // 临时把 child 搬到屏幕空间
+            child.setX(screenX);
+            child.setY(screenY);
+            try {
+                child.render(g, mouseX, mouseY, partialTick);  // 传屏幕鼠标坐标
+            } finally {
+                child.setX(contentX);
+                child.setY(contentY);
+            }
         }
 
-        g.pose().popPose();
+//        g.pose().popPose();
         g.disableScissor();
 
         renderScrollbar(g);
@@ -117,8 +130,8 @@ public class ScrollPanelWidget extends AbstractWidget {
         if (!active || !visible) return false;
         if (!isMouseOver(mouseX, mouseY)) return false;
 
-        double localX = mouseX;
-        double localY = toContentY(mouseY);
+        double localX = mouseX - getX();
+        double localY = toContentY(mouseY) - getY();
 
         // 从后往前，后添加的在上面
         for (int i = children.size() - 1; i >= 0; i--) {
@@ -138,8 +151,8 @@ public class ScrollPanelWidget extends AbstractWidget {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        double localX = mouseX;
-        double localY = toContentY(mouseY);
+        double localX = mouseX - getX();
+        double localY = toContentY(mouseY) - getY();
         boolean handled = false;
         for (AbstractWidget child : children) {
             if (child.mouseReleased(localX, localY, button)) handled = true;
@@ -149,8 +162,8 @@ public class ScrollPanelWidget extends AbstractWidget {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        double localX = mouseX;
-        double localY = toContentY(mouseY);
+        double localX = mouseX - getX();
+        double localY = toContentY(mouseY) - getY();
         for (AbstractWidget child : children) {
             if (child.mouseDragged(localX, localY, button, dragX, dragY)) return true;
         }
@@ -163,8 +176,8 @@ public class ScrollPanelWidget extends AbstractWidget {
         if (!visible || !isMouseOver(mouseX, mouseY)) return false;
 
         // 先让子控件处理（支持嵌套滚动）
-        double localX = mouseX;
-        double localY = toContentY(mouseY);
+        double localX = mouseX - getX();
+        double localY = toContentY(mouseY) - getY();
         for (int i = children.size() - 1; i >= 0; i--) {
             AbstractWidget child = children.get(i);
             if (child.isMouseOver(localX, localY)

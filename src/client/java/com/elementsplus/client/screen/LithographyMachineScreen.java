@@ -2,17 +2,11 @@ package com.elementsplus.client.screen;
 
 import com.elementsplus.client.gui.*;
 import com.elementsplus.menu.LithographyMachineMenu;
-import com.mojang.datafixers.util.Pair;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ItemStack;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,10 +14,12 @@ import java.util.Map;
 public class LithographyMachineScreen extends AbstractContainerScreen<LithographyMachineMenu> implements SlotPositionProvider {
     public TabButton tabButtonDesign;
     public TabButton tabButtonManufacture;
-    public TabGroup tabGroup;
+    public ButtonGroup buttonGroup;
 
     public CollapseButton collapseButtonInventory;
     public boolean inventoryActive = true;
+
+    public ScrollPanelWidget componentWidget;
 
     public Map<Integer, Point> slotPosition;
 
@@ -41,10 +37,11 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         } else {
             GuiUtil.drawSubPanel(guiGraphics, leftPos + 5, topPos + 25, leftPos + 5 + 79, topPos + imageHeight - 28, 0xFFA0A0A0);
         }
-        if (tabGroup.getSelected() == tabButtonDesign) {
+        if (buttonGroup.getSelected() == tabButtonDesign) {
             GuiUtil.drawSubPanel(guiGraphics, leftPos + imageWidth - 5 - 79, topPos + 25, leftPos + imageWidth - 5, topPos + imageHeight - 5, 0xFFA0A0A0);
-            GuiUtil.drawSubPanel(guiGraphics, leftPos + 10 + 79, topPos + 25, leftPos + imageWidth - 10 - 79, topPos + 45, 0xFFA0A0A0);
-            GuiUtil.drawSubPanel(guiGraphics, leftPos + 10 + 79, topPos + 50, leftPos + imageWidth - 10 - 79, topPos + imageHeight - 5, 0xFFE0E0E0);
+            GuiUtil.drawSubPanel(guiGraphics, leftPos + 10 + 79 + 18 + 5, topPos + 25, leftPos + imageWidth - 10 - 79, topPos + 43, 0xFFA0A0A0);
+            GuiUtil.drawSlot(guiGraphics, leftPos + 10 + 79, topPos + 25);
+            GuiUtil.drawSubPanel(guiGraphics, leftPos + 10 + 79, topPos + 48, leftPos + imageWidth - 10 - 79, topPos + imageHeight - 5, 0xFFE0E0E0);
         }
 
         if (collapseButtonInventory.active) {
@@ -62,6 +59,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         this.titleLabelX = 6;
         this.addRenderableWidget(tabButtonDesign = new TabButton(this.leftPos + this.font.width(this.title) + 10, this.topPos, 50, 22, Component.translatable("gui.elements-plus.lithography_machine.design")));
         this.addRenderableWidget(tabButtonManufacture = new TabButton(this.leftPos + this.font.width(this.title) + 60, this.topPos, 50, 22, Component.translatable("gui.elements-plus.lithography_machine.manufacture")));
+        this.buttonGroup = new ButtonGroup(tabButtonDesign, tabButtonManufacture);
+
         this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.leftPos + 5, inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23, 79, 18, Component.nullToEmpty("物品栏")) {
             @Override
             public void onClick(double d, double e) {
@@ -71,7 +70,21 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             }
         });
         collapseButtonInventory.active = inventoryActive;
-        this.tabGroup = new TabGroup(tabButtonDesign, tabButtonManufacture);
+
+        this.addRenderableWidget(componentWidget = new ScrollPanelWidget(leftPos + 5, topPos + 25, 79, imageHeight - 218, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        
+        // 示例
+        componentWidget.addChild(new CollapseButton(0, 0, 79, 18, Component.nullToEmpty("基础元件")));
+        componentWidget.addChild(new ListEntryButton(1, 18, 77, 18, Component.nullToEmpty("与门")));
+        componentWidget.addChild(new ListEntryButton(1, 18 * 2, 77, 18, Component.nullToEmpty("或门")));
+        componentWidget.addChild(new ListEntryButton(1, 18 * 3, 77, 18, Component.nullToEmpty("非门")));
+        componentWidget.addChild(new CollapseButton(0, 18 * 4, 79, 18, Component.nullToEmpty("高级元件")));
+        componentWidget.addChild(new ListEntryButton(1, 18 * 5, 77, 18, Component.nullToEmpty("加法器")));
+        componentWidget.addChild(new ListEntryButton(1, 18 * 6, 77, 18, Component.nullToEmpty("位移器")));
+        componentWidget.addChild(new ListEntryButton(1, 18 * 7, 77, 18, Component.nullToEmpty("乘法器")));
+        componentWidget.addChild(new ListEntryButton(1, 18 * 8, 77, 18, Component.nullToEmpty("寄存器")));
+        componentWidget.addChild(new ListEntryButton(1, 18 * 9, 77, 18, Component.nullToEmpty("计数器")));
+
 
         slotPosition = new HashMap<>();
 

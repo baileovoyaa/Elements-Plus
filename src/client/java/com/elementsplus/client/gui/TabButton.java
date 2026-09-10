@@ -4,18 +4,12 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
 
-public class TabButton extends Button {
-    public boolean active;
-    public TabGroup tabGroup;
-
+public class TabButton extends GroupButton {
 
     public TabButton(int i, int j, int k, int l, Component component) {
-        super(i, j, k, l, component, button -> {
-        }, DEFAULT_NARRATION);
+        super(i, j, k, l, component);
     }
 
     @Override
@@ -34,11 +28,5 @@ public class TabButton extends Button {
         int k = this.getX() + i;
         int l = this.getX() + this.getWidth() - i;
         renderScrollingString(guiGraphics, font, this.getMessage(), k, this.active ? this.getY() : this.getY() + 2, l, this.getY() + this.getHeight(), j);
-    }
-
-    @Override
-    public void onClick(double d, double e) {
-        super.onClick(d, e);
-        this.tabGroup.onButtonClick(this);
     }
 }
