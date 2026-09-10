@@ -72,7 +72,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         collapseButtonInventory.active = inventoryActive;
 
         this.addRenderableWidget(componentWidget = new ScrollPanelWidget(leftPos + 5, topPos + 25, 79, imageHeight - 218, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
-        
+
         // 示例
         componentWidget.addChild(new CollapseButton(0, 0, 79, 18, Component.nullToEmpty("基础元件")));
         componentWidget.addChild(new ListEntryButton(1, 18, 77, 18, Component.nullToEmpty("与门")));
