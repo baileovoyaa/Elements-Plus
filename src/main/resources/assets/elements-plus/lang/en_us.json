@@ -55,6 +55,8 @@
   "gui.elements-plus.metal_catalyst.clear_waste": "Clear Waste",
 
   "container.elements-plus.lithography_machine": "Lithography Machine",
+  "gui.elements-plus.lithography_machine.design": "Design",
+  "gui.elements-plus.lithography_machine.manufacture": "Manufacture",
 
   "block.elements-plus.advanced_crafting_table": "Advanced Crafting Table",
   "block.elements-plus.lithography_machine": "Lithography Machine",

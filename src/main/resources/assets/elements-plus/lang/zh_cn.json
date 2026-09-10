@@ -57,9 +57,10 @@
   "gui.elements-plus.metal_catalyst.clear_waste": "清空废液",
 
   "container.elements-plus.lithography_machine": "光刻机",
+  "gui.elements-plus.lithography_machine.design": "设计",
+  "gui.elements-plus.lithography_machine.manufacture": "制造",
 
   "block.elements-plus.advanced_crafting_table": "高级工作台",
-  "block.elements-plus.metal_catalyst": "金属催化器",
   "block.elements-plus.lithography_machine": "光刻机",
   "block.elements-plus.charged_lightning_rod": "充能避雷针",
   "block.elements-plus.silver_ore": "银矿石",
