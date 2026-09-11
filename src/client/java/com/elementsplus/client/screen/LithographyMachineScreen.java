@@ -44,7 +44,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (buttonGroup.getSelected() == tabButtonDesign) {
             GuiUtil.drawSubPanel(guiGraphics, leftPos + imageWidth - 5 - 79, topPos + 25, leftPos + imageWidth - 5, topPos + imageHeight - 5, 0xFFA0A0A0);
             GuiUtil.drawSubPanel(guiGraphics, leftPos + 10 + 79 + 18 + 5, topPos + 25, leftPos + imageWidth - 10 - 79, topPos + 43, 0xFFA0A0A0);
-            GuiUtil.drawSlot(guiGraphics, leftPos + 10 + 79, topPos + 25);
+
+            // 这是电路图
             GuiUtil.drawSubPanel(guiGraphics, leftPos + 10 + 79, topPos + 48, leftPos + imageWidth - 10 - 79, topPos + imageHeight - 5, 0xFFE0E0E0);
         }
 
@@ -124,8 +125,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public Point getSlotPosition(Slot slot) {
-        if (slot.getContainerSlot() >= 0 && slot.getContainerSlot() <= 35 && !collapseButtonInventory.active) {
-            return null;
+        if (!(slot.container instanceof Inventory) || slot.getContainerSlot() >= 0 && slot.getContainerSlot() <= 35 && !collapseButtonInventory.active) {
+            return new Point(slot.x, slot.y);
         }
         return slotPosition.getOrDefault(slot.getContainerSlot(), Point.of(slot.x, slot.y));
     }
