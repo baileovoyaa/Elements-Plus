@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "elements-plus:plastic"
+  },
+  "result": {
+    "id": "elements-plus:circuit_board"
+  }
+}

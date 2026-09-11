@@ -39,10 +39,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         GuiUtil.drawMainPanel(guiGraphics, leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF404040);
         GuiUtil.drawMainPanel(guiGraphics, leftPos, topPos + 18, leftPos + imageWidth, topPos + imageHeight, 0xFFFFFFFF);
         if (inventoryActive) {
-            GuiUtil.drawSubPanel(guiGraphics, leftPos + 5, topPos + 25, leftPos + 5 + 79, topPos + imageHeight - 193, 0xFFA0A0A0);
             GuiUtil.drawSubPanel(guiGraphics, leftPos + 5, topPos + imageHeight - 188, leftPos + 5 + 79, topPos + imageHeight - 5, 0xFFA0A0A0);
-        } else {
-            GuiUtil.drawSubPanel(guiGraphics, leftPos + 5, topPos + 25, leftPos + 5 + 79, topPos + imageHeight - 28, 0xFFA0A0A0);
         }
         if (buttonGroup.getSelected() == tabButtonDesign) {
             GuiUtil.drawSubPanel(guiGraphics, leftPos + imageWidth - 5 - 79, topPos + 25, leftPos + imageWidth - 5, topPos + imageHeight - 5, 0xFFA0A0A0);
@@ -74,11 +71,13 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 super.onClick(d, e);
                 inventoryActive = active;
                 this.setY(inventoryActive ? topPos + imageHeight - 188 : topPos + imageHeight - 23);
+                componentWidget.setHeight(inventoryActive ? imageHeight - 218 : imageHeight - 53);
             }
         });
         collapseButtonInventory.active = inventoryActive;
 
         this.addRenderableWidget(componentWidget = new ScrollPanelWidget(leftPos + 5, topPos + 25, 79, imageHeight - 218, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        componentWidget.setHeight(inventoryActive ? imageHeight - 218 : imageHeight - 53);
 
         initComponentList();
 
@@ -144,8 +143,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int i, int j, float f) {
-        super.render(guiGraphics, i, j, f);
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+        super.render(guiGraphics, mouseX, mouseY, delta);
+        this.renderTooltip(guiGraphics, mouseX, mouseY);
+
     }
 
     @Override
@@ -155,6 +156,5 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             super.renderSlot(guiGraphics, new Slot(slot.container, slot.getContainerSlot(), point.x(), point.y()));
         }
     }
-
 
 }

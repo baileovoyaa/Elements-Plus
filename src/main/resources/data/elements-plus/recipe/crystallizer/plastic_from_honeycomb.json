@@ -1,0 +1,14 @@
+{
+    "type": "elements-plus:crystallizer",
+    "inputs": [
+        {
+            "item": {
+                "item": "minecraft:honeycomb"
+            }
+        }
+    ],
+    "result": {
+        "id": "elements-plus:plastic",
+        "count": 1
+    }
+}

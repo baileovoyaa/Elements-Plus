@@ -1,0 +1,15 @@
+{
+    "type": "crafting_shapeless",
+    "ingredients": [
+        {
+            "item": "elements-plus:catalyst"
+        },
+        {
+            "item": "elements-plus:waste_bottle"
+        }
+    ],
+    "result": {
+        "id": "elements-plus:catalyst",
+        "count": 2
+    }
+}

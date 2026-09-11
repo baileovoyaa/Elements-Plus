@@ -7,11 +7,19 @@ public class CircuitComponent {
     private Component name;
     private Component description;
     private ResourceLocation icon;
+    private final int height;
+    private final int width;
 
-    public CircuitComponent(Component name, Component description, ResourceLocation icon) {
+    public CircuitComponent(Component name, Component description, ResourceLocation icon, int width, int height) {
         this.name = name;
         this.description = description;
         this.icon = icon;
+        this.width = width;
+        this.height = height;
+    }
+
+    public CircuitComponent(Component name, Component description, ResourceLocation icon) {
+        this(name, description, icon, 1, 1);
     }
 
     public CircuitComponent(Component name) {
@@ -44,5 +52,13 @@ public class CircuitComponent {
 
     public void setDescription(Component description) {
         this.description = description;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public int getWidth() {
+        return width;
     }
 }

@@ -1,0 +1,14 @@
+{
+    "type": "elements-plus:crystallizer",
+    "inputs": [
+        {
+            "item": {
+                "item": "minecraft:sand"
+            }
+        }
+    ],
+    "result": {
+        "id": "minecraft:amethyst_shard",
+        "count": 1
+    }
+}

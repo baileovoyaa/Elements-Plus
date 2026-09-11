@@ -23,8 +23,6 @@ public class GroupButton extends Button {
         super.onClick(d, e);
         if (this.buttonGroup != null) {
             this.buttonGroup.onButtonClick(this);
-        } else {
-            this.active = !this.active;
         }
     }
 }

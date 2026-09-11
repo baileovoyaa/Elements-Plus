@@ -2,6 +2,7 @@ package com.elementsplus.blocks.entity;
 
 import com.elementsplus.ModBlockEntityTypes;
 import com.elementsplus.menu.CrystallizerMenu;
+import com.elementsplus.recipe.CrystallizerRecipe;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.*;
 import net.minecraft.nbt.CompoundTag;
@@ -19,7 +20,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
@@ -141,7 +141,7 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
         if (crystallizerBlockEntity.isLit() || hasFuel && hasIngredient && crystallizerBlockEntity.hasPressure()) {
 
             int maxStackSize = crystallizerBlockEntity.getMaxStackSize();
-            if (!crystallizerBlockEntity.isLit() && crystallizerBlockEntity.hasPressure() && canBurn(crystallizerBlockEntity.items, maxStackSize)) {
+            if (!crystallizerBlockEntity.isLit() && crystallizerBlockEntity.hasPressure() && canBurn(level, crystallizerBlockEntity.items, maxStackSize)) {
                 crystallizerBlockEntity.litTime = crystallizerBlockEntity.getBurnDuration(fuel);
                 crystallizerBlockEntity.litDuration = crystallizerBlockEntity.litTime;
                 if (crystallizerBlockEntity.isLit()) {
@@ -157,12 +157,12 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
                 }
             }
 
-            if (crystallizerBlockEntity.isLit() && crystallizerBlockEntity.hasPressure() && canBurn(crystallizerBlockEntity.items, maxStackSize)) {
+            if (crystallizerBlockEntity.isLit() && crystallizerBlockEntity.hasPressure() && canBurn(level, crystallizerBlockEntity.items, maxStackSize)) {
                 crystallizerBlockEntity.cookingProgress++;
                 if (crystallizerBlockEntity.cookingProgress == crystallizerBlockEntity.cookingTotalTime) {
                     crystallizerBlockEntity.cookingProgress = 0;
                     crystallizerBlockEntity.cookingTotalTime = getTotalCookTime();
-                    burn(crystallizerBlockEntity, crystallizerBlockEntity.items, maxStackSize);
+                    burn(crystallizerBlockEntity, level, crystallizerBlockEntity.items, maxStackSize);
 
                     bl2 = true;
                 }
@@ -192,47 +192,40 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
         }
     }
 
-    private static boolean canBurn(NonNullList<ItemStack> nonNullList, int i) {
-        if (!nonNullList.get(0).isEmpty()) {
-            if (!CrystallizerMenu.canSmelt(nonNullList.get(0))) {
-                return false;
-            } else {
-                ItemStack willOutput = Items.AMETHYST_SHARD.getDefaultInstance();
-                ItemStack output = nonNullList.get(2);
-                if (output.isEmpty()) {
-                    return true;
-                } else if (!ItemStack.isSameItemSameComponents(output, willOutput)) {
-                    return false;
-                } else {
-                    return output.getCount() < i && output.getCount() < output.getMaxStackSize() || output.getCount() < willOutput.getMaxStackSize();
-                }
-            }
-        } else {
+    private static boolean canBurn(Level level, NonNullList<ItemStack> nonNullList, int i) {
+        ItemStack ingredient = nonNullList.get(0);
+        CrystallizerRecipe recipe = ingredient.isEmpty() ? null : CrystallizerRecipe.findRecipe(ingredient, level);
+        if (recipe == null) {
             return false;
+        }
+        ItemStack willOutput = recipe.getResultItem(level.registryAccess());
+        ItemStack output = nonNullList.get(2);
+        if (output.isEmpty()) {
+            return true;
+        } else if (!ItemStack.isSameItemSameComponents(output, willOutput)) {
+            return false;
+        } else {
+            return output.getCount() < i && output.getCount() < output.getMaxStackSize() || output.getCount() < willOutput.getMaxStackSize();
         }
     }
 
-    private static boolean burn(CrystallizerBlockEntity crystallizerBlockEntity, NonNullList<ItemStack> nonNullList, int i) {
-        if (canBurn(nonNullList, i)) {
-            ItemStack ingredient = nonNullList.get(0);
-            ItemStack willOutput = Items.AMETHYST_SHARD.getDefaultInstance();
-            ItemStack output = nonNullList.get(2);
-            if (output.isEmpty()) {
-                nonNullList.set(2, willOutput.copy());
-            } else if (ItemStack.isSameItemSameComponents(output, willOutput)) {
-                output.grow(1);
-            }
-
-            if (ingredient.is(Blocks.WET_SPONGE.asItem()) && !nonNullList.get(1).isEmpty() && nonNullList.get(1).is(Items.BUCKET)) {
-                nonNullList.set(1, new ItemStack(Items.WATER_BUCKET));
-            }
-
-            ingredient.shrink(1);
-            crystallizerBlockEntity.pressure--;
-            return true;
-        } else {
+    private static boolean burn(CrystallizerBlockEntity crystallizerBlockEntity, Level level, NonNullList<ItemStack> nonNullList, int i) {
+        ItemStack ingredient = nonNullList.get(0);
+        CrystallizerRecipe recipe = ingredient.isEmpty() ? null : CrystallizerRecipe.findRecipe(ingredient, level);
+        if (recipe == null || !canBurn(level, nonNullList, i)) {
             return false;
         }
+        ItemStack willOutput = recipe.getResultItem(level.registryAccess());
+        ItemStack output = nonNullList.get(2);
+        if (output.isEmpty()) {
+            nonNullList.set(2, willOutput.copy());
+        } else if (ItemStack.isSameItemSameComponents(output, willOutput)) {
+            output.grow(1);
+        }
+
+        ingredient.shrink(recipe.getInputs().get(0).count());
+        crystallizerBlockEntity.pressure--;
+        return true;
     }
 
     protected int getBurnDuration(ItemStack itemStack) {

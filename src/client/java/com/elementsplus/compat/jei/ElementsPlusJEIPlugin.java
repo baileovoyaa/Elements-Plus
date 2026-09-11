@@ -2,6 +2,7 @@ package com.elementsplus.compat.jei;
 
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModBlocks;
+import com.elementsplus.recipe.CrystallizerRecipe;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.RecipeTypes;
@@ -12,7 +13,7 @@ import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -67,9 +68,13 @@ public class ElementsPlusJEIPlugin implements IModPlugin {
 
         registration.addRecipes(AdvancedCraftingRecipeDisplay.TYPE, largeRecipes);
 
-        List<HighPressureCrystallizerDisplay> crystallizerRecipes = List.of(
-                HighPressureCrystallizerDisplay.create(Items.SAND, Items.AMETHYST_SHARD)
-        );
+        List<HighPressureCrystallizerDisplay> crystallizerRecipes = CrystallizerRecipe.getAll(level).stream()
+                .map(recipe -> {
+                    CrystallizerRecipe.InputEntry entry = recipe.getInputs().get(0);
+                    ItemStack input = entry.ingredient().getItems()[0];
+                    return new HighPressureCrystallizerDisplay(input, recipe.getResultItem(level.registryAccess()));
+                })
+                .toList();
         registration.addRecipes(HighPressureCrystallizerDisplay.TYPE, crystallizerRecipes);
     }
 

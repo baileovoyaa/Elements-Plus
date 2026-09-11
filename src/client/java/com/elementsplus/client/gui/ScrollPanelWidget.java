@@ -51,7 +51,7 @@ public class ScrollPanelWidget extends AbstractWidget {
         for (AbstractWidget w : children) {
             max = Math.max(max, w.getY() + w.getHeight());
         }
-        return max;
+        return max + 1;
     }
 
     protected void updateScrollBounds() {

@@ -1,6 +1,7 @@
 package com.elementsplus.menu;
 
 import com.elementsplus.ModMenuTypes;
+import com.elementsplus.recipe.CrystallizerRecipe;
 import com.elementsplus.slot.CrystallizerFuelSlot;
 import com.elementsplus.slot.PressurizeSlot;
 import net.minecraft.util.Mth;
@@ -91,7 +92,7 @@ public class CrystallizerMenu extends AbstractContainerMenu {
 
                 slot.onQuickCraft(slotItem, itemStack);
             } else if (i != 1 && i != 0) {
-                if (canSmelt(slotItem)) {
+                if (this.canSmelt(slotItem)) {
                     if (!this.moveItemStackTo(slotItem, 0, 1, false)) {
                         return ItemStack.EMPTY;
                     }
@@ -130,8 +131,8 @@ public class CrystallizerMenu extends AbstractContainerMenu {
         return itemStack;
     }
 
-    public static boolean canSmelt(ItemStack itemStack) {
-        return itemStack.is(Items.SAND);
+    public boolean canSmelt(ItemStack itemStack) {
+        return this.level != null && CrystallizerRecipe.canSmelt(itemStack, this.level);
     }
 
     public static boolean isFuel(ItemStack itemStack) {

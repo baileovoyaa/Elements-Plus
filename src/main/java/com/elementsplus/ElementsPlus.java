@@ -2,6 +2,7 @@ package com.elementsplus;
 
 import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
 import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
+import com.elementsplus.recipe.CrystallizerRecipe;
 import com.elementsplus.recipe.MetalCatalystRecipe;
 import net.fabricmc.api.ModInitializer;
 
@@ -54,6 +55,7 @@ public class ElementsPlus implements ModInitializer {
         ModEffects.initialize();
         ModBlockEntityTypes.initialize();
         MetalCatalystRecipe.TYPE.toString();
+        CrystallizerRecipe.TYPE.toString();
         LOGGER.info("Hello Fabric world!");
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {

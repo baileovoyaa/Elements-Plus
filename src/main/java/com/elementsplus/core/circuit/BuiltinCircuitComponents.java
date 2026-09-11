@@ -1,7 +1,9 @@
 package com.elementsplus.core.circuit;
 
+import net.minecraft.network.chat.Component;
+
 public class BuiltinCircuitComponents {
-    public static final CircuitComponent AND_GATE = new CircuitComponent("与门");
+    public static final CircuitComponent AND_GATE = new CircuitComponent(Component.nullToEmpty("与门"), Component.nullToEmpty("与门描述"), null, 1, 2);
     public static final CircuitComponent OR_GATE = new CircuitComponent("或门");
     public static final CircuitComponent NOT_GATE = new CircuitComponent("非门");
     public static final CircuitComponent ADD = new CircuitComponent("加法器");

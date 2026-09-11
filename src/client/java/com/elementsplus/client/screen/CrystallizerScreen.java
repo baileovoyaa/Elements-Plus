@@ -52,4 +52,10 @@ public class CrystallizerScreen extends AbstractContainerScreen<CrystallizerMenu
             guiGraphics.fillGradient(leftPos + 28, topPos + 44 - pressure, leftPos + 39, topPos + 44, 0xFF0000FF | (startColor << 8), 0xFF0000FF);
         }
     }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+        super.render(guiGraphics, mouseX, mouseY, delta);
+        this.renderTooltip(guiGraphics, mouseX, mouseY);
+    }
 }
