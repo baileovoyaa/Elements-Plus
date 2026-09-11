@@ -26,6 +26,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     public ScrollPanelWidget componentWidget;
 
+    public CircuitDiagramPanel circuitPanel;
+
     public List<ComponentCategoryWidget> componentCategories = new ArrayList<>();
 
     public Map<Integer, Point> slotPosition;
@@ -44,9 +46,6 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (buttonGroup.getSelected() == tabButtonDesign) {
             GuiUtil.drawSubPanel(guiGraphics, leftPos + imageWidth - 5 - 79, topPos + 25, leftPos + imageWidth - 5, topPos + imageHeight - 5, 0xFFA0A0A0);
             GuiUtil.drawSubPanel(guiGraphics, leftPos + 10 + 79 + 18 + 5, topPos + 25, leftPos + imageWidth - 10 - 79, topPos + 43, 0xFFA0A0A0);
-
-            // 这是电路图
-            GuiUtil.drawSubPanel(guiGraphics, leftPos + 10 + 79, topPos + 48, leftPos + imageWidth - 10 - 79, topPos + imageHeight - 5, 0xFFE0E0E0);
         }
 
         if (collapseButtonInventory.active) {
@@ -79,6 +78,11 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
         this.addRenderableWidget(componentWidget = new ScrollPanelWidget(leftPos + 5, topPos + 25, 79, imageHeight - 218, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
         componentWidget.setHeight(inventoryActive ? imageHeight - 218 : imageHeight - 53);
+
+        this.addRenderableWidget(circuitPanel = new CircuitDiagramPanel(this.menu,
+                () -> buttonGroup.getSelected() == tabButtonDesign,
+                leftPos + 10 + 79, topPos + 48,
+                Math.max(1, imageWidth - 178), Math.max(1, imageHeight - 53)));
 
         initComponentList();
 

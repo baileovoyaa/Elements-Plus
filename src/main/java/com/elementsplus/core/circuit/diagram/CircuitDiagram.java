@@ -24,8 +24,8 @@ import java.util.Optional;
 
 public class CircuitDiagram {
     public static class Chunk {
-        Wire[][] wires = new Wire[16][16];
-        List<Component> components = new ArrayList<>();
+        public Wire[][] wires = new Wire[16][16];
+        public List<Component> components = new ArrayList<>();
     }
 
     public static class Block {
