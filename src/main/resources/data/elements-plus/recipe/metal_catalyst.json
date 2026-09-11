@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LHLHL",
+    "HFGFH",
+    "LGPGL",
+    "HFGFH",
+    "LHLHL"
+  ],
+  "key": {
+    "L": {
+        "item": "elements-plus:amethyst_lens"
+    },
+    "P": {
+        "item": "piston"
+    },
+    "F": {
+        "item": "furnace"
+    },
+    "H": {
+        "item": "elements-plus:high_voltage_coil"
+    },
+    "G": {
+        "item": "elements-plus:gold_wire"
+    }
+  },
+  "result": {
+    "id": "elements-plus:metal_catalyst"
+  }
+}

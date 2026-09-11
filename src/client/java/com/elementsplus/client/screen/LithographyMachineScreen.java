@@ -1,6 +1,9 @@
 package com.elementsplus.client.screen;
 
+import com.elementsplus.client.ElementsPlusClient;
 import com.elementsplus.client.gui.*;
+import com.elementsplus.core.circuit.CircuitComponent;
+import com.elementsplus.core.circuit.CircuitComponentToolbox;
 import com.elementsplus.menu.LithographyMachineMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -8,7 +11,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LithographyMachineScreen extends AbstractContainerScreen<LithographyMachineMenu> implements SlotPositionProvider {
@@ -20,6 +25,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public boolean inventoryActive = true;
 
     public ScrollPanelWidget componentWidget;
+
+    public List<ComponentCategoryWidget> componentCategories = new ArrayList<>();
 
     public Map<Integer, Point> slotPosition;
 
@@ -73,17 +80,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
         this.addRenderableWidget(componentWidget = new ScrollPanelWidget(leftPos + 5, topPos + 25, 79, imageHeight - 218, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
 
-        // 示例
-        componentWidget.addChild(new CollapseButton(0, 0, 79, 18, Component.nullToEmpty("基础元件")));
-        componentWidget.addChild(new ListEntryButton(1, 18, 77, 18, Component.nullToEmpty("与门")));
-        componentWidget.addChild(new ListEntryButton(1, 18 * 2, 77, 18, Component.nullToEmpty("或门")));
-        componentWidget.addChild(new ListEntryButton(1, 18 * 3, 77, 18, Component.nullToEmpty("非门")));
-        componentWidget.addChild(new CollapseButton(0, 18 * 4, 79, 18, Component.nullToEmpty("高级元件")));
-        componentWidget.addChild(new ListEntryButton(1, 18 * 5, 77, 18, Component.nullToEmpty("加法器")));
-        componentWidget.addChild(new ListEntryButton(1, 18 * 6, 77, 18, Component.nullToEmpty("位移器")));
-        componentWidget.addChild(new ListEntryButton(1, 18 * 7, 77, 18, Component.nullToEmpty("乘法器")));
-        componentWidget.addChild(new ListEntryButton(1, 18 * 8, 77, 18, Component.nullToEmpty("寄存器")));
-        componentWidget.addChild(new ListEntryButton(1, 18 * 9, 77, 18, Component.nullToEmpty("计数器")));
+        initComponentList();
 
 
         slotPosition = new HashMap<>();
@@ -96,6 +93,33 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
         for (int l = 0; l < 9; l++) {
             slotPosition.put(l, Point.of(11 + 3 * 18, this.imageHeight - 6 - 9 * 18 + l * 18));
+        }
+    }
+
+    private void initComponentList() {
+        componentWidget.clearChildren();
+        componentCategories.clear();
+        CircuitComponentToolbox toolbox = ElementsPlusClient.getToolbox();
+        if (toolbox == null || toolbox.categories == null) return;
+        for (CircuitComponentToolbox.Category category : toolbox.categories) {
+            ComponentCategoryWidget widget = new ComponentCategoryWidget(0, 0, 79, category.name)
+                    .setCollapseListener(this::layoutComponentList);
+            if (category.components != null) {
+                for (CircuitComponent component : category.components) {
+                    widget.addEntry(component.getName());
+                }
+            }
+            componentWidget.addChild(widget);
+            componentCategories.add(widget);
+        }
+        layoutComponentList();
+    }
+
+    private void layoutComponentList() {
+        int y = 0;
+        for (ComponentCategoryWidget category : componentCategories) {
+            category.setY(y);
+            y += category.getHeight();
         }
     }
 

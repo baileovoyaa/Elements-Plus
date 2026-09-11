@@ -48,7 +48,8 @@ public class ModItemGroups {
                 ModItems.SILVER_INGOT,
                 ModBlocks.SILVER_ORE,
                 ModBlocks.SILVER_BLOCK,
-                ModBlocks.CHARGED_LIGHTNING_ROD
+                ModBlocks.CHARGED_LIGHTNING_ROD,
+                ModItems.PLASTIC
                 // 可以继续添加更多物品
         );
         registerTab(

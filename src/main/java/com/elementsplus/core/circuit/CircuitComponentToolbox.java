@@ -2,6 +2,7 @@ package com.elementsplus.core.circuit;
 
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CircuitComponentToolbox {
@@ -11,6 +12,7 @@ public class CircuitComponentToolbox {
 
         public Category(Component name) {
             this.name = name;
+            this.components = new ArrayList<>();
         }
 
         public static Category create(Component name) {
@@ -27,7 +29,7 @@ public class CircuitComponentToolbox {
         }
     }
 
-    public List<Category> categories;
+    public List<Category> categories = new ArrayList<>();
 
     public static CircuitComponentToolbox create() {
         return new CircuitComponentToolbox();

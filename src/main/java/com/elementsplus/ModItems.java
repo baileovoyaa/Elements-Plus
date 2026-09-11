@@ -265,6 +265,7 @@ public class ModItems {
     public static final Item LIGHTNING_BOTTLE = register(new Item(new Item.Properties()), "lightning_bottle");
     public static final Item COMPUTER = register(new Item(new Item.Properties()), "computer");
     public static final Item WASTE_BOTTLE = register(new Item(new Item.Properties()), "waste_bottle");
+    public static final Item PLASTIC = register(new Item(new Item.Properties()), "plastic");
 
     public static void initialize() {
         // 物品已在静态块中注册

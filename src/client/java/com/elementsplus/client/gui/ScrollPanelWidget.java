@@ -49,7 +49,7 @@ public class ScrollPanelWidget extends AbstractWidget {
     protected int getContentHeight() {
         int max = 0;
         for (AbstractWidget w : children) {
-            max = Math.max(max, w.getY() + w.getHeight() - this.getY());
+            max = Math.max(max, w.getY() + w.getHeight());
         }
         return max;
     }

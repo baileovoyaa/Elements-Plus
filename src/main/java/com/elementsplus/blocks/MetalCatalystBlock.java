@@ -126,7 +126,10 @@ public class MetalCatalystBlock extends BaseEntityBlock {
 
     @Override
     protected int getAnalogOutputSignal(BlockState blockState, Level level, BlockPos blockPos) {
-        return AbstractContainerMenu.getRedstoneSignalFromBlockEntity(level.getBlockEntity(blockPos));
+        if (level.getBlockEntity(blockPos) instanceof MetalCatalystBlockEntity metalCatalystBlockEntity) {
+            return 15 - metalCatalystBlockEntity.getWaste() * 15 / 100;
+        }
+        return 0;
     }
 
     @Override

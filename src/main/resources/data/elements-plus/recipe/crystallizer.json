@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LPLPL",
+    "PFHFP",
+    "LHAHL",
+    "PFHFP",
+    "LPLPL"
+  ],
+  "key": {
+    "L": {
+        "item": "elements-plus:amethyst_lens"
+    },
+    "P": {
+        "item": "piston"
+    },
+    "F": {
+        "item": "furnace"
+    },
+    "H": {
+        "item": "elements-plus:high_voltage_coil"
+    },
+    "A": {
+        "item": "amethyst_shard"
+    }
+  },
+  "result": {
+    "id": "elements-plus:crystallizer"
+  }
+}
