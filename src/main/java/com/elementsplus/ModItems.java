@@ -1,5 +1,6 @@
 package com.elementsplus;
 
+import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.item.WrenchItem;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -243,7 +244,9 @@ public class ModItems {
 
     // 电路载体
     public static final Item CIRCUIT_BOARD = register(new Item(new Item.Properties().stacksTo(1)), "circuit_board");
-    public static final Item CIRCUIT_DIAGRAM = register(new Item(new Item.Properties().stacksTo(1)), "circuit_diagram");
+    public static final Item CIRCUIT_DIAGRAM = register(new Item(new Item.Properties()
+            .stacksTo(1)
+            .component(ModDataComponents.CIRCUIT_DIAGRAM, CircuitDiagram.EXAMPLE.copy())), "circuit_diagram");
     public static final Item SMALL_EMPTY_CHIP = register(new Item(new Item.Properties()), "small_empty_chip");
     public static final Item MEDIUM_EMPTY_CHIP = register(new Item(new Item.Properties()), "medium_empty_chip");
     public static final Item LARGE_EMPTY_CHIP = register(new Item(new Item.Properties()), "large_empty_chip");

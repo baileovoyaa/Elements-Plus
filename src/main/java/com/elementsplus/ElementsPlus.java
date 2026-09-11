@@ -1,21 +1,29 @@
 package com.elementsplus;
 
 import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
+import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
 import com.elementsplus.recipe.CrystallizerRecipe;
 import com.elementsplus.recipe.MetalCatalystRecipe;
+import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.registry.OxidizableBlocksRegistry;
 import net.fabricmc.fabric.api.registry.StrippableBlockRegistry;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementProgress;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import net.minecraft.core.dispenser.DispenseItemBehavior;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 
@@ -49,6 +57,7 @@ public class ElementsPlus implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        ModDataComponents.initialize();
         ModItems.initialize();
         ModItemGroups.registerAll();
         ModBlocks.initialize();
@@ -131,6 +140,21 @@ public class ElementsPlus implements ModInitializer {
                 GenerationStep.Decoration.UNDERGROUND_ORES, // 2. 生成阶段（地下矿石）
                 ResourceKey.create(Registries.PLACED_FEATURE, id("silver_ore")) // 3. 你的放置地物ID
         );
+
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            dispatcher.register(Commands.literal("elements-plus").requires((source) -> source.hasPermission(2)).then(Commands.literal("debug").executes((source) -> {
+                doSomething(source);
+                return 1;
+            })));
+        });
+    }
+
+    public static void doSomething(CommandContext<CommandSourceStack> source) {
+        try {
+            source.getSource().sendSuccess(() -> Component.nullToEmpty(CircuitDiagram.CODEC.encode(CircuitDiagram.EXAMPLE, source.getSource().getServer().registryAccess().createSerializationContext(NbtOps.INSTANCE), new CompoundTag()).toString()), false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public static ResourceLocation id(String path) {

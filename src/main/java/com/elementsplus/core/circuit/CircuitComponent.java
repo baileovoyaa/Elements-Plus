@@ -4,13 +4,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public class CircuitComponent {
+    private final ResourceLocation id;
     private Component name;
     private Component description;
     private ResourceLocation icon;
     private final int height;
     private final int width;
 
-    public CircuitComponent(Component name, Component description, ResourceLocation icon, int width, int height) {
+    public CircuitComponent(ResourceLocation id, Component name, Component description, ResourceLocation icon, int width, int height) {
+        this.id = id;
         this.name = name;
         this.description = description;
         this.icon = icon;
@@ -18,16 +20,36 @@ public class CircuitComponent {
         this.height = height;
     }
 
+    public CircuitComponent(ResourceLocation id, Component name, Component description, ResourceLocation icon) {
+        this(id, name, description, icon, 1, 1);
+    }
+
+    public CircuitComponent(ResourceLocation id, Component name) {
+        this(id, name, Component.empty(), null, 1, 1);
+    }
+
+    public CircuitComponent(ResourceLocation id, String name) {
+        this(id, Component.nullToEmpty(name));
+    }
+
+    public CircuitComponent(Component name, Component description, ResourceLocation icon, int width, int height) {
+        this(null, name, description, icon, width, height);
+    }
+
     public CircuitComponent(Component name, Component description, ResourceLocation icon) {
-        this(name, description, icon, 1, 1);
+        this(null, name, description, icon);
     }
 
     public CircuitComponent(Component name) {
-        this(name, Component.empty(), null);
+        this(null, name);
     }
 
     public CircuitComponent(String name) {
-        this(Component.nullToEmpty(name));
+        this(null, Component.nullToEmpty(name));
+    }
+
+    public ResourceLocation getId() {
+        return id;
     }
 
     public Component getName() {
