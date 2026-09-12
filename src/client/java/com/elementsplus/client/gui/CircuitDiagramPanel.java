@@ -49,16 +49,15 @@ public class CircuitDiagramPanel extends AbstractWidget {
     protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         boolean show = activeSupplier.getAsBoolean();
         this.active = show;
-        this.visible = show;
         if (!show) {
             return;
         }
         GuiUtil.drawSubPanel(guiGraphics, getX() - 1, getY() - 1, getX() + getWidth() + 1, getY() + getHeight() + 1, 0xFFE0E0E0);
         guiGraphics.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
         guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), COLOR_BACKGROUND);
-        drawDotGrid(guiGraphics);
         CircuitDiagram diagram = getDiagram();
         if (diagram != null) {
+            drawDotGrid(guiGraphics);
             drawComponents(guiGraphics, diagram);
             drawWires(guiGraphics, diagram);
         }
@@ -151,24 +150,35 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (centerX < getX() - 8 || centerX > getX() + getWidth() + 8 || centerY < getY() - 8 || centerY > getY() + getHeight() + 8) {
             return;
         }
-        int thickness = Math.max(1, (int) Math.round(zoom * 0.22));
+        int thickness = Math.max(1, (int) Math.round(zoom * 0.2));
         if (wire.north != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y - 0.5 - offsetY) * zoom, thickness, wireColor(wire.north));
+            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y - offsetY) * zoom, thickness, wireColor(wire.north));
         }
         if (wire.east != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 1.5 - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness, wireColor(wire.east));
+            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 1.0 - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness, wireColor(wire.east));
         }
         if (wire.south != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y + 1.5 - offsetY) * zoom, thickness, wireColor(wire.south));
+            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y + 1.0 - offsetY) * zoom, thickness, wireColor(wire.south));
         }
         if (wire.west != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x - 0.5 - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness, wireColor(wire.west));
+            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness, wireColor(wire.west));
+        }
+        if (wire.north != null) {
+            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y - offsetY) * zoom, thickness - 1, 0xFF000000);
+        }
+        if (wire.east != null) {
+            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 1.0 - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness - 1, 0xFF000000);
+        }
+        if (wire.south != null) {
+            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y + 1.0 - offsetY) * zoom, thickness - 1, 0xFF000000);
+        }
+        if (wire.west != null) {
+            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness - 1, 0xFF000000);
         }
         int color = wireColor(firstMaterial(wire));
         int s = Math.max(1, (int) Math.round(zoom * 0.3));
         int cxs = (int) Math.round(centerX);
         int cys = (int) Math.round(centerY);
-        guiGraphics.fill(cxs - s, cys - s, cxs + s + 1, cys + s + 1, color);
     }
 
     private int wireColor(CircuitDiagram.Wire.WireMaterial material) {
