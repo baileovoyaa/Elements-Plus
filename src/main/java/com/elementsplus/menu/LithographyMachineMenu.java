@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class LithographyMachineMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
-    final Slot diagramSlot;
+    public final Slot diagramSlot;
     Runnable slotUpdateListener = () -> {
     };
     public final Container container = new SimpleContainer(1) {

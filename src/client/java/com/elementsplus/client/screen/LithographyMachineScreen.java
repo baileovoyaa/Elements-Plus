@@ -76,6 +76,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 GuiUtil.drawSlot(guiGraphics, this.leftPos + point.x() - 1, this.topPos + point.y() - 1);
             }
         }
+
+        Point point = getSlotPosition(this.menu.diagramSlot);
+        GuiUtil.drawSlot(guiGraphics, this.leftPos + point.x() - 1, this.topPos + point.y() - 1);
     }
 
     @Override
@@ -151,10 +154,15 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public Point getSlotPosition(Slot slot) {
-        if (!(slot.container instanceof Inventory) || slot.getContainerSlot() >= 0 && slot.getContainerSlot() <= 35 && !collapseButtonInventory.active) {
+        if (slot.container instanceof Inventory && slot.getContainerSlot() >= 0 && slot.getContainerSlot() <= 35) {
+            if (collapseButtonInventory.active) {
+                return slotPosition.getOrDefault(slot.getContainerSlot(), Point.of(slot.x, slot.y));
+            } else {
+                return null;
+            }
+        } else {
             return new Point(slot.x, slot.y);
         }
-        return slotPosition.getOrDefault(slot.getContainerSlot(), Point.of(slot.x, slot.y));
     }
 
     @Override
@@ -211,6 +219,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private boolean isOverSlot(double mouseX, double mouseY) {
         for (Slot slot : this.menu.slots) {
             Point point = getSlotPosition(slot);
+            if (point == null) continue;
             int sx = this.leftPos + point.x() - 1;
             int sy = this.topPos + point.y() - 1;
             if (mouseX >= sx && mouseX < sx + 18 && mouseY >= sy && mouseY < sy + 18) {
