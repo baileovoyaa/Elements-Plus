@@ -97,6 +97,15 @@ public class CircuitDiagramPanel extends AbstractWidget {
         return stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
     }
 
+    public boolean isReadOnly() {
+        ItemStack stack = menu.slots.get(36).getItem();
+        return stack.has(ModDataComponents.EQUIVALENT_COMPONENT);
+    }
+
+    public boolean hasDiagram() {
+        return getDiagram() != null;
+    }
+
     public void setPreviewStack(ItemStack stack) {
         this.previewStack = stack;
     }
@@ -155,7 +164,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void drawGhost(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        CircuitComponent component = activeComponent();
+        CircuitComponent component = (hasDiagram() && !isReadOnly()) ? activeComponent() : null;
         if (component == null) {
             return;
         }
@@ -371,9 +380,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return true;
         }
         if (button == 0) {
-            CircuitComponent component = activeComponent();
-            if (component != null) {
-                tryPlace(cellX(mouseX), cellY(mouseY), component);
+            if (!isReadOnly()) {
+                CircuitComponent component = activeComponent();
+                if (component != null) {
+                    tryPlace(cellX(mouseX), cellY(mouseY), component);
+                }
             }
             return true;
         }
@@ -385,7 +396,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             ItemStack carried = menu.getCarried();
             if (!carried.isEmpty()) {
                 ClientPlayNetworking.send(new ReturnCarriedPayload());
-            } else {
+            } else if (!isReadOnly()) {
                 tryErase(cellX(mouseX), cellY(mouseY));
             }
             return true;
@@ -422,7 +433,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             zoomAt(mouseX, mouseY, Math.pow(1.1, scrollY));
             return true;
         }
-        if (Screen.hasAltDown() && activeComponent() != null) {
+        if (Screen.hasAltDown() && activeComponent() != null && !isReadOnly()) {
             rotation = scrollY > 0 ? rotation.getClockWise() : rotation.getCounterClockWise();
             return true;
         }

@@ -48,7 +48,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         @Override
         public void onClick(double d, double e) {
             super.onClick(d, e);
-            if (menu.getCarried().isEmpty()) {
+            if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
                 circuitPanel.setVirtualComponent(component);
             }
         }
@@ -181,7 +181,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
         ItemStack carried = this.menu.getCarried();
         boolean hideCarried = !carried.isEmpty() && buttonGroup.getSelected() == tabButtonDesign
-                && circuitPanel.isPlaceable(carried) && circuitPanel.contains(mouseX, mouseY);
+                && circuitPanel.isPlaceable(carried) && circuitPanel.contains(mouseX, mouseY)
+                && circuitPanel.hasDiagram() && !circuitPanel.isReadOnly();
         if (hideCarried) {
             circuitPanel.setPreviewStack(carried);
             this.menu.setCarried(ItemStack.EMPTY);
@@ -192,7 +193,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             circuitPanel.setPreviewStack(ItemStack.EMPTY);
         }
         CircuitComponent virtual = circuitPanel.getVirtualComponent();
-        if (virtual != null && !(buttonGroup.getSelected() == tabButtonDesign && circuitPanel.contains(mouseX, mouseY))) {
+        boolean suppressVirtual = circuitPanel.hasDiagram() && !circuitPanel.isReadOnly()
+                && buttonGroup.getSelected() == tabButtonDesign
+                && circuitPanel.contains(mouseX, mouseY);
+        if (virtual != null && !suppressVirtual) {
             drawVirtualCursor(guiGraphics, virtual, mouseX, mouseY);
         }
         this.renderTooltip(guiGraphics, mouseX, mouseY);
