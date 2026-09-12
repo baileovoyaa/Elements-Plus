@@ -6,14 +6,22 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
 import java.awt.*;
 
 public class ListEntryButton extends GroupButton {
 
-    public ListEntryButton(int i, int j, int k, int l, Component component) {
+    public ResourceLocation icon;
+
+    public ListEntryButton(int i, int j, int k, int l, Component component, ResourceLocation icon) {
         super(i, j, k, l, component);
+        this.icon = icon;
+    }
+
+    public ListEntryButton(int i, int j, int k, int l, Component component) {
+        this(i, j, k, l, component, null);
     }
 
     @Override
@@ -26,6 +34,10 @@ public class ListEntryButton extends GroupButton {
         guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), this.active ? 0xFFE0E0E0 : this.isHovered ? 0xFFA0A0A0 : 0xFF808080);
 
         guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+
+        if (this.icon != null) {
+            guiGraphics.blit(this.icon, this.getX() + 5, this.getY() + 1, 0, 0, 16, 16, 16, 16);
+        }
         this.renderString(guiGraphics, minecraft.font, 0xFFFFFFFF);
     }
 
@@ -59,7 +71,7 @@ public class ListEntryButton extends GroupButton {
             guiGraphics.drawString(font, component, j - (int) g, p, n);
             guiGraphics.disableScissor();
         } else {
-            guiGraphics.drawString(font, component, j + 14, p, n);
+            guiGraphics.drawString(font, component, j + 25, p, n);
         }
     }
 

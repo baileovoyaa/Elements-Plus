@@ -1,13 +1,15 @@
 package com.elementsplus.client.screen;
 
+import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModItems;
 import com.elementsplus.client.ElementsPlusClient;
 import com.elementsplus.client.gui.*;
+import com.elementsplus.client.gui.TabButton;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.CircuitComponentToolbox;
 import com.elementsplus.menu.LithographyMachineMenu;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -30,6 +32,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public boolean inventoryActive = true;
 
     public ScrollPanelWidget componentWidget;
+    public ScrollPanelWidget toolbarWidget;
 
     public CircuitDiagramPanel circuitPanel;
 
@@ -37,11 +40,13 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     public Map<Integer, Point> slotPosition;
 
+    public boolean isPlaying = false;
+
     private class ComponentEntryButton extends ListEntryButton {
         private final CircuitComponent component;
 
         ComponentEntryButton(CircuitComponent component) {
-            super(0, 0, 0, ComponentCategoryWidget.ENTRY_HEIGHT, component.getName());
+            super(0, 0, 0, ComponentCategoryWidget.ENTRY_HEIGHT, component.getName(), component.getIcon());
             this.component = component;
         }
 
@@ -109,8 +114,35 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 leftPos + 10 + 80, topPos + 49,
                 Math.max(1, imageWidth - 180), Math.max(1, imageHeight - 55)));
 
-        initComponentList();
+        this.addRenderableWidget(toolbarWidget = new ScrollPanelWidget(leftPos + 10 + 79 + 18 + 5, topPos + 25, imageWidth - 10 - 79 - 10 - 79 - 18 - 5, 18, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
 
+        // 播放/暂停
+        toolbarWidget.addChild(new IconButton(0, 0, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8, 0, button -> {
+            if (isPlaying) {
+                ((IconButton) button).u = 8;
+                isPlaying = false;
+            } else {
+                ((IconButton) button).u = 8 + 16;
+                isPlaying = true;
+            }
+        }));
+
+        // 单步
+        toolbarWidget.addChild(new IconButton(16, 0, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 32, 0, button -> {
+
+        }));
+
+        // 复位
+        toolbarWidget.addChild(new IconButton(32, 0, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 48, 0, button -> {
+
+        }));
+
+        // TODO: 速度滑块
+
+        // 速度输入框
+        toolbarWidget.addChild(new EditBox(font, 100, 0, 50, 16, Component.empty()));
+
+        initComponentList();
 
         slotPosition = new HashMap<>();
 
@@ -171,7 +203,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     }
 
     private void updateScreenSize() {
-        this.imageWidth = Math.max(176, this.width - 80);
+        this.imageWidth = Math.max(250, this.width - 80);
         this.imageHeight = Math.max(230, this.height - 40);
         this.topPos = this.height / 2 - this.imageHeight / 2;
         this.leftPos = this.width / 2 - this.imageWidth / 2;

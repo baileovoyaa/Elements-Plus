@@ -29,9 +29,9 @@ public class CollapseButton extends Button {
         guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), this.isHovered() ? 0xFFFFFFFF : 0xFF000000);
         GuiUtil.drawSubPanel(guiGraphics, this.getX() + 1, this.getY() + 1, this.getX() + this.getWidth() - 1, this.getY() + this.getHeight() - 1, this.active ? 0xFFA0A0A0 : 0xFF808080, GuiUtil.SubPanelType.CONVEX);
         if (this.active) {
-            guiGraphics.blit(ElementsPlus.id("textures/gui/collapse_button.png"), this.getX() + this.getWidth() - 11, this.getY() + this.getHeight() / 2 - 1, 0, 0, 5, 5);
+            guiGraphics.blit(ElementsPlus.id("textures/gui/widget.png"), this.getX() + this.getWidth() - 11, this.getY() + this.getHeight() / 2 - 1, 0, 0, 5, 5);
         } else {
-            guiGraphics.blit(ElementsPlus.id("textures/gui/collapse_button.png"), this.getX() + this.getWidth() - 10, this.getY() + this.getHeight() / 2 - 2, 5, 0, 5, 5);
+            guiGraphics.blit(ElementsPlus.id("textures/gui/widget.png"), this.getX() + this.getWidth() - 10, this.getY() + this.getHeight() / 2 - 2, 5, 0, 5, 5);
         }
 
         guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);

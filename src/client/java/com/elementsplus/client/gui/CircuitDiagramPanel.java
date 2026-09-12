@@ -195,6 +195,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
             guiGraphics.fill(lx, ty, lx + 1, by, COLOR_GHOST_BORDER);
             guiGraphics.fill(rx - 1, ty, rx, by, COLOR_GHOST_BORDER);
         }
+        int ghostColor = conflict ? COLOR_GHOST_INVALID : COLOR_GHOST_VALID;
+        float ghostAlpha = ((ghostColor >> 24) & 0xFF) / 255.0F;
+        drawIcon(guiGraphics, component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, ghostAlpha);
     }
 
     private boolean diagramHasConflict(int gx, int gy, int w, int h) {
@@ -406,6 +409,25 @@ public class CircuitDiagramPanel extends AbstractWidget {
             guiGraphics.fill(lx, by - 1, rx, by, COLOR_COMPONENT_BORDER);
             guiGraphics.fill(lx, ty, lx + 1, by, COLOR_COMPONENT_BORDER);
             guiGraphics.fill(rx - 1, ty, rx, by, COLOR_COMPONENT_BORDER);
+        }
+        drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, 1.0F);
+    }
+
+    private void drawIcon(GuiGraphics guiGraphics, CircuitComponent component, double centerX, double centerY, double boxWidth, double boxHeight, float alpha) {
+        ResourceLocation icon = component.getIcon();
+        if (icon == null) {
+            return;
+        }
+        double fit = Math.min(boxWidth, boxHeight);
+        int size = Mth.clamp((int) Math.floor(fit), 4, 16);
+        int x = (int) Math.round(centerX - size / 2.0);
+        int y = (int) Math.round(centerY - size / 2.0);
+        if (alpha < 1.0F) {
+            guiGraphics.setColor(1.0F, 1.0F, 1.0F, alpha);
+        }
+        guiGraphics.blit(icon, x, y, size, size, 0.0F, 0.0F, 16, 16, 16, 16);
+        if (alpha < 1.0F) {
+            guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         }
     }
 
