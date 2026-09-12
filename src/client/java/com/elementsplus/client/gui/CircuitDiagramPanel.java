@@ -1,6 +1,7 @@
 package com.elementsplus.client.gui;
 
 import com.elementsplus.ModDataComponents;
+import com.elementsplus.ModItems;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
@@ -23,8 +24,8 @@ import java.util.function.BooleanSupplier;
 public class CircuitDiagramPanel extends AbstractWidget {
 
     private static final double MIN_ZOOM = 0.5;
-    private static final double MAX_ZOOM = 16.0;
-    private static final double DEFAULT_ZOOM = 8.0;
+    private static final double MAX_ZOOM = 32.0;
+    private static final double DEFAULT_ZOOM = 16.0;
     private static final int DOT_MIN_GAP = 4;
     private static final int SCROLL_PIXELS = 48;
 
@@ -50,6 +51,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private Direction rotation = Direction.NORTH;
     private ItemStack previewStack = ItemStack.EMPTY;
     private CircuitComponent virtualComponent;
+
+    private CircuitDiagram.Wire.WireMaterial draggingWire;
+    private int lastWireX;
+    private int lastWireY;
 
     private Integer lastMouseX;
     private Integer lastMouseY;
@@ -77,6 +82,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             drawWires(guiGraphics, diagram);
         }
         drawGhost(guiGraphics, mouseX, mouseY);
+        drawWirePreview(guiGraphics, mouseX, mouseY);
         guiGraphics.disableScissor();
 
         if (this.lastMouseX == null) {
@@ -125,7 +131,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     public boolean isPlaceable(ItemStack stack) {
-        return placeComponent(stack) != null;
+        return placeComponent(stack) != null || stack.is(ModItems.COPPER_WIRE) || stack.is(ModItems.GOLD_WIRE);
     }
 
     private CircuitComponent placeComponent(ItemStack stack) {
@@ -249,6 +255,112 @@ public class CircuitDiagramPanel extends AbstractWidget {
         ClientPlayNetworking.send(new UpdateCircuitDiagramPayload(editor));
     }
 
+    private CircuitDiagram.Wire.WireMaterial wireMaterial() {
+        ItemStack carried = displayCarried();
+        if (carried.is(ModItems.COPPER_WIRE)) {
+            return CircuitDiagram.Wire.WireMaterial.COPPER;
+        }
+        if (carried.is(ModItems.GOLD_WIRE)) {
+            return CircuitDiagram.Wire.WireMaterial.GOLD;
+        }
+        return null;
+    }
+
+    private void drawWirePreview(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (!hasDiagram() || isReadOnly()) {
+            return;
+        }
+        CircuitDiagram.Wire.WireMaterial material = wireMaterial();
+        if (material == null) {
+            return;
+        }
+        int gx = cellX(mouseX);
+        int gy = cellY(mouseY);
+        double centerX = getX() + (gx + 0.5 - offsetX) * zoom;
+        double centerY = getY() + (gy + 0.5 - offsetY) * zoom;
+        int size = Math.max(2, (int) Math.round(zoom * 0.4));
+        int color = (wireColor(material) & 0x00FFFFFF) | 0x80000000;
+        guiGraphics.fill(
+                (int) Math.floor(centerX - size / 2.0),
+                (int) Math.floor(centerY - size / 2.0),
+                (int) Math.ceil(centerX + size / 2.0),
+                (int) Math.ceil(centerY + size / 2.0),
+                color);
+    }
+
+    private void stepWireDrag(int toX, int toY) {
+        if (draggingWire == null) {
+            return;
+        }
+        int walkX = lastWireX;
+        int walkY = lastWireY;
+        while (walkX != toX || walkY != toY) {
+            int dx = Integer.signum(toX - walkX);
+            int dy = Integer.signum(toY - walkY);
+            if (dx != 0) {
+                commitConnection(walkX, walkY, walkX + dx, walkY, draggingWire);
+                walkX += dx;
+            } else {
+                commitConnection(walkX, walkY, walkX, walkY + dy, draggingWire);
+                walkY += dy;
+            }
+        }
+        lastWireX = toX;
+        lastWireY = toY;
+    }
+
+    private void commitConnection(int fromX, int fromY, int toX, int toY, CircuitDiagram.Wire.WireMaterial material) {
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return;
+        }
+        CircuitDiagram editor = diagram.copy();
+        applyConnection(editor, fromX, fromY, toX, toY, material);
+        commitDiagram(stack, editor);
+    }
+
+    private void applyConnection(CircuitDiagram diagram, int fromX, int fromY, int toX, int toY, CircuitDiagram.Wire.WireMaterial material) {
+        int dx = toX - fromX;
+        int dy = toY - fromY;
+        if (Math.abs(dx) + Math.abs(dy) != 1) {
+            return;
+        }
+        Direction fromSide = dx > 0 ? Direction.EAST : (dx < 0 ? Direction.WEST : (dy > 0 ? Direction.SOUTH : Direction.NORTH));
+        boolean force = Screen.hasShiftDown();
+        CircuitDiagram.Block toBlock = diagram.getBlock(toX, toY);
+        if (toBlock instanceof CircuitDiagram.Component && !force) {
+            setWireSide(diagram, fromX, fromY, fromSide, material);
+            return;
+        }
+        if (toBlock instanceof CircuitDiagram.Component) {
+            diagram.setBlock(toX, toY, null);
+        }
+        setWireSide(diagram, fromX, fromY, fromSide, material);
+        setWireSide(diagram, toX, toY, fromSide.getOpposite(), material);
+    }
+
+    private void setWireSide(CircuitDiagram diagram, int x, int y, Direction side, CircuitDiagram.Wire.WireMaterial material) {
+        CircuitDiagram.Block block = diagram.getBlock(x, y);
+        CircuitDiagram.Wire wire;
+        if (block instanceof CircuitDiagram.Wire existing) {
+            wire = existing;
+        } else if (block == null) {
+            wire = new CircuitDiagram.Wire(null, null, null, null);
+            wire.x = x;
+            wire.y = y;
+            diagram.setBlock(x, y, wire);
+        } else {
+            return;
+        }
+        switch (side) {
+            case NORTH -> wire.north = material;
+            case EAST -> wire.east = material;
+            case SOUTH -> wire.south = material;
+            case WEST -> wire.west = material;
+        }
+    }
+
     private void drawDotGrid(GuiGraphics guiGraphics) {
         int startGX = (int) Math.floor(offsetX);
         int endGX = (int) Math.ceil(offsetX + getWidth() / zoom);
@@ -311,6 +423,25 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
     }
 
+    private CircuitDiagram.Wire.WireMaterial materialOf(CircuitDiagram.Wire w, Direction d) {
+        return switch (d) {
+            case DOWN, UP -> null;
+            case NORTH -> w.north;
+            case EAST -> w.east;
+            case SOUTH -> w.south;
+            case WEST -> w.west;
+        };
+    }
+
+    private void drawSegmentForDir(GuiGraphics g, Direction d, double centerX, double centerY, double baseX, double baseY, double half, double zoom, double gap, int thickness, int color) {
+        switch (d) {
+            case NORTH -> drawSegment(g, centerX, centerY + gap, baseX + half, baseY, thickness, color);
+            case EAST -> drawSegment(g, centerX - gap, centerY, baseX + zoom, baseY + half, thickness, color);
+            case SOUTH -> drawSegment(g, centerX, centerY - gap, baseX + half, baseY + zoom, thickness, color);
+            case WEST -> drawSegment(g, centerX + gap, centerY, baseX, baseY + half, thickness, color);
+        }
+    }
+
     private void drawWire(GuiGraphics guiGraphics, CircuitDiagram.Wire wire) {
         double centerX = getX() + (wire.x + 0.5 - offsetX) * zoom;
         double centerY = getY() + (wire.y + 0.5 - offsetY) * zoom;
@@ -318,34 +449,43 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return;
         }
         int thickness = Math.max(1, (int) Math.round(zoom * 0.2));
-        if (wire.north != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y - offsetY) * zoom, thickness, wireColor(wire.north));
+        double baseX = getX() + (wire.x - offsetX) * zoom;
+        double baseY = getY() + (wire.y - offsetY) * zoom;
+        double half = 0.5 * zoom;
+        double gap = 0.03 * zoom;
+
+        var materials = new CircuitDiagram.Wire.WireMaterial[]{
+                CircuitDiagram.Wire.WireMaterial.COPPER,
+                CircuitDiagram.Wire.WireMaterial.GOLD
+        };
+
+        for (var target : materials) {
+            // 彩色线
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                var m = materialOf(wire, d);
+                if (m != target) continue;
+
+                drawSegmentForDir(
+                        guiGraphics, d, centerX, centerY,
+                        baseX, baseY, half, zoom, gap,
+                        thickness, wireColor(m)
+                );
+            }
+
+            // 黑色描边，保持原来“先彩后黑”的顺序
+            if (thickness > 1) {
+                for (Direction d : Direction.Plane.HORIZONTAL) {
+                    var m = materialOf(wire, d);
+                    if (m != target) continue;
+
+                    drawSegmentForDir(
+                            guiGraphics, d, centerX, centerY,
+                            baseX, baseY, half, zoom, gap,
+                            thickness - 1, 0xFF000000
+                    );
+                }
+            }
         }
-        if (wire.east != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 1.0 - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness, wireColor(wire.east));
-        }
-        if (wire.south != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y + 1.0 - offsetY) * zoom, thickness, wireColor(wire.south));
-        }
-        if (wire.west != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness, wireColor(wire.west));
-        }
-        if (wire.north != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y - offsetY) * zoom, thickness - 1, 0xFF000000);
-        }
-        if (wire.east != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 1.0 - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness - 1, 0xFF000000);
-        }
-        if (wire.south != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x + 0.5 - offsetX) * zoom, getY() + (wire.y + 1.0 - offsetY) * zoom, thickness - 1, 0xFF000000);
-        }
-        if (wire.west != null) {
-            drawSegment(guiGraphics, centerX, centerY, getX() + (wire.x - offsetX) * zoom, getY() + (wire.y + 0.5 - offsetY) * zoom, thickness - 1, 0xFF000000);
-        }
-        int color = wireColor(firstMaterial(wire));
-        int s = Math.max(1, (int) Math.round(zoom * 0.3));
-        int cxs = (int) Math.round(centerX);
-        int cys = (int) Math.round(centerY);
     }
 
     private int wireColor(CircuitDiagram.Wire.WireMaterial material) {
@@ -382,9 +522,16 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (button == 0) {
             if (!isReadOnly()) {
-                CircuitComponent component = activeComponent();
-                if (component != null) {
-                    tryPlace(cellX(mouseX), cellY(mouseY), component);
+                CircuitDiagram.Wire.WireMaterial wire = wireMaterial();
+                if (wire != null) {
+                    draggingWire = wire;
+                    lastWireX = cellX(mouseX);
+                    lastWireY = cellY(mouseY);
+                } else {
+                    CircuitComponent component = activeComponent();
+                    if (component != null) {
+                        tryPlace(cellX(mouseX), cellY(mouseY), component);
+                    }
                 }
             }
             return true;
@@ -419,6 +566,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (button == 1) {
             erasing = false;
         }
+        if (button == 0) {
+            draggingWire = null;
+        }
         return this.active && this.visible && isMouseOver(mouseX, mouseY);
     }
 
@@ -430,6 +580,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (erasing) {
             tryErase(cellX(mouseX), cellY(mouseY));
         }
+        if (draggingWire != null) {
+            stepWireDrag(cellX(mouseX), cellY(mouseY));
+        }
     }
 
     @Override
@@ -438,7 +591,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return false;
         }
         if (Screen.hasControlDown()) {
-            zoomAt(mouseX, mouseY, Math.pow(1.1, scrollY));
+            zoomAt(mouseX, mouseY, Math.pow(2, scrollY / 5));
             return true;
         }
         if (Screen.hasAltDown() && activeComponent() != null && !isReadOnly()) {
