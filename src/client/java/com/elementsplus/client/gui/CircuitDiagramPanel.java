@@ -45,6 +45,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private double offsetY = -6;
     private double zoom = DEFAULT_ZOOM;
     private boolean dragging;
+    private boolean erasing;
 
     private Direction rotation = Direction.NORTH;
     private ItemStack previewStack = ItemStack.EMPTY;
@@ -397,6 +398,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             if (!carried.isEmpty()) {
                 ClientPlayNetworking.send(new ReturnCarriedPayload());
             } else if (!isReadOnly()) {
+                erasing = true;
                 tryErase(cellX(mouseX), cellY(mouseY));
             }
             return true;
@@ -414,6 +416,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (button == 2) {
             dragging = false;
         }
+        if (button == 1) {
+            erasing = false;
+        }
         return this.active && this.visible && isMouseOver(mouseX, mouseY);
     }
 
@@ -421,6 +426,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (dragging) {
             offsetX -= dx / zoom;
             offsetY -= dy / zoom;
+        }
+        if (erasing) {
+            tryErase(cellX(mouseX), cellY(mouseY));
         }
     }
 

@@ -55,7 +55,29 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
 
     @Override
     public @NotNull ItemStack quickMoveStack(Player player, int i) {
-        return ItemStack.EMPTY;
+        ItemStack itemStack = ItemStack.EMPTY;
+        Slot slot = this.slots.get(i);
+        if (slot != null && slot.hasItem()) {
+            ItemStack itemStack2 = slot.getItem();
+            itemStack = itemStack2.copy();
+            if (i < 36) {
+                if (!this.moveItemStackTo(itemStack2, 36, 37, false)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (!this.moveItemStackTo(itemStack2, 0, 36, false)) {
+                return ItemStack.EMPTY;
+            }
+            if (itemStack2.isEmpty()) {
+                slot.setByPlayer(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
+            if (itemStack2.getCount() == itemStack.getCount()) {
+                return ItemStack.EMPTY;
+            }
+            slot.onTake(player, itemStack2);
+        }
+        return itemStack;
     }
 
     @Override
@@ -90,4 +112,5 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         // 返还输入容器中的物品
         this.access.execute((level, blockPos) -> this.clearContainer(player, this.container));
     }
+
 }
