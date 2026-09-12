@@ -1,5 +1,6 @@
 package com.elementsplus.client.screen;
 
+import com.elementsplus.ModItems;
 import com.elementsplus.client.ElementsPlusClient;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.core.circuit.CircuitComponent;
@@ -10,6 +11,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -34,6 +36,23 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public List<ComponentCategoryWidget> componentCategories = new ArrayList<>();
 
     public Map<Integer, Point> slotPosition;
+
+    private class ComponentEntryButton extends ListEntryButton {
+        private final CircuitComponent component;
+
+        ComponentEntryButton(CircuitComponent component) {
+            super(0, 0, 0, ComponentCategoryWidget.ENTRY_HEIGHT, component.getName());
+            this.component = component;
+        }
+
+        @Override
+        public void onClick(double d, double e) {
+            super.onClick(d, e);
+            if (menu.getCarried().isEmpty()) {
+                circuitPanel.setVirtualComponent(component);
+            }
+        }
+    }
 
     public LithographyMachineScreen(LithographyMachineMenu abstractContainerMenu, Inventory inventory, Component component) {
         super(abstractContainerMenu, inventory, component);
@@ -113,7 +132,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                     .setCollapseListener(this::layoutComponentList);
             if (category.components != null) {
                 for (CircuitComponent component : category.components) {
-                    widget.addEntry(component.getName());
+                    widget.addEntry(new ComponentEntryButton(component));
                 }
             }
             componentWidget.addChild(widget);
@@ -164,7 +183,41 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             this.menu.setCarried(carried);
             circuitPanel.setPreviewStack(ItemStack.EMPTY);
         }
+        CircuitComponent virtual = circuitPanel.getVirtualComponent();
+        if (virtual != null && !(buttonGroup.getSelected() == tabButtonDesign && circuitPanel.contains(mouseX, mouseY))) {
+            drawVirtualCursor(guiGraphics, virtual, mouseX, mouseY);
+        }
         this.renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    private void drawVirtualCursor(GuiGraphics guiGraphics, CircuitComponent component, int mouseX, int mouseY) {
+        ResourceLocation icon = component.getIcon();
+        if (icon != null) {
+            guiGraphics.blit(icon, mouseX - 8, mouseY - 8, 0, 0, 16, 16, 16, 16);
+        } else {
+            guiGraphics.renderItem(new ItemStack(ModItems.SMALL_CHIP), mouseX - 8, mouseY - 8);
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        if (isOverSlot(mouseX, mouseY) || button == 1) {
+            circuitPanel.setVirtualComponent(null);
+        }
+        return handled;
+    }
+
+    private boolean isOverSlot(double mouseX, double mouseY) {
+        for (Slot slot : this.menu.slots) {
+            Point point = getSlotPosition(slot);
+            int sx = this.leftPos + point.x() - 1;
+            int sy = this.topPos + point.y() - 1;
+            if (mouseX >= sx && mouseX < sx + 18 && mouseY >= sy && mouseY < sy + 18) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

@@ -34,11 +34,17 @@ public class ComponentCategoryWidget extends AbstractWidget {
         return this;
     }
 
-    public ListEntryButton addEntry(Component label) {
-        ListEntryButton entry = new ListEntryButton(1, HEADER_HEIGHT + entries.size() * ENTRY_HEIGHT, getWidth() - 2, ENTRY_HEIGHT, label);
+    public ListEntryButton addEntry(ListEntryButton entry) {
+        entry.setX(1);
+        entry.setY(HEADER_HEIGHT + entries.size() * ENTRY_HEIGHT);
+        entry.setWidth(getWidth() - 2);
         entries.add(entry);
         updateHeight();
         return entry;
+    }
+
+    public ListEntryButton addEntry(Component label) {
+        return addEntry(new ListEntryButton(0, 0, 0, ENTRY_HEIGHT, label));
     }
 
     public boolean isExpanded() {

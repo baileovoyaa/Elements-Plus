@@ -48,6 +48,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private Direction rotation = Direction.NORTH;
     private ItemStack previewStack = ItemStack.EMPTY;
+    private CircuitComponent virtualComponent;
 
     private Integer lastMouseX;
     private Integer lastMouseY;
@@ -100,6 +101,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
         this.previewStack = stack;
     }
 
+    public CircuitComponent getVirtualComponent() {
+        return virtualComponent;
+    }
+
+    public void setVirtualComponent(CircuitComponent component) {
+        this.virtualComponent = component;
+    }
+
     public boolean contains(double mouseX, double mouseY) {
         return mouseX >= getX() && mouseX < getX() + getWidth()
                 && mouseY >= getY() && mouseY < getY() + getHeight();
@@ -124,6 +133,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
         return previewStack.isEmpty() ? menu.getCarried() : previewStack;
     }
 
+    private CircuitComponent activeComponent() {
+        CircuitComponent carried = placeComponent(displayCarried());
+        return carried != null ? carried : virtualComponent;
+    }
+
     private int cellX(double mouseX) {
         return (int) Math.floor(offsetX + (mouseX - getX()) / zoom);
     }
@@ -141,7 +155,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void drawGhost(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        CircuitComponent component = placeComponent(displayCarried());
+        CircuitComponent component = activeComponent();
         if (component == null) {
             return;
         }
@@ -357,13 +371,17 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return true;
         }
         if (button == 0) {
-            CircuitComponent component = placeComponent(menu.getCarried());
+            CircuitComponent component = activeComponent();
             if (component != null) {
                 tryPlace(cellX(mouseX), cellY(mouseY), component);
             }
             return true;
         }
         if (button == 1) {
+            if (virtualComponent != null) {
+                virtualComponent = null;
+                return true;
+            }
             ItemStack carried = menu.getCarried();
             if (!carried.isEmpty()) {
                 ClientPlayNetworking.send(new ReturnCarriedPayload());
@@ -404,7 +422,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             zoomAt(mouseX, mouseY, Math.pow(1.1, scrollY));
             return true;
         }
-        if (Screen.hasAltDown() && placeComponent(menu.getCarried()) != null) {
+        if (Screen.hasAltDown() && activeComponent() != null) {
             rotation = scrollY > 0 ? rotation.getClockWise() : rotation.getCounterClockWise();
             return true;
         }
