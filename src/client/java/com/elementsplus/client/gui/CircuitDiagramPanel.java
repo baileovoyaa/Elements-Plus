@@ -1,12 +1,19 @@
 package com.elementsplus.client.gui;
 
 import com.elementsplus.ModDataComponents;
+import com.elementsplus.core.circuit.BuiltinCircuitComponents;
+import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
+import com.elementsplus.network.ReturnCarriedPayload;
+import com.elementsplus.network.UpdateCircuitDiagramPayload;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 
@@ -21,12 +28,15 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int DOT_MIN_GAP = 4;
     private static final int SCROLL_PIXELS = 48;
 
-    private static final int COLOR_BACKGROUND = 0xFFE0E0E0;
-    private static final int COLOR_DOT = 0xFFA0A0A0;
+    private static final int COLOR_BACKGROUND = 0xFF2B2B28;
+    private static final int COLOR_DOT = 0xFF4A4A44;
     private static final int COLOR_COPPER = 0xFFB06030;
     private static final int COLOR_GOLD = 0xFFFFD700;
     private static final int COLOR_COMPONENT_FILL = 0xFF909090;
     private static final int COLOR_COMPONENT_BORDER = 0xFF555555;
+    private static final int COLOR_GHOST_VALID = 0x4010E0B0;
+    private static final int COLOR_GHOST_INVALID = 0x60E03030;
+    private static final int COLOR_GHOST_BORDER = 0xFFFFFFFF;
 
     private final LithographyMachineMenu menu;
     private final BooleanSupplier activeSupplier;
@@ -35,6 +45,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private double offsetY = -6;
     private double zoom = DEFAULT_ZOOM;
     private boolean dragging;
+
+    private Direction rotation = Direction.NORTH;
+    private ItemStack previewStack = ItemStack.EMPTY;
 
     private Integer lastMouseX;
     private Integer lastMouseY;
@@ -61,6 +74,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             drawComponents(guiGraphics, diagram);
             drawWires(guiGraphics, diagram);
         }
+        drawGhost(guiGraphics, mouseX, mouseY);
         guiGraphics.disableScissor();
 
         if (this.lastMouseX == null) {
@@ -80,6 +94,135 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private CircuitDiagram getDiagram() {
         ItemStack stack = menu.slots.get(36).getItem();
         return stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+    }
+
+    public void setPreviewStack(ItemStack stack) {
+        this.previewStack = stack;
+    }
+
+    public boolean contains(double mouseX, double mouseY) {
+        return mouseX >= getX() && mouseX < getX() + getWidth()
+                && mouseY >= getY() && mouseY < getY() + getHeight();
+    }
+
+    public boolean isPlaceable(ItemStack stack) {
+        return placeComponent(stack) != null;
+    }
+
+    private CircuitComponent placeComponent(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return null;
+        }
+        ResourceLocation id = stack.get(ModDataComponents.EQUIVALENT_COMPONENT);
+        if (id == null) {
+            return null;
+        }
+        return BuiltinCircuitComponents.byId(id);
+    }
+
+    private ItemStack displayCarried() {
+        return previewStack.isEmpty() ? menu.getCarried() : previewStack;
+    }
+
+    private int cellX(double mouseX) {
+        return (int) Math.floor(offsetX + (mouseX - getX()) / zoom);
+    }
+
+    private int cellY(double mouseY) {
+        return (int) Math.floor(offsetY + (mouseY - getY()) / zoom);
+    }
+
+    private int placementWidth(CircuitComponent component) {
+        return rotation == Direction.NORTH || rotation == Direction.SOUTH ? component.getWidth() : component.getHeight();
+    }
+
+    private int placementHeight(CircuitComponent component) {
+        return rotation == Direction.NORTH || rotation == Direction.SOUTH ? component.getHeight() : component.getWidth();
+    }
+
+    private void drawGhost(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        CircuitComponent component = placeComponent(displayCarried());
+        if (component == null) {
+            return;
+        }
+        int gx = cellX(mouseX);
+        int gy = cellY(mouseY);
+        int w = placementWidth(component);
+        int h = placementHeight(component);
+        double left = getX() + (gx - offsetX) * zoom;
+        double top = getY() + (gy - offsetY) * zoom;
+        double right = left + w * zoom;
+        double bottom = top + h * zoom;
+        int lx = (int) Math.floor(left);
+        int ty = (int) Math.floor(top);
+        int rx = (int) Math.ceil(right);
+        int by = (int) Math.ceil(bottom);
+        boolean conflict = diagramHasConflict(gx, gy, w, h);
+        guiGraphics.fill(lx, ty, rx, by, conflict ? COLOR_GHOST_INVALID : COLOR_GHOST_VALID);
+        if (zoom >= 3) {
+            guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_GHOST_BORDER);
+            guiGraphics.fill(lx, by - 1, rx, by, COLOR_GHOST_BORDER);
+            guiGraphics.fill(lx, ty, lx + 1, by, COLOR_GHOST_BORDER);
+            guiGraphics.fill(rx - 1, ty, rx, by, COLOR_GHOST_BORDER);
+        }
+    }
+
+    private boolean diagramHasConflict(int gx, int gy, int w, int h) {
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return false;
+        }
+        for (int dx = 0; dx < w; dx++) {
+            for (int dy = 0; dy < h; dy++) {
+                if (diagram.getBlock(gx + dx, gy + dy) != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void tryPlace(int gx, int gy, CircuitComponent component) {
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return;
+        }
+        boolean force = Screen.hasShiftDown();
+        int w = placementWidth(component);
+        int h = placementHeight(component);
+        if (!force) {
+            for (int dx = 0; dx < w; dx++) {
+                for (int dy = 0; dy < h; dy++) {
+                    if (diagram.getBlock(gx + dx, gy + dy) != null) {
+                        return;
+                    }
+                }
+            }
+        }
+        CircuitDiagram editor = diagram.copy();
+        editor.setBlock(gx, gy, new CircuitDiagram.Component(component, rotation), force);
+        commitDiagram(stack, editor);
+    }
+
+    private void tryErase(int gx, int gy) {
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return;
+        }
+        if (diagram.getBlock(gx, gy) == null) {
+            return;
+        }
+        CircuitDiagram editor = diagram.copy();
+        editor.setBlock(gx, gy, null);
+        commitDiagram(stack, editor);
+    }
+
+    private void commitDiagram(ItemStack stack, CircuitDiagram editor) {
+        stack.set(ModDataComponents.CIRCUIT_DIAGRAM, editor);
+        menu.onDiagramChanged();
+        ClientPlayNetworking.send(new UpdateCircuitDiagramPayload(editor));
     }
 
     private void drawDotGrid(GuiGraphics guiGraphics) {
@@ -211,6 +354,23 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (button == 2) {
             dragging = true;
+            return true;
+        }
+        if (button == 0) {
+            CircuitComponent component = placeComponent(menu.getCarried());
+            if (component != null) {
+                tryPlace(cellX(mouseX), cellY(mouseY), component);
+            }
+            return true;
+        }
+        if (button == 1) {
+            ItemStack carried = menu.getCarried();
+            if (!carried.isEmpty()) {
+                ClientPlayNetworking.send(new ReturnCarriedPayload());
+            } else {
+                tryErase(cellX(mouseX), cellY(mouseY));
+            }
+            return true;
         }
         return true;
     }
@@ -242,6 +402,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (Screen.hasControlDown()) {
             zoomAt(mouseX, mouseY, Math.pow(1.1, scrollY));
+            return true;
+        }
+        if (Screen.hasAltDown() && placeComponent(menu.getCarried()) != null) {
+            rotation = scrollY > 0 ? rotation.getClockWise() : rotation.getCounterClockWise();
             return true;
         }
         double sx = scrollX != 0 ? scrollX : 0;

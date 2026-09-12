@@ -68,6 +68,18 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         super.slotsChanged(container);
     }
 
+    public void onDiagramChanged() {
+        this.container.setChanged();
+    }
+
+    public void returnCarriedToInventory() {
+        ItemStack carried = this.getCarried();
+        if (carried.isEmpty()) {
+            return;
+        }
+        this.moveItemStackTo(carried, 0, 36, false);
+    }
+
     @Override
     public void removed(Player player) {
         super.removed(player);

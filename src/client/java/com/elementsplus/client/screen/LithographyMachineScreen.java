@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -151,9 +152,19 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+        ItemStack carried = this.menu.getCarried();
+        boolean hideCarried = !carried.isEmpty() && buttonGroup.getSelected() == tabButtonDesign
+                && circuitPanel.isPlaceable(carried) && circuitPanel.contains(mouseX, mouseY);
+        if (hideCarried) {
+            circuitPanel.setPreviewStack(carried);
+            this.menu.setCarried(ItemStack.EMPTY);
+        }
         super.render(guiGraphics, mouseX, mouseY, delta);
+        if (hideCarried) {
+            this.menu.setCarried(carried);
+            circuitPanel.setPreviewStack(ItemStack.EMPTY);
+        }
         this.renderTooltip(guiGraphics, mouseX, mouseY);
-
     }
 
     @Override

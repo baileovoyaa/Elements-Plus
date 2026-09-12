@@ -3,6 +3,9 @@ package com.elementsplus;
 import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
+import com.elementsplus.menu.LithographyMachineMenu;
+import com.elementsplus.network.ReturnCarriedPayload;
+import com.elementsplus.network.UpdateCircuitDiagramPayload;
 import com.elementsplus.recipe.CrystallizerRecipe;
 import com.elementsplus.recipe.MetalCatalystRecipe;
 import com.mojang.brigadier.context.CommandContext;
@@ -13,6 +16,8 @@ import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.registry.OxidizableBlocksRegistry;
 import net.fabricmc.fabric.api.registry.StrippableBlockRegistry;
 import net.minecraft.advancements.AdvancementHolder;
@@ -65,6 +70,27 @@ public class ElementsPlus implements ModInitializer {
         ModBlockEntityTypes.initialize();
         MetalCatalystRecipe.TYPE.toString();
         CrystallizerRecipe.TYPE.toString();
+
+        PayloadTypeRegistry.playC2S().register(ReturnCarriedPayload.TYPE, ReturnCarriedPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(ReturnCarriedPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
+                        menu.returnCarriedToInventory();
+                    }
+                }));
+
+        PayloadTypeRegistry.playC2S().register(UpdateCircuitDiagramPayload.TYPE, UpdateCircuitDiagramPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(UpdateCircuitDiagramPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
+                        ItemStack stack = menu.slots.get(36).getItem();
+                        if (stack.get(ModDataComponents.CIRCUIT_DIAGRAM) != null) {
+                            stack.set(ModDataComponents.CIRCUIT_DIAGRAM, payload.diagram());
+                            menu.onDiagramChanged();
+                        }
+                    }
+                }));
+
         LOGGER.info("Hello Fabric world!");
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {

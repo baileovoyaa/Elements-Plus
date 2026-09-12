@@ -97,7 +97,15 @@ public class ModItemGroups {
                 ModItems.CATALYST,
                 ModItems.LIGHTNING_BOTTLE,
                 ModItems.WASTE_BOTTLE,
-                ModItems.COMPUTER
+                ModItems.COMPUTER,
+                ModItems.AND_GATE,
+                ModItems.OR_GATE,
+                ModItems.NOT_GATE,
+                ModItems.ADDER,
+                ModItems.BITWISE_MOVE,
+                ModItems.MULTIPLIER,
+                ModItems.REGISTER,
+                ModItems.COUNTER
                 // 可以继续添加更多物品
         );
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());

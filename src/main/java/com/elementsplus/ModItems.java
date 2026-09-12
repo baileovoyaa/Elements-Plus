@@ -1,5 +1,7 @@
 package com.elementsplus;
 
+import com.elementsplus.core.circuit.BuiltinCircuitComponents;
+import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.item.WrenchItem;
 import net.minecraft.core.Holder;
@@ -247,6 +249,29 @@ public class ModItems {
     public static final Item CIRCUIT_DIAGRAM = register(new Item(new Item.Properties()
             .stacksTo(1)
             .component(ModDataComponents.CIRCUIT_DIAGRAM, CircuitDiagram.EXAMPLE.copy())), "circuit_diagram");
+
+    // 等效元件（可作为电路图放置源）
+    public static final Item AND_GATE = registerComponentItem(BuiltinCircuitComponents.AND_GATE);
+    public static final Item OR_GATE = registerComponentItem(BuiltinCircuitComponents.OR_GATE);
+    public static final Item NOT_GATE = registerComponentItem(BuiltinCircuitComponents.NOT_GATE);
+    public static final Item ADDER = registerComponentItem(BuiltinCircuitComponents.ADD);
+    public static final Item BITWISE_MOVE = registerComponentItem(BuiltinCircuitComponents.BITWISE_MOVE);
+    public static final Item MULTIPLIER = registerComponentItem(BuiltinCircuitComponents.MULTIPLIER);
+    public static final Item REGISTER = registerComponentItem(BuiltinCircuitComponents.REGISTER);
+    public static final Item COUNTER = registerComponentItem(BuiltinCircuitComponents.COUNTER);
+
+    private static Item registerComponentItem(CircuitComponent component) {
+        ResourceLocation id = component.getId();
+        return register(new Item(new Item.Properties()
+                .stacksTo(1)
+                .component(ModDataComponents.EQUIVALENT_COMPONENT, id)) {
+            @Override
+            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
+                tooltip.add(component.getName().copy().withStyle(style -> style.withColor(0xFFD700)));
+            }
+        }, id.getPath());
+    }
+
     public static final Item SMALL_EMPTY_CHIP = register(new Item(new Item.Properties()), "small_empty_chip");
     public static final Item MEDIUM_EMPTY_CHIP = register(new Item(new Item.Properties()), "medium_empty_chip");
     public static final Item LARGE_EMPTY_CHIP = register(new Item(new Item.Properties()), "large_empty_chip");

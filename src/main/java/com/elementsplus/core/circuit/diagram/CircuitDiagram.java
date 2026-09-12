@@ -364,6 +364,11 @@ public class CircuitDiagram {
             CircuitDiagram::readFromBuf
     );
 
+    public static final StreamCodec<FriendlyByteBuf, CircuitDiagram> PAYLOAD_STREAM_CODEC = StreamCodec.of(
+            CircuitDiagram::writeToBuf,
+            CircuitDiagram::readFromBuf
+    );
+
     private static void writeMaterial(FriendlyByteBuf buf, Wire.WireMaterial material) {
         buf.writeVarInt(material == null ? -1 : material.ordinal());
     }
@@ -373,7 +378,7 @@ public class CircuitDiagram {
         return ordinal == -1 ? null : Wire.WireMaterial.values()[ordinal];
     }
 
-    private static void writeToBuf(RegistryFriendlyByteBuf buf, CircuitDiagram diagram) {
+    private static void writeToBuf(FriendlyByteBuf buf, CircuitDiagram diagram) {
         buf.writeVarInt(diagram.chunks.size());
         for (Map.Entry<Long, Chunk> entry : diagram.chunks.entrySet()) {
             buf.writeVarInt((int) (entry.getKey() >> 32));
@@ -410,7 +415,7 @@ public class CircuitDiagram {
         }
     }
 
-    private static CircuitDiagram readFromBuf(RegistryFriendlyByteBuf buf) {
+    private static CircuitDiagram readFromBuf(FriendlyByteBuf buf) {
         CircuitDiagram diagram = new CircuitDiagram();
         int chunkCount = buf.readVarInt();
         for (int i = 0; i < chunkCount; i++) {
