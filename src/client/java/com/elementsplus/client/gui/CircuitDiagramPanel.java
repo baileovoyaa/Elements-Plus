@@ -36,6 +36,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private double zoom = DEFAULT_ZOOM;
     private boolean dragging;
 
+    private Integer lastMouseX;
+    private Integer lastMouseY;
+
     public CircuitDiagramPanel(LithographyMachineMenu menu, BooleanSupplier activeSupplier, int x, int y, int width, int height) {
         super(x, y, width, height, net.minecraft.network.chat.Component.empty());
         this.menu = menu;
@@ -50,6 +53,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (!show) {
             return;
         }
+        GuiUtil.drawSubPanel(guiGraphics, getX() - 1, getY() - 1, getX() + getWidth() + 1, getY() + getHeight() + 1, 0xFFE0E0E0);
         guiGraphics.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
         guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), COLOR_BACKGROUND);
         drawDotGrid(guiGraphics);
@@ -59,6 +63,19 @@ public class CircuitDiagramPanel extends AbstractWidget {
             drawWires(guiGraphics, diagram);
         }
         guiGraphics.disableScissor();
+
+        if (this.lastMouseX == null) {
+            this.lastMouseX = mouseX;
+            this.lastMouseY = mouseY;
+        } else {
+            double dx = mouseX - this.lastMouseX;
+            double dy = mouseY - this.lastMouseY;
+            this.lastMouseX = mouseX;
+            this.lastMouseY = mouseY;
+            if (dx != 0 || dy != 0) {
+                this.mouseMoveDelta(mouseX, mouseY, dx, dy);
+            }
+        }
     }
 
     private CircuitDiagram getDiagram() {
@@ -201,14 +218,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
         return this.active && this.visible && isMouseOver(mouseX, mouseY);
     }
 
-    @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (button == 2 && dragging) {
-            offsetX -= dragX / zoom;
-            offsetY -= dragY / zoom;
-            return true;
+    public void mouseMoveDelta(double mouseX, double mouseY, double dx, double dy) {
+        if (dragging) {
+            offsetX -= dx / zoom;
+            offsetY -= dy / zoom;
         }
-        return false;
     }
 
     @Override

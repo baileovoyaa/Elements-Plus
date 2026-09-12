@@ -6,6 +6,8 @@ import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.CircuitComponentToolbox;
 import com.elementsplus.menu.LithographyMachineMenu;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -81,8 +83,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
         this.addRenderableWidget(circuitPanel = new CircuitDiagramPanel(this.menu,
                 () -> buttonGroup.getSelected() == tabButtonDesign,
-                leftPos + 10 + 79, topPos + 48,
-                Math.max(1, imageWidth - 178), Math.max(1, imageHeight - 53)));
+                leftPos + 10 + 80, topPos + 49,
+                Math.max(1, imageWidth - 180), Math.max(1, imageHeight - 55)));
 
         initComponentList();
 
