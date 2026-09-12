@@ -37,4 +37,14 @@ public class IconButton extends Button {
         int k = this.active ? 16777215 : 10526880;
         this.renderString(guiGraphics, minecraft.font, k | Mth.ceil(this.alpha * 255.0F) << 24);
     }
+
+    @Override
+    public boolean mouseDragged(double d, double e, int i, double f, double g) {
+        if (this.isHovered && this.isValidClickButton(i)) {
+            this.onDrag(d, e, f, g);
+            return true;
+        } else {
+            return false;
+        }
+    }
 }

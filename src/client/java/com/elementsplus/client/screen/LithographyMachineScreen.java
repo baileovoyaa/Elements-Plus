@@ -14,6 +14,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -33,6 +34,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     public ScrollPanelWidget componentWidget;
     public ScrollPanelWidget toolbarWidget;
+
+    public IntSliderWidget speedSlider;
+    public EditBox speedEditBox;
+    public boolean syncingSpeed = false;
 
     public CircuitDiagramPanel circuitPanel;
 
@@ -129,19 +134,35 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }));
 
         // 单步
-        toolbarWidget.addChild(new IconButton(16, 0, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 32, 0, button -> {
+        toolbarWidget.addChild(new IconButton(16, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 32, 0, button -> {
 
         }));
 
         // 复位
-        toolbarWidget.addChild(new IconButton(32, 0, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 48, 0, button -> {
+        toolbarWidget.addChild(new IconButton(32, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 48, 0, button -> {
 
         }));
 
-        // TODO: 速度滑块
-
-        // 速度输入框
-        toolbarWidget.addChild(new EditBox(font, 100, 0, 50, 16, Component.empty()));
+        // 速度滑块（范围 1~20，与输入框同步；输入超出范围时滑块停在两端）
+        speedEditBox = new EditBox(font, 100, 1, 50, 16, Component.empty());
+        speedSlider = toolbarWidget.addChild(new IntSliderWidget(48, 1, 50, 16, 1, 20, 20, value -> {
+            if (syncingSpeed) return;
+            syncingSpeed = true;
+            speedEditBox.setValue(String.valueOf(value));
+            syncingSpeed = false;
+        }));
+        speedEditBox.setResponder(text -> {
+            if (syncingSpeed) return;
+            int parsed;
+            try {
+                parsed = Integer.parseInt(text.trim());
+            } catch (NumberFormatException e) {
+                return;
+            }
+            speedSlider.setValue(parsed);
+        });
+        speedEditBox.setValue("20");
+        toolbarWidget.addChild(speedEditBox);
 
         initComponentList();
 
@@ -246,6 +267,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        speedEditBox.setFocused(false);
         boolean handled = super.mouseClicked(mouseX, mouseY, button);
         if (isOverSlot(mouseX, mouseY) || button == 1) {
             circuitPanel.setVirtualComponent(null);

@@ -1,6 +1,7 @@
 package com.elementsplus.core.circuit;
 
 import com.elementsplus.ElementsPlus;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -9,17 +10,43 @@ import java.util.List;
 import java.util.Map;
 
 public class BuiltinCircuitComponents {
-    public static final CircuitComponent TRANSISTOR = new CircuitComponent(ElementsPlus.id("transistor"), Component.translatable("circuit.elements-plus.component.transistor"), Component.translatable("circuit.elements-plus.component.transistor.description"), ElementsPlus.id("textures/item/amethyst_transistor.png"), 1, 1);
-    public static final CircuitComponent DIODE = new CircuitComponent(ElementsPlus.id("diode"), Component.translatable("circuit.elements-plus.component.diode"), Component.translatable("circuit.elements-plus.component.diode.description"), ElementsPlus.id("textures/item/amethyst_diode.png"), 1, 1);
-    public static final CircuitComponent CAPACITOR = new CircuitComponent(ElementsPlus.id("capacitor"), Component.translatable("circuit.elements-plus.component.capacitor"), Component.translatable("circuit.elements-plus.component.capacitor.description"), ElementsPlus.id("textures/item/amethyst_capacitor.png"), 1, 1);
-    public static final CircuitComponent RESISTOR = new CircuitComponent(ElementsPlus.id("resistor"), Component.translatable("circuit.elements-plus.component.resistor"), Component.translatable("circuit.elements-plus.component.resistor.description"), ElementsPlus.id("textures/item/amethyst_resistor.png"), 1, 1);
-    public static final CircuitComponent RESONATOR = new CircuitComponent(ElementsPlus.id("resonator"), Component.translatable("circuit.elements-plus.component.resonator"), Component.translatable("circuit.elements-plus.component.resonator.description"), ElementsPlus.id("textures/item/amethyst_resonator.png"), 1, 1);
-    public static final CircuitComponent BATTERY = new CircuitComponent(ElementsPlus.id("battery"), Component.translatable("circuit.elements-plus.component.battery"), Component.translatable("circuit.elements-plus.component.battery.description"), ElementsPlus.id("textures/item/amethyst_battery.png"), 1, 1);
+    public static final CircuitComponent TRANSISTOR = new CircuitComponent(ElementsPlus.id("transistor"), Component.translatable("circuit.elements-plus.component.transistor"), Component.translatable("circuit.elements-plus.component.transistor.description"), ElementsPlus.id("textures/item/amethyst_transistor.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.SOUTH, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+    }};
+    public static final CircuitComponent DIODE = new CircuitComponent(ElementsPlus.id("diode"), Component.translatable("circuit.elements-plus.component.diode"), Component.translatable("circuit.elements-plus.component.diode.description"), ElementsPlus.id("textures/item/amethyst_diode.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+    }};
+    public static final CircuitComponent CAPACITOR = new CircuitComponent(ElementsPlus.id("capacitor"), Component.translatable("circuit.elements-plus.component.capacitor"), Component.translatable("circuit.elements-plus.component.capacitor.description"), ElementsPlus.id("textures/item/amethyst_capacitor.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+    }};
+    public static final CircuitComponent RESISTOR = new CircuitComponent(ElementsPlus.id("resistor"), Component.translatable("circuit.elements-plus.component.resistor"), Component.translatable("circuit.elements-plus.component.resistor.description"), ElementsPlus.id("textures/item/amethyst_resistor.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+    }};
+    public static final CircuitComponent RESONATOR = new CircuitComponent(ElementsPlus.id("resonator"), Component.translatable("circuit.elements-plus.component.resonator"), Component.translatable("circuit.elements-plus.component.resonator.description"), ElementsPlus.id("textures/item/amethyst_resonator.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+    }};
+    public static final CircuitComponent BATTERY = new CircuitComponent(ElementsPlus.id("battery"), Component.translatable("circuit.elements-plus.component.battery"), Component.translatable("circuit.elements-plus.component.battery.description"), ElementsPlus.id("textures/item/amethyst_battery.png"), 1, 1) {{
+        setPin(Direction.NORTH, 0, PinType.OUTPUT);
+    }};
 
-    public static final CircuitComponent INPUT = new CircuitComponent(ElementsPlus.id("input"), Component.nullToEmpty("circuit.elements-plus.component.input"), Component.nullToEmpty("circuit.elements-plus.component.input.description"), ElementsPlus.id("textures/circuit/input.png"), 1, 2);
-    public static final CircuitComponent OUTPUT = new CircuitComponent(ElementsPlus.id("output"), Component.nullToEmpty("circuit.elements-plus.component.output"), Component.nullToEmpty("circuit.elements-plus.component.output.description"), ElementsPlus.id("textures/circuit/output.png"), 1, 2);
+    public static final CircuitComponent INPUT = new CircuitComponent(ElementsPlus.id("input"), Component.nullToEmpty("circuit.elements-plus.component.input"), Component.nullToEmpty("circuit.elements-plus.component.input.description"), ElementsPlus.id("textures/circuit/input.png"), 1, 2) {{
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+    }};
+    public static final CircuitComponent OUTPUT = new CircuitComponent(ElementsPlus.id("output"), Component.nullToEmpty("circuit.elements-plus.component.output"), Component.nullToEmpty("circuit.elements-plus.component.output.description"), ElementsPlus.id("textures/circuit/output.png"), 1, 2) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+    }};
 
-    public static final CircuitComponent AND_GATE = new CircuitComponent(ElementsPlus.id("and_gate"), Component.nullToEmpty("与门"), Component.nullToEmpty("与门描述"), ElementsPlus.id("textures/circuit/and_gate.png"), 1, 2);
+    public static final CircuitComponent AND_GATE = new CircuitComponent(ElementsPlus.id("and_gate"), Component.nullToEmpty("与门"), Component.nullToEmpty("与门描述"), ElementsPlus.id("textures/circuit/and_gate.png"), 1, 2) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.WEST, 1, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.INPUT);
+    }};
     public static final CircuitComponent OR_GATE = new CircuitComponent(ElementsPlus.id("or_gate"), "或门");
     public static final CircuitComponent NOT_GATE = new CircuitComponent(ElementsPlus.id("not_gate"), "非门");
     public static final CircuitComponent ADD = new CircuitComponent(ElementsPlus.id("adder"), "加法器");
