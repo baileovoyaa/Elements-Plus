@@ -108,6 +108,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
         this.addRenderableWidget(componentWidget = new ScrollPanelWidget(leftPos + 5, topPos + 25, 79, imageHeight - 218, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
         componentWidget.setHeight(inventoryActive ? imageHeight - 218 : imageHeight - 53);
+        componentWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
 
         this.addRenderableWidget(circuitPanel = new CircuitDiagramPanel(this.menu,
                 () -> buttonGroup.getSelected() == tabButtonDesign,
