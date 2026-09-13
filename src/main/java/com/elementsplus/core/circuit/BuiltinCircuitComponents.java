@@ -45,7 +45,7 @@ public class BuiltinCircuitComponents {
     public static final CircuitComponent AND_GATE = new CircuitComponent(ElementsPlus.id("and_gate"), Component.nullToEmpty("与门"), Component.nullToEmpty("与门描述"), ElementsPlus.id("textures/circuit/and_gate.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
-        setPin(Direction.EAST, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
     }};
     public static final CircuitComponent OR_GATE = new CircuitComponent(ElementsPlus.id("or_gate"), "或门");
     public static final CircuitComponent NOT_GATE = new CircuitComponent(ElementsPlus.id("not_gate"), "非门");

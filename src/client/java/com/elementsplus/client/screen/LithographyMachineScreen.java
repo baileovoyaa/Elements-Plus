@@ -123,7 +123,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         this.addRenderableWidget(toolbarWidget = new ScrollPanelWidget(leftPos + 10 + 79 + 18 + 5, topPos + 25, imageWidth - 10 - 79 - 10 - 79 - 18 - 5, 18, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
 
         // 播放/暂停
-        toolbarWidget.addChild(new IconButton(0, 0, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8, 0, button -> {
+        toolbarWidget.addChild(new IconButton(0, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8, 0, button -> {
             if (isPlaying) {
                 ((IconButton) button).u = 8;
                 isPlaying = false;

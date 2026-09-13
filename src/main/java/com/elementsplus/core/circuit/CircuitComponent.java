@@ -101,7 +101,7 @@ public class CircuitComponent {
     private Integer index(Direction side, int offset) {
         return switch (side) {
             case DOWN, UP -> null;
-            case NORTH -> offset;// 上边：从左到右
+            case NORTH -> offset; // 上边：从左到右
             case EAST -> width + offset; // 右边：从上到下
             case SOUTH -> width + height + offset; // 下边：从右到左
             case WEST -> 2 * width + height + offset; // 左边：从下到上

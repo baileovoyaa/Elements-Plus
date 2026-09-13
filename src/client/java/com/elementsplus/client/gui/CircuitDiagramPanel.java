@@ -4,19 +4,27 @@ import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
+import com.elementsplus.core.circuit.CircuitComponent.PinType;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.UpdateCircuitDiagramPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.SoundType;
 
 import java.util.Map;
 import java.util.function.BooleanSupplier;
@@ -35,6 +43,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int COLOR_GOLD = 0xFFFFD700;
     private static final int COLOR_COMPONENT_FILL = 0xFF909090;
     private static final int COLOR_COMPONENT_BORDER = 0xFF555555;
+    private static final int COLOR_PIN_INPUT = 0xFF4488FF;
+    private static final int COLOR_PIN_OUTPUT = 0xFF44FF88;
     private static final int COLOR_GHOST_VALID = 0x4010E0B0;
     private static final int COLOR_GHOST_INVALID = 0x60E03030;
     private static final int COLOR_GHOST_BORDER = 0xFFFFFFFF;
@@ -58,6 +68,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private Integer lastMouseX;
     private Integer lastMouseY;
+
+    public final SoundInstance COMPONENT_PLACE_SOUND = SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_PLACE, 1, 1);
+    public final SoundInstance COMPONENT_ERASE_SOUND = SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_BREAK, 1, 1);
+    public final SoundInstance WIRE_PLACE_SOUND = SimpleSoundInstance.forUI(SoundEvents.STONE_PLACE, 1, 1);
+    public final SoundInstance WIRE_ERASE_SOUND = SimpleSoundInstance.forUI(SoundEvents.STONE_BREAK, 1, 1);
+    public final SoundInstance INVALID_SOUND = SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_HARP.value(), 0.5f, 1);
+    public final SoundInstance ROTATE_CLOCKWISE_SOUND = SimpleSoundInstance.forUI(SoundEvents.COMPARATOR_CLICK, 0.55f, 1);
+    public final SoundInstance ROTATE_ANTICLOCKWISE_SOUND = SimpleSoundInstance.forUI(SoundEvents.COMPARATOR_CLICK, 0.5f, 1);
 
     public CircuitDiagramPanel(LithographyMachineMenu menu, BooleanSupplier activeSupplier, int x, int y, int width, int height) {
         super(x, y, width, height, net.minecraft.network.chat.Component.empty());
@@ -198,6 +216,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         int ghostColor = conflict ? COLOR_GHOST_INVALID : COLOR_GHOST_VALID;
         float ghostAlpha = ((ghostColor >> 24) & 0xFF) / 255.0F;
         drawIcon(guiGraphics, component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, ghostAlpha);
+        drawPins(guiGraphics, component, rotation, left, top, ghostAlpha);
     }
 
     private boolean diagramHasConflict(int gx, int gy, int w, int h) {
@@ -215,6 +234,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
         return false;
     }
 
+    private void playSound(SoundInstance soundInstance) {
+//        Minecraft.getInstance().getSoundManager().play(soundInstance);
+        // TODO: 把音效做成可配置的
+    }
+
     private void tryPlace(int gx, int gy, CircuitComponent component) {
         ItemStack stack = menu.slots.get(36).getItem();
         CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
@@ -228,13 +252,16 @@ public class CircuitDiagramPanel extends AbstractWidget {
             for (int dx = 0; dx < w; dx++) {
                 for (int dy = 0; dy < h; dy++) {
                     if (diagram.getBlock(gx + dx, gy + dy) != null) {
+                        playSound(INVALID_SOUND);
                         return;
                     }
                 }
             }
         }
         CircuitDiagram editor = diagram.copy();
-        editor.setBlock(gx, gy, new CircuitDiagram.Component(component, rotation), force);
+        if (editor.setBlock(gx, gy, new CircuitDiagram.Component(component, rotation), force)) {
+            playSound(COMPONENT_PLACE_SOUND);
+        }
         commitDiagram(stack, editor);
     }
 
@@ -244,10 +271,16 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (diagram == null) {
             return;
         }
-        if (diagram.getBlock(gx, gy) == null) {
+        CircuitDiagram.Block block = diagram.getBlock(gx, gy);
+        if (block == null) {
             return;
         }
         CircuitDiagram editor = diagram.copy();
+        if (block instanceof CircuitDiagram.Component) {
+            playSound(COMPONENT_ERASE_SOUND);
+        } else {
+            playSound(WIRE_ERASE_SOUND);
+        }
         editor.setBlock(gx, gy, null);
         commitDiagram(stack, editor);
     }
@@ -356,6 +389,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         } else {
             return;
         }
+        playSound(WIRE_PLACE_SOUND);
         switch (side) {
             case NORTH -> wire.north = material;
             case EAST -> wire.east = material;
@@ -411,6 +445,80 @@ public class CircuitDiagramPanel extends AbstractWidget {
             guiGraphics.fill(rx - 1, ty, rx, by, COLOR_COMPONENT_BORDER);
         }
         drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, 1.0F);
+        drawPins(guiGraphics, component.component, component.direction, left, top, 1.0F);
+    }
+
+    /**
+     * 渲染元件引脚：输入引脚为蓝色小方块，输出引脚为绿色小方块。
+     * 引脚位置按元件的原始尺寸（component.getWidth()/getHeight()）定义在四条边上，
+     * direction 指定旋转（NORTH=原始方向，EAST/SOUTH/WEST=顺时针 90/180/270 度）。
+     */
+    private void drawPins(GuiGraphics g, CircuitComponent component, Direction direction, double left, double top, float alpha) {
+        int w0 = component.getWidth();
+        int h0 = component.getHeight();
+        if (w0 <= 0 || h0 <= 0) {
+            return;
+        }
+        for (Direction side : Direction.Plane.HORIZONTAL) {
+            int count = (side == Direction.NORTH || side == Direction.SOUTH) ? w0 : h0;
+            for (int k = 0; k < count; k++) {
+                PinType type = component.getPin(side, k);
+                if (type == null || type == PinType.NONE) {
+                    continue;
+                }
+                double nx, ny;
+                switch (side) {
+                    case NORTH -> {
+                        nx = k + 0.5;
+                        ny = 0;
+                    }
+                    case EAST -> {
+                        nx = w0;
+                        ny = k + 0.5;
+                    }
+                    case SOUTH -> {
+                        nx = w0 - 0.5 - k;
+                        ny = h0;
+                    }
+                    default -> { // WEST
+                        nx = 0;
+                        ny = h0 - 0.5 - k;
+                    }
+                }
+                double rx, ry;
+                switch (direction) {
+                    case EAST -> {
+                        rx = h0 - ny;
+                        ry = nx;
+                    }
+                    case SOUTH -> {
+                        rx = w0 - nx;
+                        ry = h0 - ny;
+                    }
+                    case WEST -> {
+                        rx = ny;
+                        ry = w0 - nx;
+                    }
+                    default -> { // NORTH
+                        rx = nx;
+                        ry = ny;
+                    }
+                }
+                double sx = left + rx * zoom;
+                double sy = top + ry * zoom;
+                int size = Mth.clamp((int) Math.round(zoom * 0.35), 2, 8);
+                int color = type == PinType.INPUT ? COLOR_PIN_INPUT : COLOR_PIN_OUTPUT;
+                if (alpha < 1.0F) {
+                    color = (color & 0x00FFFFFF) | (Math.max(0, Math.min(255, (int) (alpha * 255))) << 24);
+                }
+                g.fill(
+                        (int) Math.floor(sx - size / 2.0),
+                        (int) Math.floor(sy - size / 2.0),
+                        (int) Math.ceil(sx + size / 2.0),
+                        (int) Math.ceil(sy + size / 2.0),
+                        color);
+            }
+        }
     }
 
     private void drawIcon(GuiGraphics guiGraphics, CircuitComponent component, double centerX, double centerY, double boxWidth, double boxHeight, float alpha) {
@@ -617,10 +725,17 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return true;
         }
         if (Screen.hasAltDown() && activeComponent() != null && !isReadOnly()) {
-            rotation = scrollY > 0 ? rotation.getClockWise() : rotation.getCounterClockWise();
+            if (scrollY > 0) {
+                rotation = rotation.getClockWise();
+                playSound(ROTATE_CLOCKWISE_SOUND);
+            } else {
+                rotation = rotation.getCounterClockWise();
+                playSound(ROTATE_ANTICLOCKWISE_SOUND);
+            }
+
             return true;
         }
-        double sx = scrollX != 0 ? scrollX : 0;
+        double sx = scrollX;
         double sy = scrollY;
         if (Screen.hasShiftDown()) {
             sx = scrollX != 0 ? scrollX : scrollY;
