@@ -2,6 +2,7 @@ package com.elementsplus.core.circuit.diagram;
 
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
+import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -53,11 +54,21 @@ public class CircuitDiagram {
 
     public static class Component extends Block {
         public CircuitComponent component;
+        public CircuitComponentInstance instance;
         public Direction direction;
 
-        public Component(CircuitComponent component, Direction direction) {
+        public Component(CircuitComponent component, Direction direction, CircuitComponentInstance instance) {
             this.component = component;
             this.direction = direction;
+            this.instance = instance != null ? instance : component.createInstance();
+        }
+
+        public Component(CircuitComponent component, Direction direction) {
+            this(component, direction, component.createInstance());
+        }
+
+        public Component copy() {
+            return new Component(component, direction, instance.copy());
         }
 
         public int getHeight() {
@@ -218,7 +229,7 @@ public class CircuitDiagram {
                 }
             }
             for (Component component : source.components) {
-                Component newComponent = new Component(component.component, component.direction);
+                Component newComponent = component.copy();
                 newComponent.x = component.x;
                 newComponent.y = component.y;
                 target.components.add(newComponent);
@@ -283,12 +294,19 @@ public class CircuitDiagram {
             if (id == null) {
                 return DataResult.error(() -> "Circuit component has no registered id: " + input.component.getName().getString());
             }
-            return ops.mapBuilder()
+            RecordBuilder<T> builder = ops.mapBuilder()
                     .add("x", ops.createInt(input.x))
                     .add("y", ops.createInt(input.y))
                     .add("id", ResourceLocation.CODEC.encodeStart(ops, id))
-                    .add("direction", DIRECTION_CODEC.encodeStart(ops, input.direction))
-                    .build(prefix);
+                    .add("direction", DIRECTION_CODEC.encodeStart(ops, input.direction));
+            for (CircuitComponentInstance.Config config : input.instance.getConfigs()) {
+                if (config instanceof CircuitComponentInstance.IntConfig) {
+                    builder.add(config.key, ops.createInt(input.instance.getInt(config.key)));
+                } else if (config instanceof CircuitComponentInstance.FloatConfig) {
+                    builder.add(config.key, ops.createFloat(input.instance.getFloat(config.key)));
+                }
+            }
+            return builder.build(prefix);
         }
 
         @Override
@@ -305,7 +323,15 @@ public class CircuitDiagram {
                 Optional<Integer> x = getField(Codec.INT, ops, map, "x");
                 Optional<Integer> y = getField(Codec.INT, ops, map, "y");
                 Optional<Direction> direction = getField(DIRECTION_CODEC, ops, map, "direction");
-                Component component = new Component(circuitComponent, direction.orElse(Direction.NORTH));
+                CircuitComponentInstance instance = circuitComponent.createInstance();
+                for (CircuitComponentInstance.Config config : instance.getConfigs()) {
+                    if (config instanceof CircuitComponentInstance.IntConfig) {
+                        getField(Codec.INT, ops, map, config.key).ifPresent(v -> instance.setInt(config.key, v));
+                    } else if (config instanceof CircuitComponentInstance.FloatConfig) {
+                        getField(Codec.FLOAT, ops, map, config.key).ifPresent(v -> instance.setFloat(config.key, v));
+                    }
+                }
+                Component component = new Component(circuitComponent, direction.orElse(Direction.NORTH), instance);
                 component.x = x.orElse(0);
                 component.y = y.orElse(0);
                 return DataResult.success(new Pair<>(component, input));
@@ -411,6 +437,13 @@ public class CircuitDiagram {
                     throw new IllegalArgumentException("Circuit component has no registered id: " + component.component.getName().getString());
                 }
                 ResourceLocation.STREAM_CODEC.encode(buf, id);
+                for (CircuitComponentInstance.Config config : component.instance.getConfigs()) {
+                    if (config instanceof CircuitComponentInstance.IntConfig) {
+                        buf.writeInt(component.instance.getInt(config.key));
+                    } else if (config instanceof CircuitComponentInstance.FloatConfig) {
+                        buf.writeFloat(component.instance.getFloat(config.key));
+                    }
+                }
             }
         }
     }
@@ -442,7 +475,15 @@ public class CircuitDiagram {
                 if (circuitComponent == null) {
                     throw new IllegalArgumentException("Unknown circuit component id");
                 }
-                Component component = new Component(circuitComponent, direction);
+                CircuitComponentInstance instance = circuitComponent.createInstance();
+                for (CircuitComponentInstance.Config config : instance.getConfigs()) {
+                    if (config instanceof CircuitComponentInstance.IntConfig) {
+                        instance.setInt(config.key, buf.readInt());
+                    } else if (config instanceof CircuitComponentInstance.FloatConfig) {
+                        instance.setFloat(config.key, buf.readFloat());
+                    }
+                }
+                Component component = new Component(circuitComponent, direction, instance);
                 component.x = x;
                 component.y = y;
                 chunk.components.add(component);

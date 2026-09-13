@@ -98,6 +98,8 @@
   "circuit.elements-plus.component.output": "输出",
   "circuit.elements-plus.component.output.description": "向外输出信号",
 
+  "circuit.elements-plus.config.multiplier": "倍数",
+
   "item.elements-plus.gold_wire": "金引线",
   "item.elements-plus.copper_wire": "铜引线",
   "item.elements-plus.insulating_layer": "绝缘层",

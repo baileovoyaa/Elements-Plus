@@ -7,10 +7,13 @@ import com.elementsplus.client.gui.*;
 import com.elementsplus.client.gui.TabButton;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.CircuitComponentToolbox;
+import com.elementsplus.core.circuit.component.CircuitComponentInstance;
+import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -34,6 +37,11 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     public ScrollPanelWidget componentWidget;
     public ScrollPanelWidget toolbarWidget;
+
+    public ScrollPanelWidget attributeWidget;
+    private int lastAttrX = Integer.MIN_VALUE;
+    private int lastAttrY = Integer.MIN_VALUE;
+    private CircuitDiagram.Component lastAttrComponent;
 
     public IntSliderWidget speedSlider;
     public EditBox speedEditBox;
@@ -59,6 +67,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         public void onClick(double d, double e) {
             super.onClick(d, e);
             if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
+                circuitPanel.setVirtualWire(null);
                 circuitPanel.setVirtualComponent(component);
             }
         }
@@ -74,10 +83,6 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         GuiUtil.drawMainPanel(guiGraphics, leftPos, topPos + 18, leftPos + imageWidth, topPos + imageHeight, 0xFFFFFFFF);
         if (inventoryActive) {
             GuiUtil.drawSubPanel(guiGraphics, leftPos + 5, topPos + imageHeight - 188, leftPos + 5 + 79, topPos + imageHeight - 5, 0xFFA0A0A0);
-        }
-        if (buttonGroup.getSelected() == tabButtonDesign) {
-            GuiUtil.drawSubPanel(guiGraphics, leftPos + imageWidth - 5 - 79, topPos + 25, leftPos + imageWidth - 5, topPos + imageHeight - 5, 0xFFA0A0A0);
-            GuiUtil.drawSubPanel(guiGraphics, leftPos + 10 + 79 + 18 + 5, topPos + 25, leftPos + imageWidth - 10 - 79, topPos + 43, 0xFFA0A0A0);
         }
 
         if (collapseButtonInventory.active) {
@@ -122,6 +127,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
         this.addRenderableWidget(toolbarWidget = new ScrollPanelWidget(leftPos + 10 + 79 + 18 + 5, topPos + 25, imageWidth - 10 - 79 - 10 - 79 - 18 - 5, 18, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
 
+        // 属性面板
+        this.addRenderableWidget(attributeWidget = new ScrollPanelWidget(leftPos + imageWidth - 5 - 79, topPos + 25, 79, imageHeight - 30, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        attributeWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
+
         // 播放/暂停
         toolbarWidget.addChild(new IconButton(0, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8, 0, button -> {
             if (isPlaying) {
@@ -163,6 +172,35 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         });
         speedEditBox.setValue("20");
         toolbarWidget.addChild(speedEditBox);
+
+        // 工具栏分隔线（纯视觉）
+        toolbarWidget.addChild(new AbstractWidget(155, 2, 1, 14, Component.empty()) {
+            @Override
+            protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFF000000);
+            }
+
+            @Override
+            protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+
+            }
+        });
+
+        // 铜线
+        toolbarWidget.addChild(new IconButton(160, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 16 * 4, 0, button -> {
+            if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
+                circuitPanel.setVirtualComponent(null);
+                circuitPanel.setVirtualWire(CircuitDiagram.Wire.WireMaterial.COPPER);
+            }
+        }));
+
+        // 金线
+        toolbarWidget.addChild(new IconButton(160 + 16, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 16 * 5, 0, button -> {
+            if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
+                circuitPanel.setVirtualComponent(null);
+                circuitPanel.setVirtualWire(CircuitDiagram.Wire.WireMaterial.GOLD);
+            }
+        }));
 
         initComponentList();
 
@@ -207,6 +245,51 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     }
 
     @Override
+    public void containerTick() {
+        super.containerTick();
+        boolean designTab = buttonGroup.getSelected() == tabButtonDesign;
+        attributeWidget.visible = designTab;
+        toolbarWidget.visible = designTab;
+        if (!designTab) {
+            return;
+        }
+        int sx = circuitPanel.getSelectedX();
+        int sy = circuitPanel.getSelectedY();
+        CircuitDiagram.Component current = circuitPanel.getSelectedComponent();
+        if (sx != lastAttrX || sy != lastAttrY || current != lastAttrComponent) {
+            lastAttrX = sx;
+            lastAttrY = sy;
+            lastAttrComponent = current;
+            rebuildAttributes();
+        }
+    }
+
+    /**
+     * 根据当前选中的元件，重建其属性字段控件（每个配置一行）。
+     * 只读模式下仍显示名称与当前值，但不提供控件。
+     */
+    private void rebuildAttributes() {
+        attributeWidget.clearChildren();
+        attributeWidget.scrollToTop();
+        CircuitDiagram.Component selected = circuitPanel.getSelectedComponent();
+        if (selected == null) {
+            return;
+        }
+        boolean readOnly = circuitPanel.isReadOnly();
+        int y = 2;
+        for (CircuitComponentInstance.Config config : selected.instance.getConfigs()) {
+            ComponentConfigWidget widget = attributeWidget.addChild(
+                    new ComponentConfigWidget(2, y, attributeWidget.getWidth() - 4, 22,
+                            selected.instance, config, !readOnly, this::commitAttributes));
+            y += widget.getHeight() + 2;
+        }
+    }
+
+    private void commitAttributes() {
+        circuitPanel.commitDiagram();
+    }
+
+    @Override
     public Point getSlotPosition(Slot slot) {
         if (slot.container instanceof Inventory && slot.getContainerSlot() >= 0 && slot.getContainerSlot() <= 35) {
             if (collapseButtonInventory.active) {
@@ -247,11 +330,15 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             circuitPanel.setPreviewStack(ItemStack.EMPTY);
         }
         CircuitComponent virtual = circuitPanel.getVirtualComponent();
+        CircuitDiagram.Wire.WireMaterial virtualWire = circuitPanel.getVirtualWire();
         boolean suppressVirtual = circuitPanel.hasDiagram() && !circuitPanel.isReadOnly()
                 && buttonGroup.getSelected() == tabButtonDesign
                 && circuitPanel.contains(mouseX, mouseY);
         if (virtual != null && !suppressVirtual) {
             drawVirtualCursor(guiGraphics, virtual, mouseX, mouseY);
+        }
+        if (virtualWire != null && !suppressVirtual) {
+            drawVirtualWireCursor(guiGraphics, virtualWire, mouseX, mouseY);
         }
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
@@ -265,14 +352,28 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
     }
 
+    private void drawVirtualWireCursor(GuiGraphics guiGraphics, CircuitDiagram.Wire.WireMaterial material, int mouseX, int mouseY) {
+        ItemStack stack = new ItemStack(material == CircuitDiagram.Wire.WireMaterial.GOLD ? ModItems.GOLD_WIRE : ModItems.COPPER_WIRE);
+        guiGraphics.renderItem(stack, mouseX - 8, mouseY - 8);
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         speedEditBox.setFocused(false);
         boolean handled = super.mouseClicked(mouseX, mouseY, button);
         if (isOverSlot(mouseX, mouseY) || button == 1) {
             circuitPanel.setVirtualComponent(null);
+            circuitPanel.setVirtualWire(null);
         }
         return handled;
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 2) {
+            circuitPanel.mouseReleased(mouseX, mouseY, button);
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private boolean isOverSlot(double mouseX, double mouseY) {

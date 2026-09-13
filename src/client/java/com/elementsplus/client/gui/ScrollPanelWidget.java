@@ -60,6 +60,11 @@ public class ScrollPanelWidget extends AbstractWidget {
         focusedChild = null;
     }
 
+    public void scrollToTop() {
+        this.scrollAmount = 0;
+        this.horizontalScrollAmount = 0;
+    }
+
     /**
      * 内容总高度，默认取所有子 widget 的下边界最大值
      */

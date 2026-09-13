@@ -1,6 +1,7 @@
 package com.elementsplus.core.circuit;
 
 import com.elementsplus.ElementsPlus;
+import com.elementsplus.core.circuit.component.ResistorComponentInstance;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -26,6 +27,7 @@ public class BuiltinCircuitComponents {
     public static final CircuitComponent RESISTOR = new CircuitComponent(ElementsPlus.id("resistor"), Component.translatable("circuit.elements-plus.component.resistor"), Component.translatable("circuit.elements-plus.component.resistor.description"), ElementsPlus.id("textures/item/amethyst_resistor.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
+        setInstanceFactory(ResistorComponentInstance::new);
     }};
     public static final CircuitComponent RESONATOR = new CircuitComponent(ElementsPlus.id("resonator"), Component.translatable("circuit.elements-plus.component.resonator"), Component.translatable("circuit.elements-plus.component.resonator.description"), ElementsPlus.id("textures/item/amethyst_resonator.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
@@ -35,10 +37,10 @@ public class BuiltinCircuitComponents {
         setPin(Direction.NORTH, 0, PinType.OUTPUT);
     }};
 
-    public static final CircuitComponent INPUT = new CircuitComponent(ElementsPlus.id("input"), Component.nullToEmpty("circuit.elements-plus.component.input"), Component.nullToEmpty("circuit.elements-plus.component.input.description"), ElementsPlus.id("textures/circuit/input.png"), 1, 2) {{
+    public static final CircuitComponent INPUT = new CircuitComponent(ElementsPlus.id("input"), Component.nullToEmpty("circuit.elements-plus.component.input"), Component.nullToEmpty("circuit.elements-plus.component.input.description"), ElementsPlus.id("textures/circuit/input.png"), 1, 1) {{
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }};
-    public static final CircuitComponent OUTPUT = new CircuitComponent(ElementsPlus.id("output"), Component.nullToEmpty("circuit.elements-plus.component.output"), Component.nullToEmpty("circuit.elements-plus.component.output.description"), ElementsPlus.id("textures/circuit/output.png"), 1, 2) {{
+    public static final CircuitComponent OUTPUT = new CircuitComponent(ElementsPlus.id("output"), Component.nullToEmpty("circuit.elements-plus.component.output"), Component.nullToEmpty("circuit.elements-plus.component.output.description"), ElementsPlus.id("textures/circuit/output.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
     }};
 
@@ -58,7 +60,7 @@ public class BuiltinCircuitComponents {
     private static final Map<ResourceLocation, CircuitComponent> BY_ID = new HashMap<>();
 
     static {
-        for (CircuitComponent component : List.of(TRANSISTOR, DIODE, CAPACITOR, RESISTOR, RESONATOR, BATTERY, AND_GATE, OR_GATE, NOT_GATE, ADD, BITWISE_MOVE, MULTIPLIER, REGISTER, COUNTER)) {
+        for (CircuitComponent component : List.of(TRANSISTOR, DIODE, CAPACITOR, RESISTOR, RESONATOR, BATTERY, INPUT, OUTPUT, AND_GATE, OR_GATE, NOT_GATE, ADD, BITWISE_MOVE, MULTIPLIER, REGISTER, COUNTER)) {
             BY_ID.put(component.getId(), component);
         }
     }

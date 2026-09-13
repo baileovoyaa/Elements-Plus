@@ -1,10 +1,13 @@
 package com.elementsplus.core.circuit;
 
+import com.elementsplus.core.circuit.component.CircuitComponentInstance;
+import com.elementsplus.core.circuit.component.SimpleComponentInstance;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Arrays;
+import java.util.function.Supplier;
 
 public class CircuitComponent {
     private final ResourceLocation id;
@@ -14,6 +17,7 @@ public class CircuitComponent {
     private final int height;
     private final int width;
     private final PinType[] pins;
+    private Supplier<CircuitComponentInstance> instanceFactory = () -> SimpleComponentInstance.INSTANCE;
 
 
     public CircuitComponent(ResourceLocation id, Component name, Component description, ResourceLocation icon, int width, int height) {
@@ -117,5 +121,14 @@ public class CircuitComponent {
         Integer i = index(side, offset);
         if (i == null) return;
         pins[i] = type;
+    }
+
+    public CircuitComponent setInstanceFactory(Supplier<CircuitComponentInstance> instanceFactory) {
+        this.instanceFactory = instanceFactory;
+        return this;
+    }
+
+    public CircuitComponentInstance createInstance() {
+        return instanceFactory.get();
     }
 }

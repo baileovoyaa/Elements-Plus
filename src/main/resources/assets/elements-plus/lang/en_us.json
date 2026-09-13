@@ -99,6 +99,8 @@
   "circuit.elements-plus.component.output": "Output",
   "circuit.elements-plus.component.output.description": "Output signal externally",
 
+  "circuit.elements-plus.config.multiplier": "Multiplier",
+
   "item.elements-plus.gold_wire": "Gold Wire",
   "item.elements-plus.copper_wire": "Copper Wire",
   "item.elements-plus.insulating_layer": "Insulating Layer",

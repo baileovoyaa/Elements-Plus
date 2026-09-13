@@ -48,6 +48,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int COLOR_GHOST_VALID = 0x4010E0B0;
     private static final int COLOR_GHOST_INVALID = 0x60E03030;
     private static final int COLOR_GHOST_BORDER = 0xFFFFFFFF;
+    private static final int COLOR_SELECTION = 0xFFFFC900;
 
     private final LithographyMachineMenu menu;
     private final BooleanSupplier activeSupplier;
@@ -61,10 +62,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private Direction rotation = Direction.NORTH;
     private ItemStack previewStack = ItemStack.EMPTY;
     private CircuitComponent virtualComponent;
+    private CircuitDiagram.Wire.WireMaterial virtualWire;
 
     private CircuitDiagram.Wire.WireMaterial draggingWire;
     private int lastWireX;
     private int lastWireY;
+
+    private int selectedX = Integer.MIN_VALUE;
+    private int selectedY = Integer.MIN_VALUE;
 
     private Integer lastMouseX;
     private Integer lastMouseY;
@@ -143,6 +148,55 @@ public class CircuitDiagramPanel extends AbstractWidget {
         this.virtualComponent = component;
     }
 
+    public CircuitDiagram.Wire.WireMaterial getVirtualWire() {
+        return virtualWire;
+    }
+
+    public void setVirtualWire(CircuitDiagram.Wire.WireMaterial wire) {
+        this.virtualWire = wire;
+    }
+
+    public int getSelectedX() {
+        return selectedX;
+    }
+
+    public int getSelectedY() {
+        return selectedY;
+    }
+
+    public boolean hasSelection() {
+        return selectedX != Integer.MIN_VALUE && selectedY != Integer.MIN_VALUE;
+    }
+
+    public CircuitDiagram.Component getSelectedComponent() {
+        if (!hasSelection()) {
+            return null;
+        }
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return null;
+        }
+        CircuitDiagram.Block block = diagram.getBlock(selectedX, selectedY);
+        return block instanceof CircuitDiagram.Component component ? component : null;
+    }
+
+    public void setSelected(int x, int y) {
+        this.selectedX = x;
+        this.selectedY = y;
+    }
+
+    private void handleSelection(int gx, int gy) {
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return;
+        }
+        if (diagram.getBlock(gx, gy) instanceof CircuitDiagram.Component component) {
+            setSelected(component.x, component.y);
+        } else {
+            setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        }
+    }
+
     public boolean contains(double mouseX, double mouseY) {
         return mouseX >= getX() && mouseX < getX() + getWidth()
                 && mouseY >= getY() && mouseY < getY() + getHeight();
@@ -215,8 +269,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         int ghostColor = conflict ? COLOR_GHOST_INVALID : COLOR_GHOST_VALID;
         float ghostAlpha = ((ghostColor >> 24) & 0xFF) / 255.0F;
-        drawIcon(guiGraphics, component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, ghostAlpha);
         drawPins(guiGraphics, component, rotation, left, top, ghostAlpha);
+        drawIcon(guiGraphics, component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, ghostAlpha);
     }
 
     private boolean diagramHasConflict(int gx, int gy, int w, int h) {
@@ -261,6 +315,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         CircuitDiagram editor = diagram.copy();
         if (editor.setBlock(gx, gy, new CircuitDiagram.Component(component, rotation), force)) {
             playSound(COMPONENT_PLACE_SOUND);
+            setSelected(gx, gy);
         }
         commitDiagram(stack, editor);
     }
@@ -277,12 +332,28 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         CircuitDiagram editor = diagram.copy();
         if (block instanceof CircuitDiagram.Component) {
+            if (hasSelection() && block == getSelectedComponent()) {
+                setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
+            }
             playSound(COMPONENT_ERASE_SOUND);
         } else {
             playSound(WIRE_ERASE_SOUND);
         }
         editor.setBlock(gx, gy, null);
         commitDiagram(stack, editor);
+    }
+
+    /**
+     * 已对元件实例做出修改后（读写属性面板），调用此方法把改动下发到服务端。
+     * 仅在有电路图且非只读（未放置等价组件）时才真正提交。
+     */
+    public void commitDiagram() {
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null || isReadOnly()) {
+            return;
+        }
+        commitDiagram(stack, diagram);
     }
 
     private void commitDiagram(ItemStack stack, CircuitDiagram editor) {
@@ -299,7 +370,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (carried.is(ModItems.GOLD_WIRE)) {
             return CircuitDiagram.Wire.WireMaterial.GOLD;
         }
-        return null;
+        return virtualWire;
     }
 
     private void drawWirePreview(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -444,8 +515,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
             guiGraphics.fill(lx, ty, lx + 1, by, COLOR_COMPONENT_BORDER);
             guiGraphics.fill(rx - 1, ty, rx, by, COLOR_COMPONENT_BORDER);
         }
-        drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, 1.0F);
         drawPins(guiGraphics, component.component, component.direction, left, top, 1.0F);
+        drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, 1.0F);
+        if (component.x == selectedX && component.y == selectedY) {
+            guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_SELECTION);
+            guiGraphics.fill(lx, by - 1, rx, by, COLOR_SELECTION);
+            guiGraphics.fill(lx, ty, lx + 1, by, COLOR_SELECTION);
+            guiGraphics.fill(rx - 1, ty, rx, by, COLOR_SELECTION);
+        }
     }
 
     /**
@@ -511,11 +588,37 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 if (alpha < 1.0F) {
                     color = (color & 0x00FFFFFF) | (Math.max(0, Math.min(255, (int) (alpha * 255))) << 24);
                 }
+                // 引脚限定在组件边框内：只绘制朝元件内部的那半个正方形
+                double rw = (direction == Direction.EAST || direction == Direction.WEST) ? h0 : w0;
+                double rh = (direction == Direction.EAST || direction == Direction.WEST) ? w0 : h0;
+                double half = size / 2.0;
+                double x1, y1, x2, y2;
+                if (ry <= 1e-6) {               // 上边：向内部（下）延伸
+                    x1 = sx - half;
+                    y1 = sy;
+                    x2 = sx + half;
+                    y2 = sy + half;
+                } else if (ry >= rh - 1e-6) {   // 下边：向内部（上）延伸
+                    x1 = sx - half;
+                    y1 = sy - half;
+                    x2 = sx + half;
+                    y2 = sy;
+                } else if (rx <= 1e-6) {        // 左边：向内部（右）延伸
+                    x1 = sx;
+                    y1 = sy - half;
+                    x2 = sx + half;
+                    y2 = sy + half;
+                } else {                        // 右边：向内部（左）延伸
+                    x1 = sx - half;
+                    y1 = sy - half;
+                    x2 = sx;
+                    y2 = sy + half;
+                }
                 g.fill(
-                        (int) Math.floor(sx - size / 2.0),
-                        (int) Math.floor(sy - size / 2.0),
-                        (int) Math.ceil(sx + size / 2.0),
-                        (int) Math.ceil(sy + size / 2.0),
+                        (int) Math.floor(x1),
+                        (int) Math.floor(y1),
+                        (int) Math.ceil(x2),
+                        (int) Math.ceil(y2),
                         color);
             }
         }
@@ -651,24 +754,33 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return true;
         }
         if (button == 0) {
-            if (!isReadOnly()) {
-                CircuitDiagram.Wire.WireMaterial wire = wireMaterial();
-                if (wire != null) {
-                    draggingWire = wire;
-                    lastWireX = cellX(mouseX);
-                    lastWireY = cellY(mouseY);
-                } else {
-                    CircuitComponent component = activeComponent();
-                    if (component != null) {
-                        tryPlace(cellX(mouseX), cellY(mouseY), component);
+            boolean placing = wireMaterial() != null || activeComponent() != null;
+            if (placing) {
+                if (!isReadOnly()) {
+                    CircuitDiagram.Wire.WireMaterial wire = wireMaterial();
+                    if (wire != null) {
+                        draggingWire = wire;
+                        lastWireX = cellX(mouseX);
+                        lastWireY = cellY(mouseY);
+                    } else {
+                        CircuitComponent component = activeComponent();
+                        if (component != null) {
+                            tryPlace(cellX(mouseX), cellY(mouseY), component);
+                        }
                     }
                 }
+            } else {
+                handleSelection(cellX(mouseX), cellY(mouseY));
             }
             return true;
         }
         if (button == 1) {
             if (virtualComponent != null) {
                 virtualComponent = null;
+                return true;
+            }
+            if (virtualWire != null) {
+                virtualWire = null;
                 return true;
             }
             ItemStack carried = menu.getCarried();
