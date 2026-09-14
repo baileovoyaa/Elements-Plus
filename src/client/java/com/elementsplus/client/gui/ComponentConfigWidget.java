@@ -90,11 +90,11 @@ public class ComponentConfigWidget extends AbstractWidget {
     }
 
     private void setValueFromMouse(double mouseX) {
-        double t = Mth.clamp((mouseX + grabOffsetX - trackStart() - KNOB_WIDTH / 2.0) / trackWidth(), 0, 1);
+        double t = Mth.clamp((mouseX - trackStart() - KNOB_WIDTH / 2.0) / trackWidth(), 0, 1);
         if (isIntConfig()) {
             int raw = (int) Math.round(t * (intMax() - intMin())) + intMin();
             int stepped = intMin() + Math.round((raw - intMin()) / (float) intStep()) * intStep();
-            instance.setInt(config.key, Math.max(intMin(), Math.min(intMax(), stepped)));
+            instance.setInt(config.key, Math.clamp(stepped, intMin(), intMax()));
         } else {
             float value = floatMin() + (float) t * (floatMax() - floatMin());
             instance.setFloat(config.key, value);

@@ -276,7 +276,24 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             return;
         }
         boolean readOnly = circuitPanel.isReadOnly();
-        int y = 2;
+        attributeWidget.addChild(new AbstractWidget(0, 1, attributeWidget.getWidth(), 20, Component.empty()) {
+            @Override
+            protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                guiGraphics.blit(selected.component.getIcon(), this.getX() + 5, this.getY() + 1, 0, 0, 16, 16, 16, 16);
+                guiGraphics.drawString(font, selected.component.getName(), this.getX() + 22, this.getY() + 4, 0xFFFFFFFF, false);
+            }
+
+            @Override
+            protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+
+            }
+
+            @Override
+            public boolean mouseDragged(double d, double e, int i, double f, double g) {
+                return false;
+            }
+        });
+        int y = 22;
         for (CircuitComponentInstance.Config config : selected.instance.getConfigs()) {
             ComponentConfigWidget widget = attributeWidget.addChild(
                     new ComponentConfigWidget(2, y, attributeWidget.getWidth() - 4, 22,

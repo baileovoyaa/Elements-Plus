@@ -6,19 +6,20 @@ import java.util.List;
 
 public class ResistorComponentInstance extends AbstractComponentInstance {
 
-    public static final String KEY_MULTIPLIER = "multiplier";
+    public static final String KEY_DECAY = "decay";
 
-    public static final FloatConfig MULTIPLIER = new FloatConfig(
-            KEY_MULTIPLIER,
-            Component.translatable("circuit.elements-plus.config.multiplier"),
+    public static final IntConfig DECAY = new IntConfig(
+            KEY_DECAY,
+            Component.translatable("circuit.elements-plus.config.decay"),
             null,
-            0f,
-            1f,
-            0.5f,
+            0,
+            15,
+            1,
+            1,
             true
     );
 
-    public static final List<Config> CONFIGS = List.of(MULTIPLIER);
+    public static final List<Config> CONFIGS = List.of(DECAY);
 
     public ResistorComponentInstance() {
         super();
@@ -38,11 +39,11 @@ public class ResistorComponentInstance extends AbstractComponentInstance {
         return new ResistorComponentInstance();
     }
 
-    public float getMultiplier() {
-        return getFloat(KEY_MULTIPLIER);
+    public int getDecay() {
+        return getInt(KEY_DECAY);
     }
 
-    public void setMultiplier(float value) {
-        setFloat(KEY_MULTIPLIER, value);
+    public void setDecay(int value) {
+        setInt(KEY_DECAY, value);
     }
 }

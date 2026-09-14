@@ -99,7 +99,10 @@
   "circuit.elements-plus.component.output": "Output",
   "circuit.elements-plus.component.output.description": "Output signal externally",
 
-  "circuit.elements-plus.config.multiplier": "Multiplier",
+  "circuit.elements-plus.config.decay": "Decay",
+  "circuit.elements-plus.config.high_duration": "High Duration",
+  "circuit.elements-plus.config.low_duration": "Low Duration",
+  "circuit.elements-plus.config.initial_phase": "Initial Phase",
 
   "item.elements-plus.gold_wire": "Gold Wire",
   "item.elements-plus.copper_wire": "Copper Wire",

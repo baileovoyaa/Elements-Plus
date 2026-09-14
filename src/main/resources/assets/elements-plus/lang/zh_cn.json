@@ -98,7 +98,10 @@
   "circuit.elements-plus.component.output": "输出",
   "circuit.elements-plus.component.output.description": "向外输出信号",
 
-  "circuit.elements-plus.config.multiplier": "倍数",
+  "circuit.elements-plus.config.decay": "衰减",
+  "circuit.elements-plus.config.high_duration": "高电平保持",
+  "circuit.elements-plus.config.low_duration": "低电平保持",
+  "circuit.elements-plus.config.initial_phase": "初始相位",
 
   "item.elements-plus.gold_wire": "金引线",
   "item.elements-plus.copper_wire": "铜引线",

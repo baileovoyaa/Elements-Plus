@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>逻辑电路模拟</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f1f5f9;
+    user-select: none;
+  }
+  canvas { display: block; cursor: crosshair; }
+
+  #top-ui {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+    z-index: 10;
+    max-width: calc(100vw - 24px);
+  }
+  #toolbar, #controls {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 8px;
+    background: rgba(255,255,255,0.96);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(15,23,42,0.13);
+    justify-content: center;
+    align-items: center;
+  }
+  #toolbar button, #controls button {
+    padding: 7px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+    background: #fff; cursor: pointer; font-size: 13px; color: #334155;
+    transition: all .12s;
+    font-family: inherit;
+  }
+  #toolbar button:hover, #controls button:hover { background: #f1f5f9; }
+  #toolbar button.active, #controls button.active {
+    background: #3b82f6; color: #fff; border-color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.4);
+  }
+  #controls button#btn-run.active {
+    background: #16a34a; border-color: #16a34a;
+    box-shadow: 0 2px 8px rgba(22,163,74,0.4);
+  }
+  #toolbar .sep, #controls .sep {
+    width: 1px; background: #e2e8f0; margin: 2px 2px; align-self: stretch;
+  }
+  #controls .freq {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 6px; font-size: 13px; color: #334155;
+  }
+  #controls .freq input[type=range] { width: 110px; accent-color: #3b82f6; }
+  #controls .freq span {
+    min-width: 48px; text-align: right;
+    font-variant-numeric: tabular-nums; color: #64748b;
+  }
+  #banner {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    padding: 9px 18px; border-radius: 10px;
+    background: #ef4444; color: #fff; font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 18px rgba(239,68,68,0.4);
+    display: none; z-index: 10;
+  }
+  #hint {
+    position: fixed; bottom: 14px; left: 14px;
+    font-size: 12px; color: #94a3b8; line-height: 1.7; z-index: 5;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top-ui">
+  <div id="toolbar">
+    <button data-tool="wire" class="active">导线</button>
+    <button data-tool="high">高电平</button>
+    <div class="sep"></div>
+    <button data-tool="and">与门</button>
+    <button data-tool="or">或门</button>
+    <button data-tool="nand">与非门</button>
+    <button data-tool="nor">或非门</button>
+    <button data-tool="not">非门</button>
+    <button data-tool="dff">触发器</button>
+    <div class="sep"></div>
+    <button data-tool="input">输入</button>
+    <button data-tool="output">输出</button>
+    <div class="sep"></div>
+    <button data-tool="erase">擦除</button>
+  </div>
+  <div id="controls">
+    <button id="btn-step">步进 ▸|</button>
+    <button id="btn-run">运行 ▶</button>
+    <button id="btn-reset">复位 ↺</button>
+    <div class="sep"></div>
+    <label class="freq">
+      时钟
+      <input type="range" id="clockRange" min="1" max="20" step="1" value="2">
+      <span id="clockVal">2 Hz</span>
+    </label>
+  </div>
+</div>
+
+<div id="banner">⚠ 检测到组合环路，红色为环路</div>
+<div id="hint">左键放置 / 拖动绘制 &nbsp;·&nbsp; 右键或中键拖动画面 &nbsp;·&nbsp; 滚轮缩放<br>点击已有「输入」元件可切换电平 &nbsp;·&nbsp; 空格运行/暂停 &nbsp;·&nbsp; S 单步</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ============================================================
+ *  常量
+ * ============================================================ */
+
+const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+
+const PINS = {
+  high:   { in: [],                out: ['up', 'down', 'left', 'right'] },
+  and:    { in: ['up', 'down'],    out: ['right'] },
+  or:     { in: ['up', 'down'],    out: ['right'] },
+  nand:   { in: ['up', 'down'],    out: ['right'] },
+  nor:    { in: ['up', 'down'],    out: ['right'] },
+  not:    { in: ['left'],          out: ['right'] },
+  input:  { in: [],                out: ['right'] },
+  output: { in: ['left'],          out: [] },
+  dff:    { in: ['left'],          out: ['right'] },
+};
+
+const COMP_STYLE = {
+  high: { bg: '#fde68a', fg: '#92400e', label: '1' },
+  and:  { bg: '#bfdbfe', fg: '#1e40af', label: '与' },
+  or:   { bg: '#ddd6fe', fg: '#5b21b6', label: '或' },
+  nand: { bg: '#bfdbfe', fg: '#1e40af', label: '与非' },
+  nor:  { bg: '#ddd6fe', fg: '#5b21b6', label: '或非' },
+  not:  { bg: '#a5f3fc', fg: '#155e75', label: '非' },
+};
+
+/* ============================================================
+ *  全局状态
+ * ============================================================ */
+
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+const banner = document.getElementById('banner');
+
+let W = 0, H = 0, dpr = 1;
+
+// 电路数据： "x,y" -> { type, val?, state? }
+const cells = new Map();
+
+// 相机
+const cam = { x: 0.5, y: 0.5 };
+let zoom = 60;
+
+// 工具
+let currentTool = 'wire';
+
+// 模拟结果（绘制时按格子 key 查询）
+const wireVal = new Map();
+const wireBad = new Set();
+const compVal = new Map();
+
+// 依赖图缓存（编辑后失效）
+let cache = null;
+let cacheDirty = true;
+
+// 时钟
+let running = false;
+let clockHz = 2;
+let clockPeriod = 500;
+let lastTime = 0;
+let accum = 0;
+let clockTicks = 0;
+
+/* ============================================================
+ *  画布尺寸
+ * ============================================================ */
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  draw();
+}
+
+/* ============================================================
+ *  依赖图构建 / 缓存
+ *  - 节点 0..numNets-1             : 导线网络 N<id>
+ *  - 节点 numNets..+numComb-1      : 组合元件 C<idx>
+ *  - 节点 +numComb..+numDff-1      : 触发器 Q<idx>
+ * ============================================================ */
+
+function rebuildCache() {
+  const wireKeys = [];
+  const combKeys = [];   // 非 dff 的元件
+  const dffKeys = [];
+
+  for (const [k, c] of cells) {
+    if (c.type === 'wire') wireKeys.push(k);
+    else if (c.type === 'dff') dffKeys.push(k);
+    else combKeys.push(k);
+  }
+
+  /* ---------- 1. 并查集合并导线 ---------- */
+  const par = new Map();
+  for (const k of wireKeys) par.set(k, k);
+
+  function find(k0) {
+    let k = k0;
+    let r = k;
+    while (par.get(r) !== r) r = par.get(r);
+    while (par.get(k) !== r) {
+      const nxt = par.get(k);
+      par.set(k, r);
+      k = nxt;
+    }
+    return r;
+  }
+
+  for (const k of wireKeys) {
+    const i = k.indexOf(',');
+    const x = +k.slice(0, i), y = +k.slice(i + 1);
+    const rk = (x + 1) + ',' + y;
+    const dk = x + ',' + (y + 1);
+    if (par.has(rk)) {
+      const ra = find(k), rb = find(rk);
+      if (ra !== rb) par.set(ra, rb);
+    }
+    if (par.has(dk)) {
+      const ra = find(k), rb = find(dk);
+      if (ra !== rb) par.set(ra, rb);
+    }
+  }
+
+  // 分配网络 id
+  const wireToNet = new Map();   // 导线格 key -> 网络 id
+  const rootToNet = new Map();
+  const netRoots = [];
+  for (const k of wireKeys) {
+    const r = find(k);
+    let id = rootToNet.get(r);
+    if (id === undefined) {
+      id = netRoots.length;
+      rootToNet.set(r, id);
+      netRoots.push(r);
+    }
+    wireToNet.set(k, id);
+  }
+
+  const numNets = netRoots.length;
+  const numComb = combKeys.length;
+  const numDff  = dffKeys.length;
+  const totalNodes = numNets + numComb + numDff;
+
+  const combNodeStart = numNets;
+  const dffNodeStart  = numNets + numComb;
+
+  /* ---------- 2. 节点表 ---------- */
+  const nodeKind = new Int8Array(totalNodes);   // 0=Net 1=Comb 2=DFF_Q
+  const nodeData = new Int32Array(totalNodes);  // 对应数组下标
+  for (let i = 0; i < numComb; i++) {
+    nodeKind[combNodeStart + i] = 1;
+    nodeData[combNodeStart + i] = i;
+  }
+  for (let i = 0; i < numDff; i++) {
+    nodeKind[dffNodeStart + i] = 2;
+    nodeData[dffNodeStart + i] = i;
+  }
+
+  /* ---------- 3. 建边 ---------- */
+  const predSets = new Array(totalNodes);
+  for (let i = 0; i < totalNodes; i++) predSets[i] = new Set();
+
+  const netNodeAt = (x, y) => {
+    const id = wireToNet.get(x + ',' + y);
+    return id === undefined ? -1 : id;
+  };
+
+  // 组合元件：输入网络 -> C，C -> 输出网络
+  const combInputs = new Array(numComb);  // 每个元件的输入网络节点索引（按引脚顺序，-1 表示未连）
+  for (let i = 0; i < numComb; i++) {
+    const k = combKeys[i];
+    const cell = cells.get(k);
+    const ci = k.indexOf(',');
+    const x = +k.slice(0, ci), y = +k.slice(ci + 1);
+    const pins = PINS[cell.type];
+    const nodeIdx = combNodeStart + i;
+
+    const inputs = new Int32Array(pins.in.length);
+    for (let j = 0; j < pins.in.length; j++) {
+      const [dx, dy] = DIRS[pins.in[j]];
+      const id = netNodeAt(x + dx, y + dy);
+      inputs[j] = id;
+      if (id >= 0) predSets[nodeIdx].add(id);
+    }
+    combInputs[i] = inputs;
+
+    for (const d of pins.out) {
+      const [dx, dy] = DIRS[d];
+      const id = netNodeAt(x + dx, y + dy);
+      if (id >= 0) predSets[id].add(nodeIdx);
+    }
+  }
+
+  // DFF：仅 Q 输出参与组合图，D 输入不连边（构成时序延迟）
+  for (let i = 0; i < numDff; i++) {
+    const k = dffKeys[i];
+    const ci = k.indexOf(',');
+    const x = +k.slice(0, ci), y = +k.slice(ci + 1);
+    const nodeIdx = dffNodeStart + i;
+    for (const d of PINS.dff.out) {
+      const [dx, dy] = DIRS[d];
+      const id = netNodeAt(x + dx, y + dy);
+      if (id >= 0) predSets[id].add(nodeIdx);
+    }
+  }
+
+  // Set -> Int32Array，同时构建后继表
+  const preds = new Array(totalNodes);
+  const succs = new Array(totalNodes);
+  for (let i = 0; i < totalNodes; i++) succs[i] = [];
+  for (let i = 0; i < totalNodes; i++) {
+    preds[i] = Int32Array.from(predSets[i]);
+    predSets[i] = null;
+    for (let j = 0; j < preds[i].length; j++) {
+      succs[preds[i][j]].push(i);
+    }
+  }
+
+  /* ---------- 4. Kahn 拓扑排序 ---------- */
+  const indeg = new Int32Array(totalNodes);
+  for (let i = 0; i < totalNodes; i++) indeg[i] = preds[i].length;
+  const topo = new Int32Array(totalNodes);
+  let topoLen = 0, head = 0;
+  for (let i = 0; i < totalNodes; i++) if (indeg[i] === 0) topo[topoLen++] = i;
+  while (head < topoLen) {
+    const v = topo[head++];
+    const ss = succs[v];
+    for (let j = 0; j < ss.length; j++) {
+      const w = ss[j];
+      if (--indeg[w] === 0) topo[topoLen++] = w;
+    }
+  }
+
+  /* ---------- 5. 组合环检测（Tarjan SCC，迭代版） ---------- */
+  const badNet = new Uint8Array(numNets);
+  let hasCycle = false;
+  if (topoLen < totalNodes) {
+    hasCycle = true;
+    tarjanMarkCycles(topo, topoLen, succs, nodeKind, totalNodes, badNet);
+  }
+
+  /* ---------- 6. 缓存常用引用 ---------- */
+  const combCells = new Array(numComb);
+  for (let i = 0; i < numComb; i++) combCells[i] = cells.get(combKeys[i]);
+  const dffCells = new Array(numDff);
+  for (let i = 0; i < numDff; i++) dffCells[i] = cells.get(dffKeys[i]);
+
+  const wireResultNets = new Int32Array(wireKeys.length);
+  for (let i = 0; i < wireKeys.length; i++) wireResultNets[i] = wireToNet.get(wireKeys[i]);
+
+  cache = {
+    wireKeys, combKeys, dffKeys,
+    combCells, dffCells,
+    combInputs, combNodeStart, dffNodeStart,
+    numNets, numComb, numDff, totalNodes,
+    nodeKind, nodeData,
+    preds, topo, topoLen,
+    badNet, hasCycle,
+    nodeVals: new Uint8Array(totalNodes),
+    dffNext:  new Uint8Array(numDff),
+    wireResultNets,
+  };
+}
+
+function tarjanMarkCycles(topo, topoLen, succs, nodeKind, totalNodes, badNet) {
+  const inTopo = new Uint8Array(totalNodes);
+  for (let i = 0; i < topoLen; i++) inTopo[topo[i]] = 1;
+
+  const index   = new Int32Array(totalNodes).fill(-1);
+  const low     = new Int32Array(totalNodes);
+  const onStack = new Uint8Array(totalNodes);
+  const stack   = [];
+  let counter = 0;
+
+  for (let start = 0; start < totalNodes; start++) {
+    if (inTopo[start] || index[start] !== -1) continue;
+
+    const callStack = [[start, 0]];
+    index[start] = low[start] = counter++;
+    stack.push(start); onStack[start] = 1;
+
+    while (callStack.length > 0) {
+      const top = callStack[callStack.length - 1];
+      const v = top[0];
+      const ss = succs[v];
+
+      if (top[1] < ss.length) {
+        const w = ss[top[1]++];
+        if (inTopo[w]) continue;
+        if (index[w] === -1) {
+          index[w] = low[w] = counter++;
+          stack.push(w); onStack[w] = 1;
+          callStack.push([w, 0]);
+        } else if (onStack[w]) {
+          if (index[w] < low[v]) low[v] = index[w];
+        }
+      } else {
+        if (low[v] === index[v]) {
+          const comp = [];
+          let w;
+          do {
+            w = stack.pop();
+            onStack[w] = 0;
+            comp.push(w);
+          } while (w !== v);
+          if (comp.length > 1) {
+            for (let t = 0; t < comp.length; t++) {
+              const node = comp[t];
+              if (nodeKind[node] === 0) badNet[node] = 1;
+            }
+          }
+        }
+        callStack.pop();
+        if (callStack.length > 0) {
+          const p = callStack[callStack.length - 1][0];
+          if (low[v] < low[p]) low[p] = low[v];
+        }
+      }
+    }
+  }
+}
+
+/* ============================================================
+ *  求值（纯数值传播）
+ * ============================================================ */
+
+function evalOnce() {
+  const c = cache;
+  const vals        = c.nodeVals;
+  const topo        = c.topo;
+  const topoLen     = c.topoLen;
+  const preds       = c.preds;
+  const nodeKind    = c.nodeKind;
+  const nodeData    = c.nodeData;
+  const combCells   = c.combCells;
+  const dffCells    = c.dffCells;
+  const combInputs  = c.combInputs;
+
+  vals.fill(0);
+
+  for (let i = 0; i < topoLen; i++) {
+    const node = topo[i];
+    const kind = nodeKind[node];
+
+    if (kind === 0) {
+      // 导线网络：线或
+      let v = 0;
+      const ps = preds[node];
+      for (let j = 0; j < ps.length; j++) {
+        if (vals[ps[j]]) { v = 1; break; }
+      }
+      vals[node] = v;
+
+    } else if (kind === 1) {
+      // 组合元件
+      const di = nodeData[node];
+      const cell = combCells[di];
+      const t = cell.type;
+      const inputs = combInputs[di];
+
+      let out;
+      if (t === 'high') {
+        out = 1;
+      } else if (t === 'input') {
+        out = cell.val ? 1 : 0;
+      } else if (t === 'output') {
+        out = inputs[0] >= 0 ? vals[inputs[0]] : 0;
+      } else {
+        const in0 = inputs[0] >= 0 ? vals[inputs[0]] : 0;
+        const in1 = inputs[1] >= 0 ? vals[inputs[1]] : 0;
+        if (t === 'not')       out = in0 ? 0 : 1;
+        else if (t === 'and')  out = (in0 && in1) ? 1 : 0;
+        else if (t === 'or')   out = (in0 || in1) ? 1 : 0;
+        else if (t === 'nand') out = (in0 && in1) ? 0 : 1;
+        else if (t === 'nor')  out = (in0 || in1) ? 0 : 1;
+        else                   out = 0;
+      }
+      vals[node] = out;
+
+    } else {
+      // 触发器 Q 输出 = 内部状态
+      vals[node] = dffCells[nodeData[node]].state ? 1 : 0;
+    }
+  }
+}
+
+function collectResults() {
+  const c = cache;
+  const vals = c.nodeVals;
+
+  wireVal.clear();
+  wireBad.clear();
+  const wkeys = c.wireKeys, wnets = c.wireResultNets, bad = c.badNet;
+  for (let i = 0; i < wkeys.length; i++) {
+    const n = wnets[i];
+    wireVal.set(wkeys[i], vals[n]);
+    if (bad[n]) wireBad.add(wkeys[i]);
+  }
+
+  compVal.clear();
+  const ckeys = c.combKeys, cstart = c.combNodeStart;
+  for (let i = 0; i < ckeys.length; i++) {
+    compVal.set(ckeys[i], vals[cstart + i]);
+  }
+  const dkeys = c.dffKeys, dcells = c.dffCells;
+  for (let i = 0; i < dkeys.length; i++) {
+    compVal.set(dkeys[i], dcells[i].state ? 1 : 0);
+  }
+}
+
+function simulate() {
+  if (cacheDirty || !cache) {
+    rebuildCache();
+    cacheDirty = false;
+  }
+  if (cache.totalNodes === 0) {
+    banner.style.display = 'none';
+    return;
+  }
+  evalOnce();
+  collectResults();
+  banner.style.display = cache.hasCycle ? 'block' : 'none';
+}
+
+/* ============================================================
+ *  时钟步进
+ * ============================================================ */
+
+function tick() {
+  simulate();
+  if (cache.totalNodes === 0) { draw(); return; }
+
+  const dkeys  = cache.dffKeys;
+  const dcells = cache.dffCells;
+  const samples = cache.dffNext;
+
+  // 采样 D 输入
+  for (let i = 0; i < dkeys.length; i++) {
+    const k = dkeys[i];
+    const ci = k.indexOf(',');
+    const x = +k.slice(0, ci), y = +k.slice(ci + 1);
+    samples[i] = wireVal.get((x - 1) + ',' + y) ? 1 : 0;
+  }
+
+  // 应用新状态（时钟边沿）
+  let changed = false;
+  for (let i = 0; i < dcells.length; i++) {
+    if (dcells[i].state !== samples[i]) {
+      dcells[i].state = samples[i];
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    evalOnce();
+    collectResults();
+  }
+
+  draw();
+  clockTicks++;
+  if (changed) updateStatus();
+}
+
+function updateStatus() {}
+
+/* ============================================================
+ *  绘制
+ * ============================================================ */
+
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+function drawComponent(x, y, cell, key) {
+  const pad = 0.07;
+  const size = 1 - pad * 2;
+
+  let bg, fg, label;
+  if (cell.type === 'input') {
+    const v = compVal.get(key) || 0;
+    bg = v ? '#16a34a' : '#0f172a';
+    fg = '#ffffff'; label = '入';
+  } else if (cell.type === 'output') {
+    const v = compVal.get(key) || 0;
+    bg = v ? '#16a34a' : '#0f172a';
+    fg = '#ffffff'; label = '出';
+  } else if (cell.type === 'dff') {
+    const v = cell.state ? 1 : 0;
+    bg = v ? '#16a34a' : '#0f172a';
+    fg = '#ffffff'; label = 'D';
+  } else {
+    const s = COMP_STYLE[cell.type];
+    bg = s.bg; fg = s.fg; label = s.label;
+  }
+
+  roundRect(ctx, x + pad, y + pad, size, size, 0.16);
+  ctx.fillStyle = bg;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(15,23,42,0.22)';
+  ctx.lineWidth = 0.022;
+  ctx.stroke();
+
+  if (cell.type === 'input' || cell.type === 'output' || cell.type === 'dff') {
+    roundRect(ctx, x + pad + 0.03, y + pad + 0.03, size - 0.06, size - 0.06, 0.13);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 0.018;
+    ctx.stroke();
+  }
+
+  if (cell.type === 'dff') {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(x + 0.14, y + 0.16);
+    ctx.lineTo(x + 0.30, y + 0.24);
+    ctx.lineTo(x + 0.14, y + 0.32);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.fillStyle = fg;
+  const fs = label.length > 1 ? 0.29 : 0.42;
+  ctx.font = `bold ${fs}px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + 0.5, y + 0.53);
+
+  // 引脚标记
+  const pins = PINS[cell.type];
+  const mk = 0.13;
+  ctx.fillStyle = 'rgba(15,23,42,0.35)';
+  for (const d of pins.in) {
+    const [dx, dy] = DIRS[d];
+    const cx = x + 0.5 + dx * 0.36;
+    const cy = y + 0.5 + dy * 0.36;
+    ctx.beginPath();
+    if (dx === 1)       { ctx.moveTo(cx + mk/2, cy); ctx.lineTo(cx, cy - mk/2); ctx.lineTo(cx, cy + mk/2); }
+    else if (dx === -1) { ctx.moveTo(cx - mk/2, cy); ctx.lineTo(cx, cy - mk/2); ctx.lineTo(cx, cy + mk/2); }
+    else if (dy === 1)  { ctx.moveTo(cx, cy + mk/2); ctx.lineTo(cx - mk/2, cy); ctx.lineTo(cx + mk/2, cy); }
+    else                { ctx.moveTo(cx, cy - mk/2); ctx.lineTo(cx - mk/2, cy); ctx.lineTo(cx + mk/2, cy); }
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(59,130,246,0.75)';
+  for (const d of pins.out) {
+    const [dx, dy] = DIRS[d];
+    const cx = x + 0.5 + dx * 0.36;
+    const cy = y + 0.5 + dy * 0.36;
+    ctx.beginPath();
+    if (dx === 1)       { ctx.moveTo(cx + mk/2, cy); ctx.lineTo(cx - mk/2, cy - mk/2); ctx.lineTo(cx - mk/2, cy + mk/2); }
+    else if (dx === -1) { ctx.moveTo(cx - mk/2, cy); ctx.lineTo(cx + mk/2, cy - mk/2); ctx.lineTo(cx + mk/2, cy + mk/2); }
+    else if (dy === 1)  { ctx.moveTo(cx, cy + mk/2); ctx.lineTo(cx - mk/2, cy - mk/2); ctx.lineTo(cx + mk/2, cy - mk/2); }
+    else                { ctx.moveTo(cx, cy - mk/2); ctx.lineTo(cx - mk/2, cy + mk/2); ctx.lineTo(cx + mk/2, cy + mk/2); }
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-cam.x, -cam.y);
+
+  const hw = W / 2 / zoom;
+  const hh = H / 2 / zoom;
+  const x0 = Math.floor(cam.x - hw) - 1;
+  const x1 = Math.ceil(cam.x + hw) + 1;
+  const y0 = Math.floor(cam.y - hh) - 1;
+  const y1 = Math.ceil(cam.y + hh) + 1;
+
+  // 网格
+  ctx.beginPath();
+  for (let x = x0; x <= x1; x++) { ctx.moveTo(x, y0); ctx.lineTo(x, y1); }
+  for (let y = y0; y <= y1; y++) { ctx.moveTo(x0, y); ctx.lineTo(x1, y); }
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1 / zoom;
+  ctx.stroke();
+
+  // 导线
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const k = x + ',' + y;
+      const c = cells.get(k);
+      if (!c || c.type !== 'wire') continue;
+      if (wireBad.has(k))       ctx.fillStyle = '#ef4444';
+      else if (wireVal.get(k))  ctx.fillStyle = '#22c55e';
+      else                      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  // 元件
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const k = x + ',' + y;
+      const c = cells.get(k);
+      if (!c || c.type === 'wire') continue;
+      drawComponent(x, y, c, k);
+    }
+  }
+
+  ctx.restore();
+}
+
+/* ============================================================
+ *  调度
+ * ============================================================ */
+
+let framePending = false;
+function requestUpdate() {
+  if (framePending) return;
+  framePending = true;
+  requestAnimationFrame(() => {
+    framePending = false;
+    simulate();
+    draw();
+  });
+}
+
+/* ============================================================
+ *  编辑操作（改动电路 -> 标脏缓存）
+ * ============================================================ */
+
+function applyToolAt(gx, gy, tool) {
+  const k = gx + ',' + gy;
+
+  if (tool === 'erase') {
+    if (!cells.has(k)) return false;
+    cells.delete(k);
+    cacheDirty = true;
+    return true;
+  }
+
+  const existing = cells.get(k);
+
+  if (tool === 'wire') {
+    if (existing && existing.type === 'wire') return false;
+    cells.set(k, { type: 'wire' });
+    cacheDirty = true;
+    return true;
+  }
+
+  if (tool === 'input') {
+    if (existing && existing.type === 'input') return false;
+    cells.set(k, { type: 'input', val: 1 });
+    cacheDirty = true;
+    return true;
+  }
+
+  if (tool === 'dff') {
+    if (existing && existing.type === 'dff') return false;
+    cells.set(k, { type: 'dff', state: 0 });
+    cacheDirty = true;
+    return true;
+  }
+
+  if (existing && existing.type === tool) return false;
+  cells.set(k, { type: tool });
+  cacheDirty = true;
+  return true;
+}
+
+/* ============================================================
+ *  坐标换算
+ * ============================================================ */
+
+function screenToWorld(cx, cy) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = cx - rect.left;
+  const sy = cy - rect.top;
+  return {
+    wx: (sx - W / 2) / zoom + cam.x,
+    wy: (sy - H / 2) / zoom + cam.y,
+  };
+}
+
+/* ============================================================
+ *  鼠标 / 触摸
+ * ============================================================ */
+
+let painting = false;
+let paintTool = 'wire';
+let panning = false;
+let lastX = 0, lastY = 0;
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 1 || e.button === 2) {
+    panning = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    canvas.style.cursor = 'grabbing';
+    e.preventDefault();
+    return;
+  }
+  if (e.button !== 0) return;
+
+  const { wx, wy } = screenToWorld(e.clientX, e.clientY);
+  const gx = Math.floor(wx), gy = Math.floor(wy);
+  const k = gx + ',' + gy;
+  const existing = cells.get(k);
+
+  if (currentTool === 'input' && existing && existing.type === 'input') {
+    existing.val = existing.val ? 0 : 1;
+    requestUpdate();
+    return;
+  }
+
+  painting = true;
+  paintTool = currentTool;
+  if (applyToolAt(gx, gy, paintTool)) requestUpdate();
+});
+
+window.addEventListener('mousemove', e => {
+  if (panning) {
+    cam.x -= (e.clientX - lastX) / zoom;
+    cam.y -= (e.clientY - lastY) / zoom;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    draw();
+    return;
+  }
+  if (painting) {
+    const { wx, wy } = screenToWorld(e.clientX, e.clientY);
+    const gx = Math.floor(wx), gy = Math.floor(wy);
+    if (applyToolAt(gx, gy, paintTool)) requestUpdate();
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  painting = false;
+  panning = false;
+  canvas.style.cursor = 'crosshair';
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const wx = (mx - W / 2) / zoom + cam.x;
+  const wy = (my - H / 2) / zoom + cam.y;
+
+  const factor = Math.exp(-e.deltaY * 0.0012);
+  const nz = Math.min(240, Math.max(16, zoom * factor));
+
+  cam.x = wx - (mx - W / 2) / nz;
+  cam.y = wy - (my - H / 2) / nz;
+  zoom = nz;
+
+  draw();
+}, { passive: false });
+
+/* ============================================================
+ *  工具栏
+ * ============================================================ */
+
+document.getElementById('toolbar').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-tool]');
+  if (!btn) return;
+  currentTool = btn.dataset.tool;
+  document.querySelectorAll('#toolbar button').forEach(b => {
+    b.classList.toggle('active', b === btn);
+  });
+});
+
+/* ============================================================
+ *  控制面板
+ * ============================================================ */
+
+const btnRun = document.getElementById('btn-run');
+const btnStep = document.getElementById('btn-step');
+const btnReset = document.getElementById('btn-reset');
+const clockRange = document.getElementById('clockRange');
+const clockVal = document.getElementById('clockVal');
+
+btnStep.addEventListener('click', () => {
+  if (running) {
+    running = false;
+    btnRun.textContent = '运行 ▶';
+    btnRun.classList.remove('active');
+  }
+  tick();
+});
+
+btnRun.addEventListener('click', () => {
+  running = !running;
+  btnRun.textContent = running ? '暂停 ⏸' : '运行 ▶';
+  btnRun.classList.toggle('active', running);
+  if (running) {
+    lastTime = performance.now();
+    accum = 0;
+  }
+});
+
+btnReset.addEventListener('click', () => {
+  running = false;
+  btnRun.textContent = '运行 ▶';
+  btnRun.classList.remove('active');
+  for (const [, cell] of cells) {
+    if (cell.type === 'dff') cell.state = 0;
+  }
+  clockTicks = 0;
+  simulate();
+  draw();
+});
+
+function updateClockHz() {
+  clockHz = +clockRange.value;
+  clockVal.textContent = clockHz + ' Hz';
+  clockPeriod = 1000 / clockHz;
+}
+clockRange.addEventListener('input', updateClockHz);
+updateClockHz();
+
+function mainLoop(now) {
+  requestAnimationFrame(mainLoop);
+  if (!running) {
+    lastTime = now;
+    accum = 0;
+    return;
+  }
+  const dt = now - lastTime;
+  lastTime = now;
+  accum += dt;
+  if (accum > clockPeriod * 8) accum = clockPeriod * 8;
+
+  let steps = 0;
+  while (accum >= clockPeriod && steps < 8) {
+    accum -= clockPeriod;
+    tick();
+    steps++;
+  }
+}
+requestAnimationFrame(mainLoop);
+
+/* 键盘 */
+window.addEventListener('keydown', e => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  if (e.code === 'Space') { e.preventDefault(); btnRun.click(); }
+  else if (e.key === 's' || e.key === 'S') { e.preventDefault(); btnStep.click(); }
+  else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); btnReset.click(); }
+});
+
+/* ============================================================
+ *  初始化
+ * ============================================================ */
+
+window.addEventListener('resize', resize);
+resize();
+simulate();
+draw();
+
+(function seed() {
+  cells.set('0,0', { type: 'input', val: 1 });
+  cells.set('1,0', { type: 'wire' });
+  cells.set('2,0', { type: 'not' });
+  cells.set('3,0', { type: 'wire' });
+  cells.set('4,0', { type: 'output' });
+
+  cells.set('0,3', { type: 'high' });
+  cells.set('1,3', { type: 'wire' });
+  cells.set('2,3', { type: 'and' });
+  cells.set('3,3', { type: 'wire' });
+  cells.set('4,3', { type: 'output' });
+
+  cells.set('0,6', { type: 'input', val: 1 });
+  cells.set('1,6', { type: 'wire' });
+  cells.set('2,6', { type: 'dff', state: 0 });
+  cells.set('3,6', { type: 'wire' });
+  cells.set('4,6', { type: 'output' });
+
+  cacheDirty = true;
+  requestUpdate();
+})();
+
+})();
+</script>
+</body>
+</html>

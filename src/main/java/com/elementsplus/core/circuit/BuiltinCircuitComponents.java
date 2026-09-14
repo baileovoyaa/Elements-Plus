@@ -2,6 +2,7 @@ package com.elementsplus.core.circuit;
 
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.core.circuit.component.ResistorComponentInstance;
+import com.elementsplus.core.circuit.component.ResonatorComponentInstance;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -32,6 +33,7 @@ public class BuiltinCircuitComponents {
     public static final CircuitComponent RESONATOR = new CircuitComponent(ElementsPlus.id("resonator"), Component.translatable("circuit.elements-plus.component.resonator"), Component.translatable("circuit.elements-plus.component.resonator.description"), ElementsPlus.id("textures/item/amethyst_resonator.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
+        setInstanceFactory(ResonatorComponentInstance::new);
     }};
     public static final CircuitComponent BATTERY = new CircuitComponent(ElementsPlus.id("battery"), Component.translatable("circuit.elements-plus.component.battery"), Component.translatable("circuit.elements-plus.component.battery.description"), ElementsPlus.id("textures/item/amethyst_battery.png"), 1, 1) {{
         setPin(Direction.NORTH, 0, PinType.OUTPUT);
