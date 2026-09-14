@@ -1,8 +1,10 @@
 package com.elementsplus.client.screen;
 
 import com.elementsplus.ElementsPlus;
+import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.client.ElementsPlusClient;
+import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.client.gui.TabButton;
 import com.elementsplus.core.circuit.CircuitComponent;
@@ -12,12 +14,10 @@ import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -54,6 +54,15 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public Map<Integer, Point> slotPosition;
 
     public boolean isPlaying = false;
+    public final CircuitSimulator simulator = new CircuitSimulator();
+    private CircuitDiagram lastSimDiagram;
+    private double simAccum = 0;
+    private IconButton playButton;
+
+    public CircuitDiagram getDiagram() {
+        ItemStack stack = menu.slots.get(36).getItem();
+        return stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+    }
 
     private class ComponentEntryButton extends ListEntryButton {
         private final CircuitComponent component;
@@ -124,6 +133,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 () -> buttonGroup.getSelected() == tabButtonDesign,
                 leftPos + 10 + 80, topPos + 49,
                 Math.max(1, imageWidth - 180), Math.max(1, imageHeight - 55)));
+        circuitPanel.setSimulator(simulator);
 
         this.addRenderableWidget(toolbarWidget = new ScrollPanelWidget(leftPos + 10 + 79 + 18 + 5, topPos + 25, imageWidth - 10 - 79 - 10 - 79 - 18 - 5, 18, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
 
@@ -132,24 +142,36 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         attributeWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
 
         // 播放/暂停
-        toolbarWidget.addChild(new IconButton(0, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8, 0, button -> {
+        playButton = toolbarWidget.addChild(new IconButton(0, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8, 0, button -> {
             if (isPlaying) {
                 ((IconButton) button).u = 8;
                 isPlaying = false;
             } else {
+                if (simulator.hasCycle()) {
+                    return;
+                }
                 ((IconButton) button).u = 8 + 16;
                 isPlaying = true;
+                simAccum = 0;
             }
         }));
 
         // 单步
         toolbarWidget.addChild(new IconButton(16, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 32, 0, button -> {
-
+            isPlaying = false;
+            if (playButton != null) {
+                playButton.u = 8;
+            }
+            simulator.step();
         }));
 
         // 复位
         toolbarWidget.addChild(new IconButton(32, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 48, 0, button -> {
-
+            isPlaying = false;
+            if (playButton != null) {
+                playButton.u = 8;
+            }
+            simulator.reset();
         }));
 
         // 速度滑块（范围 1~20，与输入框同步；输入超出范围时滑块停在两端）
@@ -262,6 +284,34 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             lastAttrComponent = current;
             rebuildAttributes();
         }
+
+        // 电路模拟生命周期：图引用变化 -> 重建依赖图；运行则按速度滑块推进时序，否则仅做组合求值
+        CircuitDiagram diagram = getDiagram();
+        boolean simDirty = circuitPanel.consumeSimulationDirty();
+        if (lastSimDiagram != diagram || simDirty) {
+            lastSimDiagram = diagram;
+            simulator.setDiagram(diagram);
+            simAccum = 0;
+        }
+        if (diagram != null) {
+            if (isPlaying && simulator.hasCycle()) {
+                isPlaying = false;
+                if (playButton != null) {
+                    playButton.u = 8;
+                }
+            }
+            if (isPlaying) {
+                simAccum += 50; // 一个游戏刻 = 50ms
+                double period = 1000.0 / Math.max(1, speedSlider.getValue());
+                while (simAccum >= period) {
+                    simAccum -= period;
+                    simulator.step();
+                }
+            } else {
+                simAccum = 0;
+                simulator.evaluate();
+            }
+        }
     }
 
     /**
@@ -279,7 +329,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         attributeWidget.addChild(new AbstractWidget(0, 1, attributeWidget.getWidth(), 20, Component.empty()) {
             @Override
             protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-                guiGraphics.blit(selected.component.getIcon(), this.getX() + 5, this.getY() + 1, 0, 0, 16, 16, 16, 16);
+                ResourceLocation icon = selected.component.getIcon();
+                if (icon != null) {
+                    guiGraphics.blit(icon, this.getX() + 5, this.getY() + 1, 0, 0, 16, 16, 16, 16);
+                }
                 guiGraphics.drawString(font, selected.component.getName(), this.getX() + 22, this.getY() + 4, 0xFFFFFFFF, false);
             }
 

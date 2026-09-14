@@ -103,6 +103,11 @@
   "circuit.elements-plus.config.high_duration": "High Duration",
   "circuit.elements-plus.config.low_duration": "Low Duration",
   "circuit.elements-plus.config.initial_phase": "Initial Phase",
+  "circuit.elements-plus.config.charge_speed": "Charge Speed",
+  "circuit.elements-plus.config.discharge_speed": "Discharge Speed",
+  "circuit.elements-plus.config.signal": "Signal",
+
+  "gui.elements-plus.lithography_machine.cycle_warning": "Combinational cycle detected",
 
   "item.elements-plus.gold_wire": "Gold Wire",
   "item.elements-plus.copper_wire": "Copper Wire",

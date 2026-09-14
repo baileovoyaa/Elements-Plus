@@ -1,6 +1,8 @@
 package com.elementsplus.core.circuit;
 
 import com.elementsplus.ElementsPlus;
+import com.elementsplus.core.circuit.component.CapacitorComponentInstance;
+import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.component.ResistorComponentInstance;
 import com.elementsplus.core.circuit.component.ResonatorComponentInstance;
 import net.minecraft.core.Direction;
@@ -24,6 +26,7 @@ public class BuiltinCircuitComponents {
     public static final CircuitComponent CAPACITOR = new CircuitComponent(ElementsPlus.id("capacitor"), Component.translatable("circuit.elements-plus.component.capacitor"), Component.translatable("circuit.elements-plus.component.capacitor.description"), ElementsPlus.id("textures/item/amethyst_capacitor.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
+        setInstanceFactory(CapacitorComponentInstance::new);
     }};
     public static final CircuitComponent RESISTOR = new CircuitComponent(ElementsPlus.id("resistor"), Component.translatable("circuit.elements-plus.component.resistor"), Component.translatable("circuit.elements-plus.component.resistor.description"), ElementsPlus.id("textures/item/amethyst_resistor.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
@@ -39,10 +42,11 @@ public class BuiltinCircuitComponents {
         setPin(Direction.NORTH, 0, PinType.OUTPUT);
     }};
 
-    public static final CircuitComponent INPUT = new CircuitComponent(ElementsPlus.id("input"), Component.nullToEmpty("circuit.elements-plus.component.input"), Component.nullToEmpty("circuit.elements-plus.component.input.description"), ElementsPlus.id("textures/circuit/input.png"), 1, 1) {{
+    public static final CircuitComponent INPUT = new CircuitComponent(ElementsPlus.id("input"), Component.translatable("circuit.elements-plus.component.input"), Component.translatable("circuit.elements-plus.component.input.description"), ElementsPlus.id("textures/circuit/input.png"), 1, 1) {{
         setPin(Direction.EAST, 0, PinType.OUTPUT);
+        setInstanceFactory(InputComponentInstance::new);
     }};
-    public static final CircuitComponent OUTPUT = new CircuitComponent(ElementsPlus.id("output"), Component.nullToEmpty("circuit.elements-plus.component.output"), Component.nullToEmpty("circuit.elements-plus.component.output.description"), ElementsPlus.id("textures/circuit/output.png"), 1, 1) {{
+    public static final CircuitComponent OUTPUT = new CircuitComponent(ElementsPlus.id("output"), Component.translatable("circuit.elements-plus.component.output"), Component.translatable("circuit.elements-plus.component.output.description"), ElementsPlus.id("textures/circuit/output.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
     }};
 

@@ -102,6 +102,11 @@
   "circuit.elements-plus.config.high_duration": "高电平保持",
   "circuit.elements-plus.config.low_duration": "低电平保持",
   "circuit.elements-plus.config.initial_phase": "初始相位",
+  "circuit.elements-plus.config.charge_speed": "充电速度",
+  "circuit.elements-plus.config.discharge_speed": "放电速度",
+  "circuit.elements-plus.config.signal": "信号",
+
+  "gui.elements-plus.lithography_machine.cycle_warning": "检测到组合环路",
 
   "item.elements-plus.gold_wire": "金引线",
   "item.elements-plus.copper_wire": "铜引线",

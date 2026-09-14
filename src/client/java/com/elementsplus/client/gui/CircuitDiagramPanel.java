@@ -1,10 +1,13 @@
 package com.elementsplus.client.gui;
 
+import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
+import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.CircuitComponent.PinType;
+import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.ReturnCarriedPayload;
@@ -18,13 +21,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.Util;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.SoundType;
 
 import java.util.Map;
 import java.util.function.BooleanSupplier;
@@ -49,9 +51,15 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int COLOR_GHOST_INVALID = 0x60E03030;
     private static final int COLOR_GHOST_BORDER = 0xFFFFFFFF;
     private static final int COLOR_SELECTION = 0xFFFFC900;
+    private static final int COLOR_CYCLE_BANNER = 0xCCB02020;
+
+    private static final ResourceLocation CYCLE_TEXTURE = ElementsPlus.id("textures/gui/cycle.png");
 
     private final LithographyMachineMenu menu;
     private final BooleanSupplier activeSupplier;
+
+    private CircuitSimulator simulator;
+    private boolean simulationDirty;
 
     private double offsetX = -6;
     private double offsetY = -6;
@@ -73,6 +81,20 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private Integer lastMouseX;
     private Integer lastMouseY;
+
+    private long lastInputClickTime = 0;
+    private CircuitDiagram.Component lastInputClicked;
+
+    public void setSimulator(CircuitSimulator simulator) {
+        this.simulator = simulator;
+        this.simulationDirty = true;
+    }
+
+    public boolean consumeSimulationDirty() {
+        boolean dirty = simulationDirty;
+        simulationDirty = false;
+        return dirty;
+    }
 
     public final SoundInstance COMPONENT_PLACE_SOUND = SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_PLACE, 1, 1);
     public final SoundInstance COMPONENT_ERASE_SOUND = SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_BREAK, 1, 1);
@@ -103,6 +125,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
             drawDotGrid(guiGraphics);
             drawComponents(guiGraphics, diagram);
             drawWires(guiGraphics, diagram);
+            if (simulator != null && simulator.hasCycle()) {
+                drawCycleBanner(guiGraphics);
+            }
         }
         drawGhost(guiGraphics, mouseX, mouseY);
         drawWirePreview(guiGraphics, mouseX, mouseY);
@@ -195,6 +220,42 @@ public class CircuitDiagramPanel extends AbstractWidget {
         } else {
             setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
         }
+    }
+
+    /**
+     * 双击「输入」元件：在 0 和 15 之间快速切换信号强度。
+     * 若是有效的双击并成功切换，返回 true。
+     */
+    private boolean tryInputDoubleClick(int gx, int gy) {
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return false;
+        }
+        CircuitDiagram.Block block = diagram.getBlock(gx, gy);
+        if (!(block instanceof CircuitDiagram.Component component)
+                || component.component != BuiltinCircuitComponents.INPUT) {
+            lastInputClicked = null;
+            lastInputClickTime = 0;
+            return false;
+        }
+        long now = Util.getMillis();
+        if (lastInputClicked == component && now - lastInputClickTime <= 300) {
+            ItemStack stack = menu.slots.get(36).getItem();
+            CircuitDiagram editor = diagram.copy();
+            CircuitDiagram.Block b = editor.getBlock(component.x, component.y);
+            if (b instanceof CircuitDiagram.Component ec) {
+                InputComponentInstance instance = (InputComponentInstance) ec.instance;
+                instance.setSignal(instance.getSignal() == 0 ? 15 : 0);
+            }
+            setSelected(component.x, component.y);
+            commitDiagram(stack, editor);
+            lastInputClicked = null;
+            lastInputClickTime = 0;
+            return true;
+        }
+        lastInputClicked = component;
+        lastInputClickTime = now;
+        return false;
     }
 
     public boolean contains(double mouseX, double mouseY) {
@@ -358,6 +419,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private void commitDiagram(ItemStack stack, CircuitDiagram editor) {
         stack.set(ModDataComponents.CIRCUIT_DIAGRAM, editor);
+        simulationDirty = true;
         menu.onDiagramChanged();
         ClientPlayNetworking.send(new UpdateCircuitDiagramPayload(editor));
     }
@@ -517,6 +579,15 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         drawPins(guiGraphics, component.component, component.direction, left, top, 1.0F);
         drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, 1.0F);
+        var font = Minecraft.getInstance().font;
+        if (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.OUTPUT) {
+            int value = simulator != null ? simulator.getComponentValue(component.x, component.y) : 0;
+            String text = String.valueOf(value);
+            guiGraphics.drawString(font, text,
+                    (int) Math.round((left + right) / 2.0 - font.width(text) / 2.0),
+                    (int) Math.round((top + bottom) / 2.0 - 4),
+                    0xFFFFFFFF, true);
+        }
         if (component.x == selectedX && component.y == selectedY) {
             guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_SELECTION);
             guiGraphics.fill(lx, by - 1, rx, by, COLOR_SELECTION);
@@ -692,8 +763,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 CircuitDiagram.Wire.WireMaterial.GOLD
         };
 
+        boolean anyBad = false;
         for (var target : materials) {
-            // 彩色线
+            // 彩色线外侧
             for (Direction d : Direction.Plane.HORIZONTAL) {
                 var m = materialOf(wire, d);
                 if (m != target) continue;
@@ -705,20 +777,53 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 );
             }
 
-            // 黑色描边，保持原来“先彩后黑”的顺序
+            boolean bad = simulator != null && simulator.isWireBad(wire.x, wire.y, target);
+            anyBad |= bad;
+
+            // 内层：有信号变红（0~15 对应不同亮度），坏网保持黑色
             if (thickness > 1) {
+                int innerColor;
+                if (bad) {
+                    innerColor = 0xFF000000;
+                } else {
+                    int value = simulator != null ? simulator.getWireValue(wire.x, wire.y, target) : 0;
+                    innerColor = wireSignalColor(value);
+                }
                 for (Direction d : Direction.Plane.HORIZONTAL) {
                     var m = materialOf(wire, d);
                     if (m != target) continue;
-
                     drawSegmentForDir(
                             guiGraphics, d, centerX, centerY,
                             baseX, baseY, half, zoom, gap,
-                            thickness - 1, 0xFF000000
+                            thickness - 1, innerColor
                     );
                 }
             }
         }
+
+        // 循环依赖：该导线网络所有格叠加 cycle 贴图
+        if (anyBad) {
+            int cellX = (int) Math.floor(baseX);
+            int cellY = (int) Math.floor(baseY);
+            int cellSize = (int) Math.ceil(zoom);
+            guiGraphics.setColor(1.0F, 1.0F, 1.0F, 0.55F);
+            guiGraphics.blit(CYCLE_TEXTURE, cellX, cellY, cellSize, cellSize, 0.0F, 0.0F, 16, 16, 16, 16);
+            guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+        }
+    }
+
+    private int wireSignalColor(int value) {
+        int v = Mth.clamp(value, 0, 15);
+        int brightness = Math.round(v * 255.0F / 15.0F);
+        return 0xFF000000 | (brightness << 16);
+    }
+
+    private void drawCycleBanner(GuiGraphics guiGraphics) {
+        int bannerHeight = 14;
+        int y = getY() + getHeight() - bannerHeight - 2;
+        guiGraphics.fill(getX() + 2, y, getX() + getWidth() - 2, y + bannerHeight, COLOR_CYCLE_BANNER);
+        Component text = Component.translatable("gui.elements-plus.lithography_machine.cycle_warning");
+        guiGraphics.drawString(Minecraft.getInstance().font, text, getX() + 6, y + 3, 0xFFFFFFFF, true);
     }
 
     private int wireColor(CircuitDiagram.Wire.WireMaterial material) {
@@ -754,6 +859,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return true;
         }
         if (button == 0) {
+            if (!isReadOnly() && tryInputDoubleClick(cellX(mouseX), cellY(mouseY))) {
+                return true;
+            }
             boolean placing = wireMaterial() != null || activeComponent() != null;
             if (placing) {
                 if (!isReadOnly()) {
