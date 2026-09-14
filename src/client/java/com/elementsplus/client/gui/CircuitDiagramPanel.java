@@ -28,7 +28,13 @@ import net.minecraft.util.Mth;
 import net.minecraft.Util;
 import net.minecraft.world.item.ItemStack;
 
+import org.lwjgl.glfw.GLFW;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 public class CircuitDiagramPanel extends AbstractWidget {
@@ -52,6 +58,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int COLOR_GHOST_BORDER = 0xFFFFFFFF;
     private static final int COLOR_SELECTION = 0xFFFFC900;
     private static final int COLOR_CYCLE_BANNER = 0xCCB02020;
+    private static final int COLOR_SELBOX = 0xFF40E0D0;
+    private static final int COLOR_BOX_FILL = 0x3030D0C0;
+
+    private static final double DRAG_THRESHOLD = 4.0;
 
     private static final ResourceLocation CYCLE_TEXTURE = ElementsPlus.id("textures/gui/cycle.png");
 
@@ -85,6 +95,31 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private long lastInputClickTime = 0;
     private CircuitDiagram.Component lastInputClicked;
 
+    private enum DragMode {
+        NONE, MOVE, COPY, BOX_SELECT
+    }
+
+    private final Set<Long> selectedCells = new HashSet<>();
+    private int selBoxX, selBoxY, selBoxW, selBoxH;
+    private int selectionVersion;
+
+    private boolean pressActive;
+    private double pressScreenX, pressScreenY;
+    private int pressCellX, pressCellY;
+    private boolean pressOnComponent;
+    private boolean pressSelected;
+    private boolean pressCtrl;
+
+    private DragMode dragMode = DragMode.NONE;
+    private final Set<Long> dragSelected = new HashSet<>();
+    private int dragBoxX, dragBoxY, dragBoxW, dragBoxH;
+    private final Set<Long> dragOwnedCells = new HashSet<>();
+    private final List<CircuitDiagram.Component> dragComps = new ArrayList<>();
+    private final List<CircuitDiagram.Wire> dragWires = new ArrayList<>();
+    private int dispDx, dispDy;
+
+    private int boxSelX1, boxSelY1, boxSelX2, boxSelY2;
+
     public void setSimulator(CircuitSimulator simulator) {
         this.simulator = simulator;
         this.simulationDirty = true;
@@ -98,6 +133,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     public final SoundInstance COMPONENT_PLACE_SOUND = SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_PLACE, 1, 1);
     public final SoundInstance COMPONENT_ERASE_SOUND = SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_BREAK, 1, 1);
+    public final SoundInstance COMPONENT_MOVE_SOUND = SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_HIT, 1, 1);
     public final SoundInstance WIRE_PLACE_SOUND = SimpleSoundInstance.forUI(SoundEvents.STONE_PLACE, 1, 1);
     public final SoundInstance WIRE_ERASE_SOUND = SimpleSoundInstance.forUI(SoundEvents.STONE_BREAK, 1, 1);
     public final SoundInstance INVALID_SOUND = SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_HARP.value(), 0.5f, 1);
@@ -117,21 +153,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (!show) {
             return;
         }
-        GuiUtil.drawSubPanel(guiGraphics, getX() - 1, getY() - 1, getX() + getWidth() + 1, getY() + getHeight() + 1, 0xFFE0E0E0);
-        guiGraphics.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
-        guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), COLOR_BACKGROUND);
-        CircuitDiagram diagram = getDiagram();
-        if (diagram != null) {
-            drawDotGrid(guiGraphics);
-            drawComponents(guiGraphics, diagram);
-            drawWires(guiGraphics, diagram);
-            if (simulator != null && simulator.hasCycle()) {
-                drawCycleBanner(guiGraphics);
-            }
+
+        if ((pressActive || dragMode != DragMode.NONE) && !isLeftMouseDown()) {
+            finalizePress(lastMouseX != null ? lastMouseX : mouseX, lastMouseY != null ? lastMouseY : mouseY);
         }
-        drawGhost(guiGraphics, mouseX, mouseY);
-        drawWirePreview(guiGraphics, mouseX, mouseY);
-        guiGraphics.disableScissor();
 
         if (this.lastMouseX == null) {
             this.lastMouseX = mouseX;
@@ -145,6 +170,41 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 this.mouseMoveDelta(mouseX, mouseY, dx, dy);
             }
         }
+
+        GuiUtil.drawSubPanel(guiGraphics, getX() - 1, getY() - 1, getX() + getWidth() + 1, getY() + getHeight() + 1, 0xFFE0E0E0);
+        guiGraphics.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
+        guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), COLOR_BACKGROUND);
+        CircuitDiagram diagram = getDiagram();
+        if (diagram != null) {
+            drawDotGrid(guiGraphics);
+            if (dragMode == DragMode.MOVE) {
+                drawComponents(guiGraphics, diagram);
+                drawWires(guiGraphics, diagram);
+                drawGroupAt(guiGraphics, dispDx, dispDy);
+            } else {
+                drawComponents(guiGraphics, diagram);
+                drawWires(guiGraphics, diagram);
+                if (dragMode == DragMode.COPY) {
+                    drawCopyGhost(guiGraphics, dispDx, dispDy);
+                }
+            }
+            if (isMultiSelected() || dragMode != DragMode.NONE) {
+                if (dragMode == DragMode.MOVE) {
+                    drawSelBoxOutline(guiGraphics, selBoxX + dispDx, selBoxY + dispDy, selBoxW, selBoxH);
+                } else {
+                    drawSelBoxOutline(guiGraphics, selBoxX, selBoxY, selBoxW, selBoxH);
+                }
+            }
+            if (simulator != null && simulator.hasCycle()) {
+                drawCycleBanner(guiGraphics);
+            }
+        }
+        if (dragMode == DragMode.BOX_SELECT) {
+            drawBoxSelection(guiGraphics);
+        }
+        drawGhost(guiGraphics, mouseX, mouseY);
+        drawWirePreview(guiGraphics, mouseX, mouseY);
+        guiGraphics.disableScissor();
     }
 
     private CircuitDiagram getDiagram() {
@@ -210,52 +270,148 @@ public class CircuitDiagramPanel extends AbstractWidget {
         this.selectedY = y;
     }
 
-    private void handleSelection(int gx, int gy) {
+    public boolean isMultiSelected() {
+        return selectedCells.size() > 1;
+    }
+
+    public int getSelectionVersion() {
+        return selectionVersion;
+    }
+
+    private static long cellKey(int x, int y) {
+        return ((long) x << 32) | (y & 0xFFFFFFFFL);
+    }
+
+    private static int cellXOf(long key) {
+        return (int) (key >> 32);
+    }
+
+    private static int cellYOf(long key) {
+        return (int) (key & 0xFFFFFFFFL);
+    }
+
+    private boolean isSelected(int x, int y) {
+        return selectedCells.contains(cellKey(x, y));
+    }
+
+    private CircuitDiagram.Component blockComponent(int gx, int gy) {
         CircuitDiagram diagram = getDiagram();
         if (diagram == null) {
+            return null;
+        }
+        CircuitDiagram.Block block = diagram.getBlock(gx, gy);
+        return block instanceof CircuitDiagram.Component component ? component : null;
+    }
+
+    private static boolean insideBox(int x, int y, int bx, int by, int bw, int bh) {
+        return bw > 0 && bh > 0 && x >= bx && x < bx + bw && y >= by && y < by + bh;
+    }
+
+    private void bumpSelection() {
+        selectionVersion++;
+    }
+
+    private void clearSelection() {
+        selectedCells.clear();
+        selBoxW = 0;
+        selBoxH = 0;
+        setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        bumpSelection();
+    }
+
+    /** 只选中坐标 (gx,gy) 处的元件（单选框包围它）。 */
+    private void setSelectionSingle(int gx, int gy) {
+        selectedCells.clear();
+        selectedCells.add(cellKey(gx, gy));
+        setSelected(gx, gy);
+        updateSelBox();
+        bumpSelection();
+    }
+
+    private void setSelBox(int x, int y, int w, int h) {
+        selBoxX = x;
+        selBoxY = y;
+        selBoxW = w;
+        selBoxH = h;
+    }
+
+    /** 根据当前选中元件的包围盒刷新选框。 */
+    private void updateSelBox() {
+        if (selectedCells.isEmpty()) {
+            selBoxW = 0;
+            selBoxH = 0;
             return;
         }
-        if (diagram.getBlock(gx, gy) instanceof CircuitDiagram.Component component) {
-            setSelected(component.x, component.y);
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+        CircuitDiagram diagram = getDiagram();
+        if (diagram != null) {
+            for (Map.Entry<Long, CircuitDiagram.Chunk> entry : diagram.chunks.entrySet()) {
+                for (CircuitDiagram.Component component : entry.getValue().components) {
+                    if (!selectedCells.contains(cellKey(component.x, component.y))) {
+                        continue;
+                    }
+                    minX = Math.min(minX, component.x);
+                    minY = Math.min(minY, component.y);
+                    maxX = Math.max(maxX, component.x + component.getWidth() - 1);
+                    maxY = Math.max(maxY, component.y + component.getHeight() - 1);
+                }
+            }
+        }
+        if (minX == Integer.MAX_VALUE) {
+            selBoxW = 0;
+            selBoxH = 0;
+            return;
+        }
+        setSelBox(minX, minY, maxX - minX + 1, maxY - minY + 1);
+    }
+
+    /** 普通点击：选中元件或清空选择，并在输入元件上检测双击切换。 */
+    private void onClickReleased(int gx, int gy) {
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            clearSelection();
+            return;
+        }
+        CircuitDiagram.Block block = diagram.getBlock(gx, gy);
+        if (block instanceof CircuitDiagram.Component component) {
+            setSelectionSingle(component.x, component.y);
+            if (component.component == BuiltinCircuitComponents.INPUT) {
+                long now = Util.getMillis();
+                if (lastInputClicked == component && now - lastInputClickTime <= 300) {
+                    toggleInputSignal(component);
+                    lastInputClicked = null;
+                    lastInputClickTime = 0;
+                    return;
+                }
+                lastInputClicked = component;
+                lastInputClickTime = now;
+            } else {
+                lastInputClicked = null;
+                lastInputClickTime = 0;
+            }
         } else {
-            setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
+            clearSelection();
+            lastInputClicked = null;
+            lastInputClickTime = 0;
         }
     }
 
-    /**
-     * 双击「输入」元件：在 0 和 15 之间快速切换信号强度。
-     * 若是有效的双击并成功切换，返回 true。
-     */
-    private boolean tryInputDoubleClick(int gx, int gy) {
-        CircuitDiagram diagram = getDiagram();
+    /** 双击「输入」元件：在 0 和 15 之间快速切换信号强度。 */
+    private void toggleInputSignal(CircuitDiagram.Component component) {
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
         if (diagram == null) {
-            return false;
+            return;
         }
-        CircuitDiagram.Block block = diagram.getBlock(gx, gy);
-        if (!(block instanceof CircuitDiagram.Component component)
-                || component.component != BuiltinCircuitComponents.INPUT) {
-            lastInputClicked = null;
-            lastInputClickTime = 0;
-            return false;
+        CircuitDiagram editor = diagram.copy();
+        CircuitDiagram.Block b = editor.getBlock(component.x, component.y);
+        if (b instanceof CircuitDiagram.Component ec) {
+            InputComponentInstance instance = (InputComponentInstance) ec.instance;
+            instance.setSignal(instance.getSignal() == 0 ? 15 : 0);
         }
-        long now = Util.getMillis();
-        if (lastInputClicked == component && now - lastInputClickTime <= 300) {
-            ItemStack stack = menu.slots.get(36).getItem();
-            CircuitDiagram editor = diagram.copy();
-            CircuitDiagram.Block b = editor.getBlock(component.x, component.y);
-            if (b instanceof CircuitDiagram.Component ec) {
-                InputComponentInstance instance = (InputComponentInstance) ec.instance;
-                instance.setSignal(instance.getSignal() == 0 ? 15 : 0);
-            }
-            setSelected(component.x, component.y);
-            commitDiagram(stack, editor);
-            lastInputClicked = null;
-            lastInputClickTime = 0;
-            return true;
-        }
-        lastInputClicked = component;
-        lastInputClickTime = now;
-        return false;
+        setSelectionSingle(component.x, component.y);
+        commitDiagram(stack, editor);
     }
 
     public boolean contains(double mouseX, double mouseY) {
@@ -376,7 +532,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         CircuitDiagram editor = diagram.copy();
         if (editor.setBlock(gx, gy, new CircuitDiagram.Component(component, rotation), force)) {
             playSound(COMPONENT_PLACE_SOUND);
-            setSelected(gx, gy);
+            setSelectionSingle(gx, gy);
         }
         commitDiagram(stack, editor);
     }
@@ -392,8 +548,18 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return;
         }
         CircuitDiagram editor = diagram.copy();
-        if (block instanceof CircuitDiagram.Component) {
-            if (hasSelection() && block == getSelectedComponent()) {
+        if (block instanceof CircuitDiagram.Component compBlock) {
+            boolean wasSelected = selectedCells.remove(cellKey(compBlock.x, compBlock.y));
+            if (wasSelected) {
+                if (selectedCells.isEmpty()) {
+                    setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
+                    selBoxW = 0;
+                    selBoxH = 0;
+                } else {
+                    updateSelBox();
+                }
+                bumpSelection();
+            } else if (hasSelection() && compBlock.x == selectedX && compBlock.y == selectedY) {
                 setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
             }
             playSound(COMPONENT_ERASE_SOUND);
@@ -548,19 +714,27 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void drawComponents(GuiGraphics guiGraphics, CircuitDiagram diagram) {
+        boolean moving = dragMode == DragMode.MOVE;
         for (Map.Entry<Long, CircuitDiagram.Chunk> entry : diagram.chunks.entrySet()) {
             CircuitDiagram.Chunk chunk = entry.getValue();
             for (CircuitDiagram.Component component : chunk.components) {
+                if (moving && dragComps.contains(component)) {
+                    continue;
+                }
                 drawComponent(guiGraphics, component);
             }
         }
     }
 
     private void drawComponent(GuiGraphics guiGraphics, CircuitDiagram.Component component) {
+        drawComponentAt(guiGraphics, component, 0, 0);
+    }
+
+    private void drawComponentAt(GuiGraphics guiGraphics, CircuitDiagram.Component component, int dx, int dy) {
         int width = component.getWidth();
         int height = component.getHeight();
-        double left = getX() + (component.x - offsetX) * zoom;
-        double top = getY() + (component.y - offsetY) * zoom;
+        double left = getX() + (component.x + dx - offsetX) * zoom;
+        double top = getY() + (component.y + dy - offsetY) * zoom;
         double right = left + width * zoom;
         double bottom = top + height * zoom;
         if (right < getX() || left > getX() + getWidth() || bottom < getY() || top > getY() + getHeight()) {
@@ -580,7 +754,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         drawPins(guiGraphics, component.component, component.direction, left, top, 1.0F);
         drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, 1.0F);
         var font = Minecraft.getInstance().font;
-        if (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.OUTPUT) {
+        if (dx == 0 && dy == 0 && (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.OUTPUT)) {
             int value = simulator != null ? simulator.getComponentValue(component.x, component.y) : 0;
             String text = String.valueOf(value);
             guiGraphics.drawString(font, text,
@@ -588,12 +762,102 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     (int) Math.round((top + bottom) / 2.0 - 4),
                     0xFFFFFFFF, true);
         }
-        if (component.x == selectedX && component.y == selectedY) {
+        if (isSelected(component.x, component.y)) {
             guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_SELECTION);
             guiGraphics.fill(lx, by - 1, rx, by, COLOR_SELECTION);
             guiGraphics.fill(lx, ty, lx + 1, by, COLOR_SELECTION);
             guiGraphics.fill(rx - 1, ty, rx, by, COLOR_SELECTION);
         }
+    }
+
+    private void drawGroupAt(GuiGraphics guiGraphics, int dx, int dy) {
+        if (dragComps.isEmpty() && dragWires.isEmpty()) {
+            return;
+        }
+        for (CircuitDiagram.Wire wire : dragWires) {
+            drawWireAt(guiGraphics, wire, dx, dy);
+        }
+        for (CircuitDiagram.Component component : dragComps) {
+            drawComponentAt(guiGraphics, component, dx, dy);
+        }
+    }
+
+    private void drawCopyGhost(GuiGraphics guiGraphics, int dx, int dy) {
+        if (dragComps.isEmpty() && dragWires.isEmpty()) {
+            return;
+        }
+        boolean valid = copyPlacementValid(dx, dy);
+        int color = valid ? COLOR_GHOST_VALID : COLOR_GHOST_INVALID;
+        float alpha = ((color >> 24) & 0xFF) / 255.0F;
+        for (CircuitDiagram.Wire wire : dragWires) {
+            drawWireAt(guiGraphics, wire, dx, dy);
+        }
+        for (CircuitDiagram.Component component : dragComps) {
+            drawComponentGhostAt(guiGraphics, component, dx, dy, color, alpha);
+        }
+    }
+
+    private void drawComponentGhostAt(GuiGraphics guiGraphics, CircuitDiagram.Component component, int dx, int dy, int color, float alpha) {
+        int width = component.getWidth();
+        int height = component.getHeight();
+        double left = getX() + (component.x + dx - offsetX) * zoom;
+        double top = getY() + (component.y + dy - offsetY) * zoom;
+        double right = left + width * zoom;
+        double bottom = top + height * zoom;
+        if (right < getX() || left > getX() + getWidth() || bottom < getY() || top > getY() + getHeight()) {
+            return;
+        }
+        int lx = (int) Math.floor(left);
+        int ty = (int) Math.floor(top);
+        int rx = (int) Math.ceil(right);
+        int by = (int) Math.ceil(bottom);
+        guiGraphics.fill(lx, ty, rx, by, color);
+        if (zoom >= 3) {
+            guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_GHOST_BORDER);
+            guiGraphics.fill(lx, by - 1, rx, by, COLOR_GHOST_BORDER);
+            guiGraphics.fill(lx, ty, lx + 1, by, COLOR_GHOST_BORDER);
+            guiGraphics.fill(rx - 1, ty, rx, by, COLOR_GHOST_BORDER);
+        }
+        drawPins(guiGraphics, component.component, component.direction, left, top, alpha);
+        drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, alpha);
+    }
+
+    private void drawSelBoxOutline(GuiGraphics guiGraphics, int x, int y, int w, int h) {
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        double left = getX() + (x - offsetX) * zoom;
+        double top = getY() + (y - offsetY) * zoom;
+        double right = left + w * zoom;
+        double bottom = top + h * zoom;
+        int lx = (int) Math.floor(left);
+        int ty = (int) Math.floor(top);
+        int rx = (int) Math.ceil(right);
+        int by = (int) Math.ceil(bottom);
+        guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_SELBOX);
+        guiGraphics.fill(lx, by - 1, rx, by, COLOR_SELBOX);
+        guiGraphics.fill(lx, ty, lx + 1, by, COLOR_SELBOX);
+        guiGraphics.fill(rx - 1, ty, rx, by, COLOR_SELBOX);
+    }
+
+    private void drawBoxSelection(GuiGraphics guiGraphics) {
+        int minX = Math.min(boxSelX1, boxSelX2);
+        int maxX = Math.max(boxSelX1, boxSelX2);
+        int minY = Math.min(boxSelY1, boxSelY2);
+        int maxY = Math.max(boxSelY1, boxSelY2);
+        double left = getX() + (minX - offsetX) * zoom;
+        double top = getY() + (minY - offsetY) * zoom;
+        double right = getX() + (maxX + 1 - offsetX) * zoom;
+        double bottom = getY() + (maxY + 1 - offsetY) * zoom;
+        int lx = (int) Math.floor(left);
+        int ty = (int) Math.floor(top);
+        int rx = (int) Math.ceil(right);
+        int by = (int) Math.ceil(bottom);
+        guiGraphics.fill(lx, ty, rx, by, COLOR_BOX_FILL);
+        guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_SELBOX);
+        guiGraphics.fill(lx, by - 1, rx, by, COLOR_SELBOX);
+        guiGraphics.fill(lx, ty, lx + 1, by, COLOR_SELBOX);
+        guiGraphics.fill(rx - 1, ty, rx, by, COLOR_SELBOX);
     }
 
     /**
@@ -714,12 +978,16 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void drawWires(GuiGraphics guiGraphics, CircuitDiagram diagram) {
+        boolean moving = dragMode == DragMode.MOVE;
         for (Map.Entry<Long, CircuitDiagram.Chunk> entry : diagram.chunks.entrySet()) {
             CircuitDiagram.Chunk chunk = entry.getValue();
             for (int i = 0; i < 16; i++) {
                 for (int j = 0; j < 16; j++) {
                     CircuitDiagram.Wire wire = chunk.wires[i][j];
                     if (wire != null) {
+                        if (moving && dragOwnedCells.contains(cellKey(wire.x, wire.y))) {
+                            continue;
+                        }
                         drawWire(guiGraphics, wire);
                     }
                 }
@@ -747,14 +1015,18 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void drawWire(GuiGraphics guiGraphics, CircuitDiagram.Wire wire) {
-        double centerX = getX() + (wire.x + 0.5 - offsetX) * zoom;
-        double centerY = getY() + (wire.y + 0.5 - offsetY) * zoom;
+        drawWireAt(guiGraphics, wire, 0, 0);
+    }
+
+    private void drawWireAt(GuiGraphics guiGraphics, CircuitDiagram.Wire wire, int dx, int dy) {
+        double centerX = getX() + (wire.x + dx + 0.5 - offsetX) * zoom;
+        double centerY = getY() + (wire.y + dy + 0.5 - offsetY) * zoom;
         if (centerX < getX() - 8 || centerX > getX() + getWidth() + 8 || centerY < getY() - 8 || centerY > getY() + getHeight() + 8) {
             return;
         }
         int thickness = Math.max(1, (int) Math.round(zoom * 0.2));
-        double baseX = getX() + (wire.x - offsetX) * zoom;
-        double baseY = getY() + (wire.y - offsetY) * zoom;
+        double baseX = getX() + (wire.x + dx - offsetX) * zoom;
+        double baseY = getY() + (wire.y + dy - offsetY) * zoom;
         double half = 0.5 * zoom;
         double gap = 0.03 * zoom;
 
@@ -777,7 +1049,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 );
             }
 
-            boolean bad = simulator != null && simulator.isWireBad(wire.x, wire.y, target);
+            boolean bad = dx == 0 && dy == 0 && simulator != null && simulator.isWireBad(wire.x, wire.y, target);
             anyBad |= bad;
 
             // 内层：有信号变红（0~15 对应不同亮度），坏网保持黑色
@@ -786,7 +1058,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 if (bad) {
                     innerColor = 0xFF000000;
                 } else {
-                    int value = simulator != null ? simulator.getWireValue(wire.x, wire.y, target) : 0;
+                    int value = dx == 0 && dy == 0 && simulator != null ? simulator.getWireValue(wire.x, wire.y, target) : 0;
                     innerColor = wireSignalColor(value);
                 }
                 for (Direction d : Direction.Plane.HORIZONTAL) {
@@ -859,9 +1131,6 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return true;
         }
         if (button == 0) {
-            if (!isReadOnly() && tryInputDoubleClick(cellX(mouseX), cellY(mouseY))) {
-                return true;
-            }
             boolean placing = wireMaterial() != null || activeComponent() != null;
             if (placing) {
                 if (!isReadOnly()) {
@@ -877,9 +1146,22 @@ public class CircuitDiagramPanel extends AbstractWidget {
                         }
                     }
                 }
-            } else {
-                handleSelection(cellX(mouseX), cellY(mouseY));
+                return true;
             }
+            int gx = cellX(mouseX);
+            int gy = cellY(mouseY);
+            CircuitDiagram.Component under = blockComponent(gx, gy);
+            pressActive = true;
+            pressScreenX = mouseX;
+            pressScreenY = mouseY;
+            pressCellX = gx;
+            pressCellY = gy;
+            pressOnComponent = under != null;
+            pressSelected = under != null && isSelected(under.x, under.y);
+            pressCtrl = Screen.hasControlDown();
+            dragMode = DragMode.NONE;
+            dispDx = 0;
+            dispDy = 0;
             return true;
         }
         if (button == 1) {
@@ -918,11 +1200,28 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (button == 0) {
             draggingWire = null;
+            if (pressActive || dragMode != DragMode.NONE) {
+                finalizePress((int) mouseX, (int) mouseY);
+            }
         }
-        return this.active && this.visible && isMouseOver(mouseX, mouseY);
+        return this.active && this.visible;
     }
 
     public void mouseMoveDelta(double mouseX, double mouseY, double dx, double dy) {
+        if (pressActive) {
+            if (dragMode == DragMode.NONE) {
+                if (Math.hypot(mouseX - pressScreenX, mouseY - pressScreenY) >= DRAG_THRESHOLD && !isReadOnly()) {
+                    startDrag();
+                }
+            } else if (dragMode == DragMode.MOVE) {
+                updateDragOffset(mouseX, mouseY);
+            } else if (dragMode == DragMode.COPY) {
+                updateCopyOffset(mouseX, mouseY);
+            } else if (dragMode == DragMode.BOX_SELECT) {
+                boxSelX2 = cellX(mouseX);
+                boxSelY2 = cellY(mouseY);
+            }
+        }
         if (dragging) {
             offsetX -= dx / zoom;
             offsetY -= dy / zoom;
@@ -935,6 +1234,471 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
     }
 
+    private boolean isLeftMouseDown() {
+        return GLFW.glfwGetMouseButton(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT)
+                == GLFW.GLFW_PRESS;
+    }
+
+    private void startDrag() {
+        if (isReadOnly()) {
+            return;
+        }
+        if (pressOnComponent && pressCtrl) {
+            beginGroupDrag();
+            if (dragComps.isEmpty() && dragWires.isEmpty()) {
+                dragMode = DragMode.NONE;
+                return;
+            }
+            dragMode = DragMode.COPY;
+            dispDx = 0;
+            dispDy = 0;
+        } else if (pressOnComponent && pressSelected) {
+            beginGroupDrag();
+            if (dragComps.isEmpty() && dragWires.isEmpty()) {
+                dragMode = DragMode.NONE;
+                return;
+            }
+            dragMode = DragMode.MOVE;
+            dispDx = 0;
+            dispDy = 0;
+        } else {
+            boxSelX1 = pressCellX;
+            boxSelY1 = pressCellY;
+            boxSelX2 = pressCellX;
+            boxSelY2 = pressCellY;
+            dragMode = DragMode.BOX_SELECT;
+        }
+    }
+
+    private void beginGroupDrag() {
+        dragSelected.clear();
+        dragSelected.addAll(selectedCells);
+        dragBoxX = selBoxX;
+        dragBoxY = selBoxY;
+        dragBoxW = selBoxW;
+        dragBoxH = selBoxH;
+        dragComps.clear();
+        dragWires.clear();
+        dragOwnedCells.clear();
+        collectGroup(getDiagram(), dragComps, dragWires, dragOwnedCells);
+    }
+
+    private void collectGroup(CircuitDiagram diagram, List<CircuitDiagram.Component> comps, List<CircuitDiagram.Wire> wires, Set<Long> owned) {
+        if (diagram == null) {
+            return;
+        }
+        for (Map.Entry<Long, CircuitDiagram.Chunk> entry : diagram.chunks.entrySet()) {
+            for (CircuitDiagram.Component component : entry.getValue().components) {
+                if (dragSelected.contains(cellKey(component.x, component.y))) {
+                    comps.add(component);
+                }
+            }
+        }
+        for (Map.Entry<Long, CircuitDiagram.Chunk> entry : diagram.chunks.entrySet()) {
+            CircuitDiagram.Chunk chunk = entry.getValue();
+            for (int i = 0; i < 16; i++) {
+                for (int j = 0; j < 16; j++) {
+                    CircuitDiagram.Wire wire = chunk.wires[i][j];
+                    if (wire != null && insideBox(wire.x, wire.y, dragBoxX, dragBoxY, dragBoxW, dragBoxH)) {
+                        wires.add(wire);
+                    }
+                }
+            }
+        }
+        for (CircuitDiagram.Component component : comps) {
+            for (int dx = 0; dx < component.getWidth(); dx++) {
+                for (int dy = 0; dy < component.getHeight(); dy++) {
+                    owned.add(cellKey(component.x + dx, component.y + dy));
+                }
+            }
+        }
+        for (CircuitDiagram.Wire wire : wires) {
+            owned.add(cellKey(wire.x, wire.y));
+        }
+    }
+
+    private boolean groupMoveValid(int dx, int dy) {
+        if (dragComps.isEmpty() && dragWires.isEmpty()) {
+            return false;
+        }
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return false;
+        }
+        for (CircuitDiagram.Component c : dragComps) {
+            for (int dx0 = 0; dx0 < c.getWidth(); dx0++) {
+                for (int dy0 = 0; dy0 < c.getHeight(); dy0++) {
+                    int x = c.x + dx0 + dx;
+                    int y = c.y + dy0 + dy;
+                    if (!dragOwnedCells.contains(cellKey(x, y)) && diagram.getBlock(x, y) != null) {
+                        return false;
+                    }
+                }
+            }
+        }
+        for (CircuitDiagram.Wire w : dragWires) {
+            int x = w.x + dx;
+            int y = w.y + dy;
+            if (!dragOwnedCells.contains(cellKey(x, y)) && diagram.getBlock(x, y) != null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean copyPlacementValid(int dx, int dy) {
+        if (dragComps.isEmpty() && dragWires.isEmpty()) {
+            return false;
+        }
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return false;
+        }
+        for (CircuitDiagram.Component c : dragComps) {
+            for (int dx0 = 0; dx0 < c.getWidth(); dx0++) {
+                for (int dy0 = 0; dy0 < c.getHeight(); dy0++) {
+                    if (diagram.getBlock(c.x + dx0 + dx, c.y + dy0 + dy) != null) {
+                        return false;
+                    }
+                }
+            }
+        }
+        for (CircuitDiagram.Wire w : dragWires) {
+            if (diagram.getBlock(w.x + dx, w.y + dy) != null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void updateDragOffset(double mouseX, double mouseY) {
+        int dx = cellX(mouseX) - pressCellX;
+        int dy = cellY(mouseY) - pressCellY;
+        if (Screen.hasShiftDown()) {
+            dispDx = dx;
+            dispDy = dy;
+            return;
+        }
+        if (groupMoveValid(dx, dy)) {
+            dispDx = dx;
+            dispDy = dy;
+        }
+    }
+
+    private void updateCopyOffset(double mouseX, double mouseY) {
+        dispDx = cellX(mouseX) - pressCellX;
+        dispDy = cellY(mouseY) - pressCellY;
+    }
+
+    private void finalizePress(int mouseX, int mouseY) {
+        int dx = cellX(mouseX) - pressCellX;
+        int dy = cellY(mouseY) - pressCellY;
+        DragMode mode = dragMode;
+        pressActive = false;
+        dragMode = DragMode.NONE;
+        if (mode == DragMode.MOVE) {
+            if (Screen.hasShiftDown()) {
+                commitMove(dx, dy);
+            } else if (groupMoveValid(dx, dy)) {
+                commitMove(dx, dy);
+            } else {
+                commitMove(dispDx, dispDy);
+            }
+        } else if (mode == DragMode.COPY) {
+            if (Screen.hasShiftDown() || copyPlacementValid(dx, dy)) {
+                commitCopy(dx, dy);
+            }
+        } else if (mode == DragMode.BOX_SELECT) {
+            finalizeBoxSelect();
+        } else {
+            onClickReleased(pressCellX, pressCellY);
+        }
+        clearDragState();
+    }
+
+    private void clearDragState() {
+        dragSelected.clear();
+        dragComps.clear();
+        dragWires.clear();
+        dragOwnedCells.clear();
+        dispDx = 0;
+        dispDy = 0;
+        boxSelX1 = 0;
+        boxSelY1 = 0;
+        boxSelX2 = 0;
+        boxSelY2 = 0;
+    }
+
+    private void commitMove(int dx, int dy) {
+        if (dx == 0 && dy == 0) {
+            return;
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null || (dragComps.isEmpty() && dragWires.isEmpty())) {
+            return;
+        }
+        CircuitDiagram editor = diagram.copy();
+        boolean force = Screen.hasShiftDown();
+        for (Long key : dragOwnedCells) {
+            editor.setBlock(cellXOf(key), cellYOf(key), null);
+        }
+        for (CircuitDiagram.Wire w : dragWires) {
+            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west);
+            nw.x = w.x + dx;
+            nw.y = w.y + dy;
+            editor.setBlock(nw.x, nw.y, nw, force);
+        }
+        for (CircuitDiagram.Component c : dragComps) {
+            CircuitDiagram.Component nc = c.copy();
+            nc.x = c.x + dx;
+            nc.y = c.y + dy;
+            editor.setBlock(nc.x, nc.y, nc, force);
+        }
+        playSound(COMPONENT_MOVE_SOUND);
+        commitDiagram(stack, editor);
+        selectedCells.clear();
+        for (Long key : dragSelected) {
+            selectedCells.add(cellKey(cellXOf(key) + dx, cellYOf(key) + dy));
+        }
+        setSelBox(dragBoxX + dx, dragBoxY + dy, dragBoxW, dragBoxH);
+        syncSelectionAnchor();
+    }
+
+    private void commitCopy(int dx, int dy) {
+        if (dx == 0 && dy == 0) {
+            return;
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null || (dragComps.isEmpty() && dragWires.isEmpty())) {
+            return;
+        }
+        CircuitDiagram editor = diagram.copy();
+        boolean force = Screen.hasShiftDown();
+        List<CircuitDiagram.Component> copies = new ArrayList<>();
+        for (CircuitDiagram.Wire w : dragWires) {
+            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west);
+            nw.x = w.x + dx;
+            nw.y = w.y + dy;
+            editor.setBlock(nw.x, nw.y, nw, force);
+        }
+        for (CircuitDiagram.Component c : dragComps) {
+            CircuitDiagram.Component nc = c.copy();
+            nc.x = c.x + dx;
+            nc.y = c.y + dy;
+            if (editor.setBlock(nc.x, nc.y, nc, force)) {
+                copies.add(nc);
+            }
+        }
+        if (copies.isEmpty()) {
+            return;
+        }
+        playSound(COMPONENT_PLACE_SOUND);
+        commitDiagram(stack, editor);
+        selectedCells.clear();
+        for (CircuitDiagram.Component nc : copies) {
+            selectedCells.add(cellKey(nc.x, nc.y));
+        }
+        setSelBox(dragBoxX + dx, dragBoxY + dy, dragBoxW, dragBoxH);
+        syncSelectionAnchor();
+    }
+
+    private void syncSelectionAnchor() {
+        if (selectedCells.size() == 1) {
+            Long key = selectedCells.iterator().next();
+            setSelected(cellXOf(key), cellYOf(key));
+        } else if (selectedCells.isEmpty()) {
+            setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        } else {
+            setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        }
+        bumpSelection();
+    }
+
+    private void finalizeBoxSelect() {
+        int minX = Math.min(boxSelX1, boxSelX2);
+        int maxX = Math.max(boxSelX1, boxSelX2);
+        int minY = Math.min(boxSelY1, boxSelY2);
+        int maxY = Math.max(boxSelY1, boxSelY2);
+        if (minX == maxX && minY == maxY) {
+            onClickReleased(pressCellX, pressCellY);
+            return;
+        }
+        selectedCells.clear();
+        CircuitDiagram diagram = getDiagram();
+        if (diagram != null) {
+            for (Map.Entry<Long, CircuitDiagram.Chunk> entry : diagram.chunks.entrySet()) {
+                for (CircuitDiagram.Component c : entry.getValue().components) {
+                    for (int dx0 = 0; dx0 < c.getWidth(); dx0++) {
+                        for (int dy0 = 0; dy0 < c.getHeight(); dy0++) {
+                            int x = c.x + dx0;
+                            int y = c.y + dy0;
+                            if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+                                selectedCells.add(cellKey(c.x, c.y));
+                                dx0 = c.getWidth();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (selectedCells.isEmpty()) {
+            setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
+            selBoxW = 0;
+            selBoxH = 0;
+        } else {
+            updateSelBox();
+            syncSelectionAnchor();
+        }
+        clearDragState();
+        bumpSelection();
+    }
+
+    public void deleteSelection() {
+        if (isReadOnly() || selectedCells.isEmpty()) {
+            return;
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return;
+        }
+        CircuitDiagram editor = diagram.copy();
+        boolean removedComp = false;
+        boolean removedWire = false;
+        if (selectedCells.size() == 1) {
+            Long key = selectedCells.iterator().next();
+            CircuitDiagram.Block b = editor.getBlock(cellXOf(key), cellYOf(key));
+            if (b != null) {
+                editor.setBlock(cellXOf(key), cellYOf(key), null);
+                if (b instanceof CircuitDiagram.Component) {
+                    removedComp = true;
+                } else {
+                    removedWire = true;
+                }
+            }
+        } else {
+            for (Long key : selectedCells) {
+                CircuitDiagram.Block b = editor.getBlock(cellXOf(key), cellYOf(key));
+                if (b != null) {
+                    editor.setBlock(cellXOf(key), cellYOf(key), null);
+                    removedComp = true;
+                }
+            }
+            for (Map.Entry<Long, CircuitDiagram.Chunk> entry : editor.chunks.entrySet()) {
+                CircuitDiagram.Chunk chunk = entry.getValue();
+                for (int i = 0; i < 16; i++) {
+                    for (int j = 0; j < 16; j++) {
+                        CircuitDiagram.Wire wire = chunk.wires[i][j];
+                        if (wire != null && insideBox(wire.x, wire.y, selBoxX, selBoxY, selBoxW, selBoxH)) {
+                            editor.setBlock(wire.x, wire.y, null);
+                            removedWire = true;
+                        }
+                    }
+                }
+            }
+        }
+        if (!removedComp && !removedWire) {
+            return;
+        }
+        playSound(removedComp ? COMPONENT_ERASE_SOUND : WIRE_ERASE_SOUND);
+        commitDiagram(stack, editor);
+        clearSelection();
+    }
+
+    /** 元件的原位旋转：旋转方向，锚定左上角（与放置预览一致）。先试 90°，冲突时回退 180°。 */
+    private void tryRotateAt(int gx, int gy, boolean clockwise) {
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null || isReadOnly()) {
+            return;
+        }
+        CircuitDiagram.Component under = blockComponent(gx, gy);
+        if (under == null) {
+            return;
+        }
+        if (!selectedCells.contains(cellKey(under.x, under.y))) {
+            setSelectionSingle(under.x, under.y);
+        }
+        if (tryRotateGroup(clockwise)) {
+            playSound(clockwise ? ROTATE_CLOCKWISE_SOUND : ROTATE_ANTICLOCKWISE_SOUND);
+        }
+    }
+
+    private boolean tryRotateGroup(boolean clockwise) {
+        if (selectedCells.isEmpty()) {
+            return false;
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return false;
+        }
+        CircuitDiagram editor = diagram.copy();
+        List<CircuitDiagram.Component> comps = new ArrayList<>();
+        for (Map.Entry<Long, CircuitDiagram.Chunk> entry : editor.chunks.entrySet()) {
+            for (CircuitDiagram.Component c : entry.getValue().components) {
+                if (selectedCells.contains(cellKey(c.x, c.y))) {
+                    comps.add(c);
+                }
+            }
+        }
+        if (comps.isEmpty()) {
+            return false;
+        }
+        if (tryRotateApply(editor, comps, clockwise, false)) {
+            commitDiagram(stack, editor);
+            updateSelBox();
+            bumpSelection();
+            return true;
+        }
+        if (tryRotateApply(editor, comps, clockwise, true)) {
+            commitDiagram(stack, editor);
+            updateSelBox();
+            bumpSelection();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean tryRotateApply(CircuitDiagram editor, List<CircuitDiagram.Component> comps, boolean clockwise, boolean opposite) {
+        Set<Long> originals = new HashSet<>();
+        for (CircuitDiagram.Component c : comps) {
+            for (int dx = 0; dx < c.getWidth(); dx++) {
+                for (int dy = 0; dy < c.getHeight(); dy++) {
+                    originals.add(cellKey(c.x + dx, c.y + dy));
+                }
+            }
+        }
+        Set<Long> newOcc = new HashSet<>();
+        for (CircuitDiagram.Component c : comps) {
+            Direction nd = opposite ? c.direction.getOpposite() : (clockwise ? c.direction.getClockWise() : c.direction.getCounterClockWise());
+            boolean ns = nd == Direction.NORTH || nd == Direction.SOUTH;
+            int w = ns ? c.component.getWidth() : c.component.getHeight();
+            int h = ns ? c.component.getHeight() : c.component.getWidth();
+            for (int dx = 0; dx < w; dx++) {
+                for (int dy = 0; dy < h; dy++) {
+                    Long key = cellKey(c.x + dx, c.y + dy);
+                    if (!newOcc.add(key)) {
+                        return false;
+                    }
+                    if (!originals.contains(key) && editor.getBlock(c.x + dx, c.y + dy) != null) {
+                        return false;
+                    }
+                }
+            }
+        }
+        for (Long key : originals) {
+            editor.setBlock(cellXOf(key), cellYOf(key), null);
+        }
+        for (CircuitDiagram.Component c : comps) {
+            c.direction = opposite ? c.direction.getOpposite() : (clockwise ? c.direction.getClockWise() : c.direction.getCounterClockWise());
+            editor.setBlock(c.x, c.y, c, true);
+        }
+        return true;
+    }
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (!this.active || !this.visible || !isMouseOver(mouseX, mouseY)) {
@@ -944,16 +1708,23 @@ public class CircuitDiagramPanel extends AbstractWidget {
             zoomAt(mouseX, mouseY, Math.pow(2, scrollY / 5));
             return true;
         }
-        if (Screen.hasAltDown() && activeComponent() != null && !isReadOnly()) {
-            if (scrollY > 0) {
-                rotation = rotation.getClockWise();
-                playSound(ROTATE_CLOCKWISE_SOUND);
-            } else {
-                rotation = rotation.getCounterClockWise();
-                playSound(ROTATE_ANTICLOCKWISE_SOUND);
+        if (Screen.hasAltDown() && !isReadOnly()) {
+            if (activeComponent() != null) {
+                if (scrollY > 0) {
+                    rotation = rotation.getClockWise();
+                    playSound(ROTATE_CLOCKWISE_SOUND);
+                } else {
+                    rotation = rotation.getCounterClockWise();
+                    playSound(ROTATE_ANTICLOCKWISE_SOUND);
+                }
+                return true;
             }
-
-            return true;
+            int gx = cellX(mouseX);
+            int gy = cellY(mouseY);
+            if (blockComponent(gx, gy) != null) {
+                tryRotateAt(gx, gy, scrollY > 0);
+                return true;
+            }
         }
         double sx = scrollX;
         double sy = scrollY;

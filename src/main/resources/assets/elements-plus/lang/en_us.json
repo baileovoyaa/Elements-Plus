@@ -108,6 +108,7 @@
   "circuit.elements-plus.config.signal": "Signal",
 
   "gui.elements-plus.lithography_machine.cycle_warning": "Combinational cycle detected",
+  "gui.elements-plus.lithography_machine.multiple_selected": "Multiple selected",
 
   "item.elements-plus.gold_wire": "Gold Wire",
   "item.elements-plus.copper_wire": "Copper Wire",

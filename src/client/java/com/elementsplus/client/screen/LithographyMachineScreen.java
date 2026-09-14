@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.lwjgl.glfw.GLFW;
+
 public class LithographyMachineScreen extends AbstractContainerScreen<LithographyMachineMenu> implements SlotPositionProvider {
     public TabButton tabButtonDesign;
     public TabButton tabButtonManufacture;
@@ -42,6 +44,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private int lastAttrX = Integer.MIN_VALUE;
     private int lastAttrY = Integer.MIN_VALUE;
     private CircuitDiagram.Component lastAttrComponent;
+    private int lastSelectionVersion = -1;
 
     public IntSliderWidget speedSlider;
     public EditBox speedEditBox;
@@ -58,6 +61,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private CircuitDiagram lastSimDiagram;
     private double simAccum = 0;
     private IconButton playButton;
+
+    public boolean darkMode = true;
 
     public CircuitDiagram getDiagram() {
         ItemStack stack = menu.slots.get(36).getItem();
@@ -278,7 +283,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         int sx = circuitPanel.getSelectedX();
         int sy = circuitPanel.getSelectedY();
         CircuitDiagram.Component current = circuitPanel.getSelectedComponent();
-        if (sx != lastAttrX || sy != lastAttrY || current != lastAttrComponent) {
+        int selVer = circuitPanel.getSelectionVersion();
+        if (selVer != lastSelectionVersion || sx != lastAttrX || sy != lastAttrY || current != lastAttrComponent) {
+            lastSelectionVersion = selVer;
             lastAttrX = sx;
             lastAttrY = sy;
             lastAttrComponent = current;
@@ -321,6 +328,26 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private void rebuildAttributes() {
         attributeWidget.clearChildren();
         attributeWidget.scrollToTop();
+        if (circuitPanel.isMultiSelected()) {
+            attributeWidget.addChild(new AbstractWidget(0, 1, attributeWidget.getWidth(), 20, Component.empty()) {
+                @Override
+                protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                    guiGraphics.drawString(font,
+                            Component.translatable("gui.elements-plus.lithography_machine.multiple_selected"),
+                            this.getX() + 5, this.getY() + 5, 0xFF00E5FF, false);
+                }
+
+                @Override
+                protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+                }
+
+                @Override
+                public boolean mouseDragged(double d, double e, int i, double f, double g) {
+                    return false;
+                }
+            });
+            return;
+        }
         CircuitDiagram.Component selected = circuitPanel.getSelectedComponent();
         if (selected == null) {
             return;
@@ -357,6 +384,17 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     private void commitAttributes() {
         circuitPanel.commitDiagram();
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_DELETE && buttonGroup.getSelected() == tabButtonDesign
+                && (speedEditBox == null || !speedEditBox.isFocused())
+                && circuitPanel.hasSelection()) {
+            circuitPanel.deleteSelection();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

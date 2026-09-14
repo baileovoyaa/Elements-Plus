@@ -107,6 +107,7 @@
   "circuit.elements-plus.config.signal": "信号",
 
   "gui.elements-plus.lithography_machine.cycle_warning": "检测到组合环路",
+  "gui.elements-plus.lithography_machine.multiple_selected": "已选中多个元件",
 
   "item.elements-plus.gold_wire": "金引线",
   "item.elements-plus.copper_wire": "铜引线",
