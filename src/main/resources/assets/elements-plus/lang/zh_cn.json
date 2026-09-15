@@ -98,6 +98,14 @@
   "circuit.elements-plus.component.output": "输出",
   "circuit.elements-plus.component.output.description": "向外输出信号",
 
+  "circuit.elements-plus.component.bus_joiner_8": "8位总线连接器",
+  "circuit.elements-plus.component.bus_joiner_8.description": "将多个导线合并成一个总线",
+  "circuit.elements-plus.component.bus_splitter_8": "8位总线分流器",
+  "circuit.elements-plus.component.bus_splitter_8.description": "将一个总线分成多个导线",
+
+  "circuit.elements-plus.component.adder_8": "8位加法器",
+  "circuit.elements-plus.component.adder_8.description": "将两个8位数字相加",
+
   "circuit.elements-plus.config.decay": "衰减",
   "circuit.elements-plus.config.high_duration": "高电平保持",
   "circuit.elements-plus.config.low_duration": "低电平保持",
@@ -107,6 +115,7 @@
   "circuit.elements-plus.config.signal": "信号",
 
   "gui.elements-plus.lithography_machine.cycle_warning": "检测到组合环路",
+  "gui.elements-plus.lithography_machine.bit_width_mismatch": "位宽不匹配",
   "gui.elements-plus.lithography_machine.multiple_selected": "已选中多个元件",
 
   "item.elements-plus.gold_wire": "金引线",

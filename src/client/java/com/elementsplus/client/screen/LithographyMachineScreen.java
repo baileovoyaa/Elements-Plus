@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 public class LithographyMachineScreen extends AbstractContainerScreen<LithographyMachineMenu> implements SlotPositionProvider {
@@ -88,6 +89,11 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         ComponentEntryButton(CircuitComponent component) {
             super(0, 0, 0, ComponentCategoryWidget.ENTRY_HEIGHT, component.getName(), component.getIcon());
             this.component = component;
+            if (component.getDescription() != null) {
+                this.setTooltip(Tooltip.create(Component.translatable("%s\n%s", component.getName(), component.getDescription().copy().withColor(0x808080))));
+            } else {
+                this.setTooltip(Tooltip.create(component.getName()));
+            }
         }
 
         @Override
@@ -345,6 +351,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
         int sx = circuitPanel.getSelectedX();
         int sy = circuitPanel.getSelectedY();
+        circuitPanel.setWireBitWidth(bitWidth);
         CircuitDiagram.Component current = circuitPanel.getSelectedComponent();
         int selVer = circuitPanel.getSelectionVersion();
         if (selVer != lastSelectionVersion || sx != lastAttrX || sy != lastAttrY || current != lastAttrComponent) {

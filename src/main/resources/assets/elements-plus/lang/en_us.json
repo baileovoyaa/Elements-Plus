@@ -99,6 +99,14 @@
   "circuit.elements-plus.component.output": "Output",
   "circuit.elements-plus.component.output.description": "Output signal externally",
 
+  "circuit.elements-plus.component.bus_joiner_8": "8-bit Bus Joiner",
+  "circuit.elements-plus.component.bus_joiner_8.description": "Join multiple wires into one bus",
+  "circuit.elements-plus.component.bus_splitter_8": "8-bit Bus Splitter",
+  "circuit.elements-plus.component.bus_splitter_8.description": "Split one bus into multiple wires",
+
+  "circuit.elements-plus.component.adder_8": "8-bit Adder",
+  "circuit.elements-plus.component.adder_8.description": "Add two 8-bit numbers",
+
   "circuit.elements-plus.config.decay": "Decay",
   "circuit.elements-plus.config.high_duration": "High Duration",
   "circuit.elements-plus.config.low_duration": "Low Duration",
@@ -108,6 +116,7 @@
   "circuit.elements-plus.config.signal": "Signal",
 
   "gui.elements-plus.lithography_machine.cycle_warning": "Combinational cycle detected",
+  "gui.elements-plus.lithography_machine.bit_width_mismatch": "Bit width mismatch",
   "gui.elements-plus.lithography_machine.multiple_selected": "Multiple selected",
 
   "item.elements-plus.gold_wire": "Gold Wire",

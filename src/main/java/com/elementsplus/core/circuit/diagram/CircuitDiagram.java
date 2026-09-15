@@ -43,12 +43,18 @@ public class CircuitDiagram {
         }
 
         public WireMaterial north, east, south, west;
+        public int bitWidth = 1;
 
         public Wire(WireMaterial north, WireMaterial east, WireMaterial south, WireMaterial west) {
+            this(north, east, south, west, 1);
+        }
+
+        public Wire(WireMaterial north, WireMaterial east, WireMaterial south, WireMaterial west, int bitWidth) {
             this.north = north;
             this.east = east;
             this.south = south;
             this.west = west;
+            this.bitWidth = bitWidth;
         }
     }
 
@@ -221,7 +227,7 @@ public class CircuitDiagram {
                 for (int y = 0; y < 16; y++) {
                     Wire wire = source.wires[x][y];
                     if (wire != null) {
-                        Wire newWire = new Wire(wire.north, wire.east, wire.south, wire.west);
+                        Wire newWire = new Wire(wire.north, wire.east, wire.south, wire.west, wire.bitWidth);
                         newWire.x = wire.x;
                         newWire.y = wire.y;
                         target.wires[x][y] = newWire;
@@ -251,6 +257,9 @@ public class CircuitDiagram {
             addMaterial(builder, ops, "east", input.east);
             addMaterial(builder, ops, "south", input.south);
             addMaterial(builder, ops, "west", input.west);
+            if (input.bitWidth > 1) {
+                builder.add("bitWidth", ops.createInt(input.bitWidth));
+            }
             return builder.build(prefix);
         }
 
@@ -259,11 +268,13 @@ public class CircuitDiagram {
             return ops.getMap(input).flatMap(map -> {
                 Optional<Integer> x = getField(Codec.INT, ops, map, "x");
                 Optional<Integer> y = getField(Codec.INT, ops, map, "y");
+                Optional<Integer> bitWidth = getField(Codec.INT, ops, map, "bitWidth");
                 Wire wire = new Wire(
                         getMaterial(ops, map, "north"),
                         getMaterial(ops, map, "east"),
                         getMaterial(ops, map, "south"),
-                        getMaterial(ops, map, "west"));
+                        getMaterial(ops, map, "west"),
+                        bitWidth.orElse(1));
                 wire.x = x.orElse(0);
                 wire.y = y.orElse(0);
                 return DataResult.success(new Pair<>(wire, input));
@@ -426,6 +437,7 @@ public class CircuitDiagram {
                 writeMaterial(buf, wire.east);
                 writeMaterial(buf, wire.south);
                 writeMaterial(buf, wire.west);
+                buf.writeVarInt(wire.bitWidth);
             }
             buf.writeVarInt(chunk.components.size());
             for (Component component : chunk.components) {
@@ -462,6 +474,7 @@ public class CircuitDiagram {
                 int y = buf.readVarInt();
                 Wire wire = new Wire(
                         readMaterial(buf), readMaterial(buf), readMaterial(buf), readMaterial(buf));
+                wire.bitWidth = buf.readVarInt();
                 wire.x = x;
                 wire.y = y;
                 chunk.wires[Math.floorMod(wire.x, 16)][Math.floorMod(wire.y, 16)] = wire;

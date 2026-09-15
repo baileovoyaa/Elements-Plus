@@ -60,6 +60,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int COLOR_GHOST_BORDER = 0xFFFFFFFF;
     private static final int COLOR_SELECTION = 0xFFFFC900;
     private static final int COLOR_CYCLE_BANNER = 0xCCB02020;
+    private static final int COLOR_MISMATCH_BANNER = 0xCCB0A020;
+    private static final int COLOR_MISMATCH_TRIANGLE = 0xFFFFC000;
+    private static final int COLOR_MISMATCH_MARK = 0xFF000000;
     private static final int COLOR_SELBOX = 0xFF40E0D0;
     private static final int COLOR_BOX_FILL = 0x3030D0C0;
     private static final int COLOR_BUS_8 = 0xFFFF00FF;
@@ -94,6 +97,12 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private int selectedX = Integer.MIN_VALUE;
     private int selectedY = Integer.MIN_VALUE;
+
+    private int wirePlaceBitWidth = 1;
+
+    public void setWireBitWidth(int bitWidth) {
+        this.wirePlaceBitWidth = bitWidth > 1 ? 8 : 1;
+    }
 
     private Integer lastMouseX;
     private Integer lastMouseY;
@@ -201,8 +210,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     drawSelBoxOutline(guiGraphics, selBoxX, selBoxY, selBoxW, selBoxH);
                 }
             }
+            if (simulator != null && simulator.hasMismatchWarning()) {
+                drawMismatchIcons(guiGraphics);
+            }
             if (simulator != null && simulator.hasCycle()) {
                 drawCycleBanner(guiGraphics);
+            }
+            if (simulator != null && simulator.hasMismatchWarning()) {
+                drawMismatchBanner(guiGraphics);
             }
         }
         if (dragMode == DragMode.BOX_SELECT) {
@@ -629,7 +644,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
         double centerX = getX() + (gx + 0.5 - offsetX) * zoom;
         double centerY = getY() + (gy + 0.5 - offsetY) * zoom;
         int size = Math.max(2, (int) Math.round(zoom * 0.4));
-        int color = (wireColor(material) & 0x00FFFFFF) | 0x80000000;
+        int color = wirePlaceBitWidth == 8 ? COLOR_BUS_8 : wireColor(material);
+        color = (color & 0x00FFFFFF) | 0x80000000;
         guiGraphics.fill(
                 (int) Math.floor(centerX - size / 2.0),
                 (int) Math.floor(centerY - size / 2.0),
@@ -696,7 +712,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (block instanceof CircuitDiagram.Wire existing) {
             wire = existing;
         } else if (block == null) {
-            wire = new CircuitDiagram.Wire(null, null, null, null);
+            wire = new CircuitDiagram.Wire(null, null, null, null, wirePlaceBitWidth);
             wire.x = x;
             wire.y = y;
             diagram.setBlock(x, y, wire);
@@ -1067,11 +1083,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
             boolean bad = dx == 0 && dy == 0 && simulator != null && simulator.isWireBad(wire.x, wire.y, target);
             anyBad |= bad;
 
-            // 内层：有信号变红（0~15 对应不同亮度），坏网保持黑色
+            // 内层：有信号变红（0~15 对应不同亮度），坏网保持黑色；
+            // 8 位总线内芯始终为总线色，不随信号变化
             if (thickness > 1) {
                 int innerColor;
                 if (bad) {
                     innerColor = 0xFF000000;
+                } else if (wire.bitWidth == 8) {
+                    innerColor = COLOR_BUS_8;
                 } else {
                     int value = dx == 0 && dy == 0 && simulator != null ? simulator.getWireValue(wire.x, wire.y, target) : 0;
                     innerColor = wireSignalColor(value);
@@ -1110,6 +1129,50 @@ public class CircuitDiagramPanel extends AbstractWidget {
         int y = getY() + getHeight() - bannerHeight - 2;
         guiGraphics.fill(getX() + 2, y, getX() + getWidth() - 2, y + bannerHeight, COLOR_CYCLE_BANNER);
         Component text = Component.translatable("gui.elements-plus.lithography_machine.cycle_warning");
+        guiGraphics.drawString(Minecraft.getInstance().font, text, getX() + 6, y + 3, 0xFFFFFFFF, true);
+    }
+
+    /**
+     * 位宽不匹配告警：在存在 1 位/8 位引脚或导线宽度冲突的格子上叠加醒目标记。
+     */
+    private void drawMismatchIcons(GuiGraphics guiGraphics) {
+        Set<Long> cells = simulator.getMismatchCells();
+        if (cells.isEmpty()) {
+            return;
+        }
+        int size = Mth.clamp((int) Math.round(zoom * 0.55), 4, 14);
+        for (Long cell : cells) {
+            int x = cellXOf(cell);
+            int y = cellYOf(cell);
+            double cx = getX() + (x + 0.5 - offsetX) * zoom;
+            double cy = getY() + (y + 0.5 - offsetY) * zoom;
+            if (cx < getX() - size || cx > getX() + getWidth() + size
+                    || cy < getY() - size || cy > getY() + getHeight() + size) {
+                continue;
+            }
+            int sx = (int) Math.round(cx);
+            int sy = (int) Math.round(cy);
+            for (int dy = -size + 1; dy <= size - 1; dy++) {
+                int half = Math.max(0, (int) Math.round((double) (dy + size) * size / (2.0 * size - 1)));
+                if (sx - half < sx + half + 1) {
+                    guiGraphics.fill(sx - half, sy + dy, sx + half + 1, sy + dy + 1, COLOR_MISMATCH_TRIANGLE);
+                }
+            }
+            if (size >= 6) {
+                guiGraphics.fill(sx - 1, sy - size / 2, sx + 1, sy + size / 4, COLOR_MISMATCH_MARK);
+                guiGraphics.fill(sx - 1, sy + size / 2, sx + 1, sy + size * 2 / 3 + 1, COLOR_MISMATCH_MARK);
+            }
+        }
+    }
+
+    private void drawMismatchBanner(GuiGraphics guiGraphics) {
+        int bannerHeight = 14;
+        int y = getY() + getHeight() - bannerHeight - 2;
+        if (simulator.hasCycle()) {
+            y -= bannerHeight + 2;
+        }
+        guiGraphics.fill(getX() + 2, y, getX() + getWidth() - 2, y + bannerHeight, COLOR_MISMATCH_BANNER);
+        Component text = Component.translatable("gui.elements-plus.lithography_machine.bit_width_mismatch");
         guiGraphics.drawString(Minecraft.getInstance().font, text, getX() + 6, y + 3, 0xFFFFFFFF, true);
     }
 
@@ -1459,7 +1522,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             editor.setBlock(cellXOf(key), cellYOf(key), null);
         }
         for (CircuitDiagram.Wire w : dragWires) {
-            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west);
+            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west, w.bitWidth);
             nw.x = w.x + dx;
             nw.y = w.y + dy;
             editor.setBlock(nw.x, nw.y, nw, force);
@@ -1493,7 +1556,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         boolean force = Screen.hasShiftDown();
         List<CircuitDiagram.Component> copies = new ArrayList<>();
         for (CircuitDiagram.Wire w : dragWires) {
-            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west);
+            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west, w.bitWidth);
             nw.x = w.x + dx;
             nw.y = w.y + dy;
             editor.setBlock(nw.x, nw.y, nw, force);

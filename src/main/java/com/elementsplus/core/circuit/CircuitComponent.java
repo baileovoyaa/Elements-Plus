@@ -17,6 +17,7 @@ public class CircuitComponent {
     private final int height;
     private final int width;
     private final PinType[] pins;
+    private final int[] pinBitWidths;
     private Supplier<CircuitComponentInstance> instanceFactory = () -> SimpleComponentInstance.INSTANCE;
 
 
@@ -30,6 +31,7 @@ public class CircuitComponent {
 
         this.pins = new PinType[2 * (width + height)];
         Arrays.fill(this.pins, PinType.NONE);
+        this.pinBitWidths = new int[2 * (width + height)];
     }
 
     public CircuitComponent(ResourceLocation id, Component name, Component description, ResourceLocation icon) {
@@ -37,7 +39,7 @@ public class CircuitComponent {
     }
 
     public CircuitComponent(ResourceLocation id, Component name) {
-        this(id, name, Component.empty(), null, 1, 1);
+        this(id, name, null, null, 1, 1);
     }
 
     public CircuitComponent(ResourceLocation id, String name) {
@@ -121,6 +123,20 @@ public class CircuitComponent {
         Integer i = index(side, offset);
         if (i == null) return;
         pins[i] = type;
+    }
+
+    /** 引脚位宽。未显式设置的引脚默认 1 位。 */
+    public int getPinBitWidth(Direction side, int offset) {
+        Integer i = index(side, offset);
+        if (i == null) return 1;
+        int w = pinBitWidths[i];
+        return w > 0 ? w : 1;
+    }
+
+    public void setPinBitWidth(Direction side, int offset, int bitWidth) {
+        Integer i = index(side, offset);
+        if (i == null || bitWidth <= 0) return;
+        pinBitWidths[i] = bitWidth;
     }
 
     public CircuitComponent setInstanceFactory(Supplier<CircuitComponentInstance> instanceFactory) {
