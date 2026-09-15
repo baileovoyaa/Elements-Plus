@@ -1,0 +1,22 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "BAB",
+        "APA",
+        "BAB"
+    ],
+    "key": {
+        "B": {
+            "item": "minecraft:blue_dye"
+        },
+        "P": {
+            "item": "minecraft:paper"
+        },
+        "A": {
+            "item": "minecraft:amethyst_shard"
+        }
+    },
+    "result": {
+        "id": "elements-plus:circuit_diagram"
+    }
+}

@@ -4,6 +4,7 @@ import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.client.ElementsPlusClient;
+import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.gui.ButtonGroup;
 import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.client.gui.*;
@@ -29,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.lwjgl.glfw.GLFW;
-
-import javax.swing.*;
 
 public class LithographyMachineScreen extends AbstractContainerScreen<LithographyMachineMenu> implements SlotPositionProvider {
     public TabButton tabButtonDesign;
@@ -68,8 +67,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private IconButton themeButton;
     private IconButton muteButton;
 
-    public boolean darkMode = true;
-    public boolean muted = false;
+    public boolean darkMode;
+    public boolean muted;
 
     public int bitWidth = 1;
 
@@ -103,6 +102,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     public LithographyMachineScreen(LithographyMachineMenu abstractContainerMenu, Inventory inventory, Component component) {
         super(abstractContainerMenu, inventory, component);
+        ClientConfig cfg = ClientConfig.get();
+        this.darkMode = cfg.darkMode;
+        this.muted = cfg.muted;
     }
 
     @Override
@@ -243,7 +245,19 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 bitWidth = 1;
             }
             bitWidthButton.setMessage(Component.nullToEmpty(String.valueOf(bitWidth)));
-        }));
+        }) {
+            @Override
+            public boolean mouseScrolled(double d, double e, double f, double g) {
+                // 以后支持更多位宽时可双向滚动
+                if (bitWidth == 1) {
+                    bitWidth = 8;
+                } else {
+                    bitWidth = 1;
+                }
+                bitWidthButton.setMessage(Component.nullToEmpty(String.valueOf(bitWidth)));
+                return true;
+            }
+        });
 
         toolbarWidget.addChild(new ToolbarSeparator(toolbarX += 16 + 5, 2, 1, 14));
 
@@ -260,6 +274,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             }
             CircuitDiagramPanel.colorBackground = darkMode ? 0xFF2B2B28 : 0xFFE0E0E0;
             CircuitDiagramPanel.colorDot = darkMode ? 0xFF4A4A44 : 0xFFA0A0A0;
+            ClientConfig.get().darkMode = darkMode;
+            ClientConfig.get().save();
         }));
 
         CircuitDiagramPanel.sound = !muted;
@@ -272,6 +288,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 muteButton.icon = ElementsPlus.id("textures/gui/sound_muted.png");
             }
             CircuitDiagramPanel.sound = !muted;
+            ClientConfig.get().muted = muted;
+            ClientConfig.get().save();
         }));
 
         initComponentList();

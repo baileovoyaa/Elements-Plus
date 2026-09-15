@@ -3,6 +3,8 @@ package com.elementsplus.client;
 import com.elementsplus.ModBlocks;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
+import com.elementsplus.client.config.ClientConfig;
+import com.elementsplus.client.gui.CircuitDiagramPanel;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponentToolbox;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
@@ -20,6 +22,11 @@ import java.util.Optional;
 public class ElementsPlusClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        ClientConfig.load();
+        CircuitDiagramPanel.colorBackground = ClientConfig.get().darkMode ? 0xFF2B2B28 : 0xFFE0E0E0;
+        CircuitDiagramPanel.colorDot = ClientConfig.get().darkMode ? 0xFF4A4A44 : 0xFFA0A0A0;
+        CircuitDiagramPanel.sound = !ClientConfig.get().muted;
+
         // This entrypoint is suitable for setting up client-specific logic, such as rendering.
         ModMenuScreens.initialize();
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.CHARGED_LIGHTNING_ROD, RenderType.cutout());

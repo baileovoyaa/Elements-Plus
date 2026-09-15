@@ -248,7 +248,18 @@ public class ModItems {
     public static final Item CIRCUIT_BOARD = register(new Item(new Item.Properties().stacksTo(1)), "circuit_board");
     public static final Item CIRCUIT_DIAGRAM = register(new Item(new Item.Properties()
             .stacksTo(1)
-            .component(ModDataComponents.CIRCUIT_DIAGRAM, CircuitDiagram.EXAMPLE.copy())), "circuit_diagram");
+            .component(ModDataComponents.CIRCUIT_DIAGRAM, CircuitDiagram.EXAMPLE.copy())) {
+        @Override
+        public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> list, TooltipFlag tooltipFlag) {
+            ResourceLocation id = itemStack.get(ModDataComponents.EQUIVALENT_COMPONENT);
+            if (id != null) {
+                CircuitComponent component = BuiltinCircuitComponents.byId(id);
+                if (component != null) {
+                    list.add(component.getName().copy().withStyle(style -> style.withColor(0xFFD700)));
+                }
+            }
+        }
+    }, "circuit_diagram");
 
     // 等效元件（可作为电路图放置源）
     public static final Item AND_GATE = registerComponentItem(BuiltinCircuitComponents.AND_GATE);
