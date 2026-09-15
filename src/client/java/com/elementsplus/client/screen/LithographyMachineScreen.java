@@ -66,8 +66,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private IconButton playButton;
     private IconButton bitWidthButton;
     private IconButton themeButton;
+    private IconButton muteButton;
 
     public boolean darkMode = true;
+    public boolean muted = false;
 
     public int bitWidth = 1;
 
@@ -152,14 +154,16 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 Math.max(1, imageWidth - 180), Math.max(1, imageHeight - 55)));
         circuitPanel.setSimulator(simulator);
 
-        this.addRenderableWidget(toolbarWidget = new ScrollPanelWidget(leftPos + 10 + 79 + 18 + 5, topPos + 25, imageWidth - 10 - 79 - 10 - 79 - 18 - 5, 18, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
-
         // 属性面板
         this.addRenderableWidget(attributeWidget = new ScrollPanelWidget(leftPos + imageWidth - 5 - 79, topPos + 25, 79, imageHeight - 30, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
         attributeWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
 
+        this.addRenderableWidget(toolbarWidget = new ScrollPanelWidget(leftPos + 10 + 79 + 18 + 5, topPos + 25, imageWidth - 10 - 79 - 10 - 79 - 18 - 5, 18, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+
+        int toolbarX = 0;
+
         // 播放/暂停
-        playButton = toolbarWidget.addChild(new IconButton(0, 1, 16, 16, ElementsPlus.id("textures/gui/play.png"), button -> {
+        playButton = toolbarWidget.addChild(new IconButton(toolbarX, 1, 16, 16, ElementsPlus.id("textures/gui/play.png"), button -> {
             if (isPlaying) {
                 playButton.icon = TEXTURE_PLAY;
                 isPlaying = false;
@@ -174,7 +178,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }));
 
         // 单步
-        toolbarWidget.addChild(new IconButton(16, 1, 16, 16, ElementsPlus.id("textures/gui/step.png"), button -> {
+        toolbarWidget.addChild(new IconButton(toolbarX += 16, 1, 16, 16, ElementsPlus.id("textures/gui/step.png"), button -> {
             isPlaying = false;
             if (playButton != null) {
                 playButton.icon = TEXTURE_PLAY;
@@ -183,7 +187,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }));
 
         // 复位
-        toolbarWidget.addChild(new IconButton(32, 1, 16, 16, ElementsPlus.id("textures/gui/stop.png"), button -> {
+        toolbarWidget.addChild(new IconButton(toolbarX += 16, 1, 16, 16, ElementsPlus.id("textures/gui/stop.png"), button -> {
             isPlaying = false;
             if (playButton != null) {
                 playButton.icon = TEXTURE_PLAY;
@@ -192,8 +196,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }));
 
         // 速度滑块（范围 1~20，与输入框同步；输入超出范围时滑块停在两端）
-        speedEditBox = new EditBox(font, 100, 1, 50, 16, Component.empty());
-        speedSlider = toolbarWidget.addChild(new IntSliderWidget(48, 1, 50, 16, 1, 20, 20, value -> {
+        speedEditBox = new EditBox(font, toolbarX += 16 + 50, 1, 50, 16, Component.empty());
+        speedSlider = toolbarWidget.addChild(new IntSliderWidget(toolbarX -= 50, 1, 50, 16, 1, 20, 20, value -> {
             if (syncingSpeed) return;
             syncingSpeed = true;
             speedEditBox.setValue(String.valueOf(value));
@@ -213,10 +217,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         toolbarWidget.addChild(speedEditBox);
 
         // 工具栏分隔线（纯视觉）
-        toolbarWidget.addChild(new ToolbarSeparator(155, 2, 1, 14));
+        toolbarWidget.addChild(new ToolbarSeparator(toolbarX += 50 + 50 + 5, 2, 1, 14));
 
         // 铜线
-        toolbarWidget.addChild(new IconButton(160, 1, 16, 16, ElementsPlus.id("textures/item/copper_wire.png"), button -> {
+        toolbarWidget.addChild(new IconButton(toolbarX += 5, 1, 16, 16, ElementsPlus.id("textures/item/copper_wire.png"), button -> {
             if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
                 circuitPanel.setVirtualComponent(null);
                 circuitPanel.setVirtualWire(CircuitDiagram.Wire.WireMaterial.COPPER);
@@ -224,7 +228,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }));
 
         // 金线
-        toolbarWidget.addChild(new IconButton(160 + 16, 1, 16, 16, ElementsPlus.id("textures/item/gold_wire.png"), button -> {
+        toolbarWidget.addChild(new IconButton(toolbarX += 16, 1, 16, 16, ElementsPlus.id("textures/item/gold_wire.png"), button -> {
             if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
                 circuitPanel.setVirtualComponent(null);
                 circuitPanel.setVirtualWire(CircuitDiagram.Wire.WireMaterial.GOLD);
@@ -232,7 +236,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }));
 
         // 位宽
-        toolbarWidget.addChild(bitWidthButton = new IconButton(160 + 16 * 2, 1, 16, 16, Component.nullToEmpty(String.valueOf(bitWidth)), button -> {
+        toolbarWidget.addChild(bitWidthButton = new IconButton(toolbarX += 16, 1, 16, 16, Component.nullToEmpty(String.valueOf(bitWidth)), button -> {
             if (bitWidth == 1) {
                 bitWidth = 8;
             } else {
@@ -241,12 +245,12 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             bitWidthButton.setMessage(Component.nullToEmpty(String.valueOf(bitWidth)));
         }));
 
-        toolbarWidget.addChild(new ToolbarSeparator(165 + 16 * 3, 2, 1, 14));
+        toolbarWidget.addChild(new ToolbarSeparator(toolbarX += 16 + 5, 2, 1, 14));
 
         // 明暗切换
         CircuitDiagramPanel.colorBackground = darkMode ? 0xFF2B2B28 : 0xFFE0E0E0;
         CircuitDiagramPanel.colorDot = darkMode ? 0xFF4A4A44 : 0xFFA0A0A0;
-        toolbarWidget.addChild(themeButton = new IconButton(170 + 16 * 3, 1, 16, 16, darkMode ? ElementsPlus.id("textures/gui/light.png") : ElementsPlus.id("textures/gui/dark.png"), button -> {
+        toolbarWidget.addChild(themeButton = new IconButton(toolbarX += 5, 1, 16, 16, darkMode ? ElementsPlus.id("textures/gui/light.png") : ElementsPlus.id("textures/gui/dark.png"), button -> {
             if (darkMode) {
                 darkMode = false;
                 themeButton.icon = ElementsPlus.id("textures/gui/dark.png");
@@ -256,6 +260,18 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             }
             CircuitDiagramPanel.colorBackground = darkMode ? 0xFF2B2B28 : 0xFFE0E0E0;
             CircuitDiagramPanel.colorDot = darkMode ? 0xFF4A4A44 : 0xFFA0A0A0;
+        }));
+
+        CircuitDiagramPanel.sound = !muted;
+        toolbarWidget.addChild(muteButton = new IconButton(toolbarX += 16, 1, 16, 16, muted ? ElementsPlus.id("textures/gui/sound_muted.png") : ElementsPlus.id("textures/gui/sound.png"), button -> {
+            if (muted) {
+                muted = false;
+                muteButton.icon = ElementsPlus.id("textures/gui/sound.png");
+            } else {
+                muted = true;
+                muteButton.icon = ElementsPlus.id("textures/gui/sound_muted.png");
+            }
+            CircuitDiagramPanel.sound = !muted;
         }));
 
         initComponentList();

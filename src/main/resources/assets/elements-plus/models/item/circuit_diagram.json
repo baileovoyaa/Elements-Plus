@@ -1,0 +1,20 @@
+{
+    "parent": "item/generated",
+    "textures": {
+        "layer0": "elements-plus:item/circuit_diagram"
+    },
+    "overrides": [
+        {
+            "predicate": {
+                "element-plus.circuit_diagram": 0.5
+            },
+            "model": "elements-plus:item/circuit_diagram_filled"
+        },
+        {
+            "predicate": {
+                "element-plus.circuit_diagram": 1.0
+            },
+            "model": "elements-plus:item/circuit_diagram_locked"
+        }
+    ]
+}

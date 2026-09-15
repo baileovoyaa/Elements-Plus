@@ -39,6 +39,8 @@ import java.util.function.BooleanSupplier;
 
 public class CircuitDiagramPanel extends AbstractWidget {
 
+    public static boolean sound = false;
+
     private static final double MIN_ZOOM = 0.5;
     private static final double MAX_ZOOM = 32.0;
     private static final double DEFAULT_ZOOM = 16.0;
@@ -518,8 +520,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void playSound(SoundInstance soundInstance) {
-//        Minecraft.getInstance().getSoundManager().play(soundInstance);
-        // TODO: 把音效做成可配置的
+        if (sound) {
+            Minecraft.getInstance().getSoundManager().play(soundInstance);
+        }
     }
 
     private void tryPlace(int gx, int gy, CircuitComponent component) {
