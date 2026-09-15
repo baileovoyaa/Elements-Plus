@@ -4,6 +4,7 @@ import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.client.ElementsPlusClient;
+import com.elementsplus.client.gui.ButtonGroup;
 import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.client.gui.TabButton;
@@ -28,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.lwjgl.glfw.GLFW;
+
+import javax.swing.*;
 
 public class LithographyMachineScreen extends AbstractContainerScreen<LithographyMachineMenu> implements SlotPositionProvider {
     public TabButton tabButtonDesign;
@@ -61,8 +64,17 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private CircuitDiagram lastSimDiagram;
     private double simAccum = 0;
     private IconButton playButton;
+    private IconButton bitWidthButton;
+    private IconButton themeButton;
 
     public boolean darkMode = true;
+
+    public int bitWidth = 1;
+
+    public static final ResourceLocation TEXTURE_PLAY = ElementsPlus.id("textures/gui/play.png");
+    public static final ResourceLocation TEXTURE_PAUSE = ElementsPlus.id("textures/gui/pause.png");
+    public static final ResourceLocation TEXTURE_LIGHT = ElementsPlus.id("textures/gui/light.png");
+    public static final ResourceLocation TEXTURE_DARK = ElementsPlus.id("textures/gui/dark.png");
 
     public CircuitDiagram getDiagram() {
         ItemStack stack = menu.slots.get(36).getItem();
@@ -147,34 +159,34 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         attributeWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
 
         // 播放/暂停
-        playButton = toolbarWidget.addChild(new IconButton(0, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8, 0, button -> {
+        playButton = toolbarWidget.addChild(new IconButton(0, 1, 16, 16, ElementsPlus.id("textures/gui/play.png"), button -> {
             if (isPlaying) {
-                ((IconButton) button).u = 8;
+                playButton.icon = TEXTURE_PLAY;
                 isPlaying = false;
             } else {
                 if (simulator.hasCycle()) {
                     return;
                 }
-                ((IconButton) button).u = 8 + 16;
+                playButton.icon = TEXTURE_PAUSE;
                 isPlaying = true;
                 simAccum = 0;
             }
         }));
 
         // 单步
-        toolbarWidget.addChild(new IconButton(16, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 32, 0, button -> {
+        toolbarWidget.addChild(new IconButton(16, 1, 16, 16, ElementsPlus.id("textures/gui/step.png"), button -> {
             isPlaying = false;
             if (playButton != null) {
-                playButton.u = 8;
+                playButton.icon = TEXTURE_PLAY;
             }
             simulator.step();
         }));
 
         // 复位
-        toolbarWidget.addChild(new IconButton(32, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 48, 0, button -> {
+        toolbarWidget.addChild(new IconButton(32, 1, 16, 16, ElementsPlus.id("textures/gui/stop.png"), button -> {
             isPlaying = false;
             if (playButton != null) {
-                playButton.u = 8;
+                playButton.icon = TEXTURE_PLAY;
             }
             simulator.reset();
         }));
@@ -201,20 +213,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         toolbarWidget.addChild(speedEditBox);
 
         // 工具栏分隔线（纯视觉）
-        toolbarWidget.addChild(new AbstractWidget(155, 2, 1, 14, Component.empty()) {
-            @Override
-            protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-                guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFF000000);
-            }
-
-            @Override
-            protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
-
-            }
-        });
+        toolbarWidget.addChild(new ToolbarSeparator(155, 2, 1, 14));
 
         // 铜线
-        toolbarWidget.addChild(new IconButton(160, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 16 * 4, 0, button -> {
+        toolbarWidget.addChild(new IconButton(160, 1, 16, 16, ElementsPlus.id("textures/item/copper_wire.png"), button -> {
             if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
                 circuitPanel.setVirtualComponent(null);
                 circuitPanel.setVirtualWire(CircuitDiagram.Wire.WireMaterial.COPPER);
@@ -222,11 +224,38 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }));
 
         // 金线
-        toolbarWidget.addChild(new IconButton(160 + 16, 1, 16, 16, ElementsPlus.id("textures/gui/widget.png"), 8 + 16 * 5, 0, button -> {
+        toolbarWidget.addChild(new IconButton(160 + 16, 1, 16, 16, ElementsPlus.id("textures/item/gold_wire.png"), button -> {
             if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
                 circuitPanel.setVirtualComponent(null);
                 circuitPanel.setVirtualWire(CircuitDiagram.Wire.WireMaterial.GOLD);
             }
+        }));
+
+        // 位宽
+        toolbarWidget.addChild(bitWidthButton = new IconButton(160 + 16 * 2, 1, 16, 16, Component.nullToEmpty(String.valueOf(bitWidth)), button -> {
+            if (bitWidth == 1) {
+                bitWidth = 8;
+            } else {
+                bitWidth = 1;
+            }
+            bitWidthButton.setMessage(Component.nullToEmpty(String.valueOf(bitWidth)));
+        }));
+
+        toolbarWidget.addChild(new ToolbarSeparator(165 + 16 * 3, 2, 1, 14));
+
+        // 明暗切换
+        CircuitDiagramPanel.colorBackground = darkMode ? 0xFF2B2B28 : 0xFFE0E0E0;
+        CircuitDiagramPanel.colorDot = darkMode ? 0xFF4A4A44 : 0xFFA0A0A0;
+        toolbarWidget.addChild(themeButton = new IconButton(170 + 16 * 3, 1, 16, 16, darkMode ? ElementsPlus.id("textures/gui/light.png") : ElementsPlus.id("textures/gui/dark.png"), button -> {
+            if (darkMode) {
+                darkMode = false;
+                themeButton.icon = ElementsPlus.id("textures/gui/dark.png");
+            } else {
+                darkMode = true;
+                themeButton.icon = ElementsPlus.id("textures/gui/light.png");
+            }
+            CircuitDiagramPanel.colorBackground = darkMode ? 0xFF2B2B28 : 0xFFE0E0E0;
+            CircuitDiagramPanel.colorDot = darkMode ? 0xFF4A4A44 : 0xFFA0A0A0;
         }));
 
         initComponentList();
@@ -304,7 +333,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             if (isPlaying && simulator.hasCycle()) {
                 isPlaying = false;
                 if (playButton != null) {
-                    playButton.u = 8;
+                    playButton.icon = TEXTURE_PLAY;
                 }
             }
             if (isPlaying) {
@@ -390,7 +419,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == GLFW.GLFW_KEY_DELETE && buttonGroup.getSelected() == tabButtonDesign
                 && (speedEditBox == null || !speedEditBox.isFocused())
-                && circuitPanel.hasSelection()) {
+                && (circuitPanel.hasSelection() || circuitPanel.isMultiSelected())) {
             circuitPanel.deleteSelection();
             return true;
         }

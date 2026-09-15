@@ -45,8 +45,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int DOT_MIN_GAP = 4;
     private static final int SCROLL_PIXELS = 48;
 
-    private static final int COLOR_BACKGROUND = 0xFF2B2B28;
-    private static final int COLOR_DOT = 0xFF4A4A44;
+    public static int colorBackground = 0xFF2B2B28;
+    public static int colorDot = 0xFF4A4A44;
     private static final int COLOR_COPPER = 0xFFB06030;
     private static final int COLOR_GOLD = 0xFFFFD700;
     private static final int COLOR_COMPONENT_FILL = 0xFF909090;
@@ -60,6 +60,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int COLOR_CYCLE_BANNER = 0xCCB02020;
     private static final int COLOR_SELBOX = 0xFF40E0D0;
     private static final int COLOR_BOX_FILL = 0x3030D0C0;
+    private static final int COLOR_BUS_8 = 0xFFFF00FF;
+    private static final int COLOR_BUS_16 = 0xFFA000FF;
+    private static final int COLOR_BUS_32 = 0xFF8000FF;
+    private static final int COLOR_BUS_64 = 0xFF0000FF;
 
     private static final double DRAG_THRESHOLD = 4.0;
 
@@ -173,7 +177,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
         GuiUtil.drawSubPanel(guiGraphics, getX() - 1, getY() - 1, getX() + getWidth() + 1, getY() + getHeight() + 1, 0xFFE0E0E0);
         guiGraphics.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
-        guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), COLOR_BACKGROUND);
+        guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), colorBackground);
         CircuitDiagram diagram = getDiagram();
         if (diagram != null) {
             drawDotGrid(guiGraphics);
@@ -319,7 +323,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         bumpSelection();
     }
 
-    /** 只选中坐标 (gx,gy) 处的元件（单选框包围它）。 */
+    /**
+     * 只选中坐标 (gx,gy) 处的元件（单选框包围它）。
+     */
     private void setSelectionSingle(int gx, int gy) {
         selectedCells.clear();
         selectedCells.add(cellKey(gx, gy));
@@ -335,7 +341,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         selBoxH = h;
     }
 
-    /** 根据当前选中元件的包围盒刷新选框。 */
+    /**
+     * 根据当前选中元件的包围盒刷新选框。
+     */
     private void updateSelBox() {
         if (selectedCells.isEmpty()) {
             selBoxW = 0;
@@ -366,7 +374,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         setSelBox(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
-    /** 普通点击：选中元件或清空选择，并在输入元件上检测双击切换。 */
+    /**
+     * 普通点击：选中元件或清空选择，并在输入元件上检测双击切换。
+     */
     private void onClickReleased(int gx, int gy) {
         CircuitDiagram diagram = getDiagram();
         if (diagram == null) {
@@ -397,7 +407,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
     }
 
-    /** 双击「输入」元件：在 0 和 15 之间快速切换信号强度。 */
+    /**
+     * 双击「输入」元件：在 0 和 15 之间快速切换信号强度。
+     */
     private void toggleInputSignal(CircuitDiagram.Component component) {
         ItemStack stack = menu.slots.get(36).getItem();
         CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
@@ -708,7 +720,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             for (int gy = startGY; gy <= endGY; gy += step) {
                 int sx = getX() + (int) Math.floor((gx - offsetX) * zoom);
                 int sy = getY() + (int) Math.floor((gy - offsetY) * zoom);
-                guiGraphics.fill(sx, sy, sx + size, sy + size, COLOR_DOT);
+                guiGraphics.fill(sx, sy, sx + size, sy + size, colorDot);
             }
         }
     }
@@ -1608,7 +1620,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         clearSelection();
     }
 
-    /** 元件的原位旋转：旋转方向，锚定左上角（与放置预览一致）。先试 90°，冲突时回退 180°。 */
+    /**
+     * 元件的原位旋转：旋转方向，锚定左上角（与放置预览一致）。先试 90°，冲突时回退 180°。
+     */
     private void tryRotateAt(int gx, int gy, boolean clockwise) {
         CircuitDiagram diagram = getDiagram();
         if (diagram == null || isReadOnly()) {
