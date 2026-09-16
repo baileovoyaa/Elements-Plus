@@ -13,6 +13,7 @@ import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
+import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxUpdatePayload;
 import com.elementsplus.player.PlayerToolbox;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -116,6 +117,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         this.toolboxDialog = null;
         updateScreenSize();
         super.init();
+
+//        ClientPlayNetworking.send(new ToolboxRequestPayload());
+
         this.titleLabelX = 6;
         this.addRenderableWidget(tabButtonDesign = new TabButton(this.leftPos + this.font.width(this.title) + 10, this.topPos, 50, 22, Component.translatable("gui.elements-plus.lithography_machine.design")));
         this.addRenderableWidget(tabButtonManufacture = new TabButton(this.leftPos + this.font.width(this.title) + 60, this.topPos, 50, 22, Component.translatable("gui.elements-plus.lithography_machine.manufacture")));
@@ -302,7 +306,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         componentWidget.addChild(playerToolboxWidget);
     }
 
-    /** 服务端同步回玩家元件列表时更新列表。 */
+    /**
+     * 服务端同步回玩家元件列表时更新列表。
+     */
     public void onToolboxSynced(PlayerToolbox toolbox) {
         if (playerToolboxWidget != null) {
             playerToolboxWidget.setToolbox(toolbox);

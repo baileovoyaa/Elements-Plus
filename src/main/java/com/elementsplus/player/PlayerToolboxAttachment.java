@@ -1,8 +1,18 @@
 package com.elementsplus.player;
 
 import com.elementsplus.ElementsPlus;
+import com.mojang.serialization.DataResult;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentTarget;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.Optional;
 
@@ -10,14 +20,62 @@ public final class PlayerToolboxAttachment {
     public static final AttachmentType<PlayerToolbox> PLAYER_TOOLBOX =
             AttachmentRegistry.<PlayerToolbox>builder()
                     .persistent(PlayerToolbox.CODEC)
+                    .copyOnDeath()
+                    .syncWith(PlayerToolbox.STREAM_CODEC, AttachmentSyncPredicate.targetOnly())
                     .buildAndRegister(ElementsPlus.id("player_toolbox"));
 
     public static PlayerToolbox get(net.minecraft.world.entity.player.Player player) {
-        PlayerToolbox toolbox = player.getAttachedOrElse(PLAYER_TOOLBOX, null);
-        if (toolbox == null) {
-            toolbox = PlayerToolbox.createDefault();
-            player.setAttached(PLAYER_TOOLBOX, toolbox);
+        PlayerToolbox toolbox = player.getAttached(PLAYER_TOOLBOX);
+        if (toolbox != null) {
+            return toolbox;
         }
-        return toolbox;
+
+        // Hot path: on a fresh server start the Fabric attachment can still be empty even though the
+        // player save (dat) already contains a toolbox (the in-memory entity attachment load did not
+        // run yet / failed). Read the player data directly from disk so we never clobber persisted
+        // data with a freshly created default.
+        PlayerToolbox restored = loadFromSavedData(player);
+        if (restored != null) {
+            player.setAttached(PLAYER_TOOLBOX, restored);
+            ElementsPlus.LOGGER.warn("[toolbox] in-memory attachment was empty for {}; recovered {} groups from saved player data",
+                    player.getName().getString(), restored.groups.size());
+            return restored;
+        }
+
+        PlayerToolbox fresh = PlayerToolbox.createDefault();
+        player.setAttached(PLAYER_TOOLBOX, fresh);
+        return fresh;
+    }
+
+    /** Reads the persistent attachment out of the player's saved data (playerdata/{uuid}.dat). */
+    private static PlayerToolbox loadFromSavedData(net.minecraft.world.entity.player.Player player) {
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return null;
+        }
+        MinecraftServer server = serverPlayer.server;
+        if (server == null) {
+            return null;
+        }
+
+        Optional<CompoundTag> saved;
+        try {
+            saved = server.getPlayerList().load(serverPlayer);
+        } catch (Exception e) {
+            ElementsPlus.LOGGER.error("[toolbox] failed to read saved player data for " + player.getName().getString(), e);
+            return null;
+        }
+        if (saved.isEmpty()) {
+            return null;
+        }
+
+        CompoundTag attachments = saved.get().getCompound(AttachmentTarget.NBT_ATTACHMENT_KEY);
+        String key = PLAYER_TOOLBOX.identifier().toString();
+        if (!attachments.contains(key)) {
+            return null;
+        }
+
+        RegistryOps<Tag> registryOps = RegistryOps.create(NbtOps.INSTANCE, server.registryAccess());
+        DataResult<PlayerToolbox> result = PlayerToolbox.CODEC.parse(registryOps, attachments.get(key));
+        return result.result().orElse(null);
     }
 }
