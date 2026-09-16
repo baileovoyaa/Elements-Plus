@@ -50,6 +50,26 @@ public class ScrollPanelWidget extends AbstractWidget {
         return child;
     }
 
+    public double getScrollAmount() {
+        return scrollAmount;
+    }
+
+    public double getHorizontalScrollAmount() {
+        return horizontalScrollAmount;
+    }
+
+    public double getMaxScroll() {
+        return maxScroll;
+    }
+
+    public void scrollBy(double delta) {
+        scrollAmount = Mth.clamp(scrollAmount + delta, 0, maxScroll);
+    }
+
+    public boolean isScrollable() {
+        return maxScroll > 0;
+    }
+
     public void removeChild(AbstractWidget child) {
         children.remove(child);
         if (focusedChild == child) focusedChild = null;

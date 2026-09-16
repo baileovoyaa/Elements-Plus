@@ -5,21 +5,22 @@ import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.gui.CircuitDiagramPanel;
-import com.elementsplus.core.circuit.BuiltinCircuitComponents;
-import com.elementsplus.core.circuit.CircuitComponentToolbox;
-import com.elementsplus.core.circuit.diagram.CircuitDiagram;
+import com.elementsplus.client.screen.LithographyMachineScreen;
+import com.elementsplus.network.ToolboxRequestPayload;
+import com.elementsplus.network.ToolboxSyncPayload;
+import com.elementsplus.player.PlayerToolbox;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
-import net.fabricmc.fabric.api.object.builder.v1.client.model.FabricModelPredicateProviderRegistry;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.item.ItemProperties;
-import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.Optional;
-
 public class ElementsPlusClient implements ClientModInitializer {
+
+    private static PlayerToolbox toolbox;
+
     @Override
     public void onInitializeClient() {
         ClientConfig.load();
@@ -46,9 +47,31 @@ public class ElementsPlusClient implements ClientModInitializer {
                     return 0.0F;
                 }
         );
+
+        ClientPlayNetworking.registerGlobalReceiver(ToolboxSyncPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> applyToolbox(payload.toolbox())));
+
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
+                ClientPlayNetworking.send(new ToolboxRequestPayload()));
     }
 
-    public static CircuitComponentToolbox getToolbox() {
-        return BuiltinCircuitComponents.EXAMPLE_TOOLBOX;
+    /** 客户端缓存的元件列表。未收到服务端数据时显示默认工具箱。 */
+    public static PlayerToolbox getToolbox() {
+        PlayerToolbox current = toolbox;
+        if (current == null) {
+            current = PlayerToolbox.createDefault();
+            toolbox = current;
+        }
+        return current;
+    }
+
+    /** 收到服务端同步时更新缓存；若光刻机界面已打开则通知其重建列表。 */
+    public static void applyToolbox(PlayerToolbox toolbox) {
+        PlayerToolbox clean = toolbox != null ? toolbox : PlayerToolbox.createDefault();
+        PlayerToolbox installed = ElementsPlusClient.toolbox;
+        ElementsPlusClient.toolbox = clean;
+        if (installed != clean && net.minecraft.client.Minecraft.getInstance().screen instanceof LithographyMachineScreen screen) {
+            screen.onToolboxSynced(clean);
+        }
     }
 }

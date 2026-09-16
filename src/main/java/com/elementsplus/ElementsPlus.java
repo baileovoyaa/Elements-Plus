@@ -5,7 +5,11 @@ import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.ReturnCarriedPayload;
+import com.elementsplus.network.ToolboxRequestPayload;
+import com.elementsplus.network.ToolboxSyncPayload;
+import com.elementsplus.network.ToolboxUpdatePayload;
 import com.elementsplus.network.UpdateCircuitDiagramPayload;
+import com.elementsplus.player.PlayerToolboxAttachment;
 import com.elementsplus.recipe.CrystallizerRecipe;
 import com.elementsplus.recipe.MetalCatalystRecipe;
 import com.mojang.brigadier.context.CommandContext;
@@ -89,6 +93,23 @@ public class ElementsPlus implements ModInitializer {
                             menu.onDiagramChanged();
                         }
                     }
+                }));
+
+        PayloadTypeRegistry.playC2S().register(ToolboxRequestPayload.TYPE, ToolboxRequestPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(ToolboxRequestPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayNetworking.send(context.player(),
+                            new ToolboxSyncPayload(PlayerToolboxAttachment.get(context.player())));
+                }));
+
+        PayloadTypeRegistry.playS2C().register(ToolboxSyncPayload.TYPE, ToolboxSyncPayload.STREAM_CODEC);
+
+        PayloadTypeRegistry.playC2S().register(ToolboxUpdatePayload.TYPE, ToolboxUpdatePayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(ToolboxUpdatePayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    payload.toolbox().sanitize();
+                    context.player().setAttached(PlayerToolboxAttachment.PLAYER_TOOLBOX, payload.toolbox());
+                    ServerPlayNetworking.send(context.player(), new ToolboxSyncPayload(payload.toolbox()));
                 }));
 
         LOGGER.info("Hello Fabric world!");

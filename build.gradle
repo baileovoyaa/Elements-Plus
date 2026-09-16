@@ -28,6 +28,13 @@ loom {
             sourceSet sourceSets.client
         }
     }
+
+    runs {
+        client {
+            // 固定玩家名
+            programArguments = ["--username", "myworldzycpc", "--uuid", "6c9d1d18-f50b-4a00-9a7a-260787bf7aaf"]
+        }
+    }
 }
 
 dependencies {

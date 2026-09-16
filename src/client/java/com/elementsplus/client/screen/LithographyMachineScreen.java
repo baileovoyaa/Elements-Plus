@@ -10,10 +10,12 @@ import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.client.gui.TabButton;
 import com.elementsplus.core.circuit.CircuitComponent;
-import com.elementsplus.core.circuit.CircuitComponentToolbox;
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
+import com.elementsplus.network.ToolboxUpdatePayload;
+import com.elementsplus.player.PlayerToolbox;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -24,15 +26,12 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
-public class LithographyMachineScreen extends AbstractContainerScreen<LithographyMachineMenu> implements SlotPositionProvider {
+public class LithographyMachineScreen extends AbstractContainerScreen<LithographyMachineMenu> implements SlotPositionProvider, PlayerToolboxWidget.Listener {
     public TabButton tabButtonDesign;
     public TabButton tabButtonManufacture;
     public ButtonGroup buttonGroup;
@@ -55,7 +54,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     public CircuitDiagramPanel circuitPanel;
 
-    public List<ComponentCategoryWidget> componentCategories = new ArrayList<>();
+    public PlayerToolboxWidget playerToolboxWidget;
+    private ContextMenu contextMenu;
+    private ToolboxDialog toolboxDialog;
 
     public Map<Integer, Point> slotPosition;
 
@@ -81,29 +82,6 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public CircuitDiagram getDiagram() {
         ItemStack stack = menu.slots.get(36).getItem();
         return stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
-    }
-
-    private class ComponentEntryButton extends ListEntryButton {
-        private final CircuitComponent component;
-
-        ComponentEntryButton(CircuitComponent component) {
-            super(0, 0, 0, ComponentCategoryWidget.ENTRY_HEIGHT, component.getName(), component.getIcon());
-            this.component = component;
-            if (component.getDescription() != null) {
-                this.setTooltip(Tooltip.create(Component.translatable("%s\n%s", component.getName(), component.getDescription().copy().withColor(0x808080))));
-            } else {
-                this.setTooltip(Tooltip.create(component.getName()));
-            }
-        }
-
-        @Override
-        public void onClick(double d, double e) {
-            super.onClick(d, e);
-            if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
-                circuitPanel.setVirtualWire(null);
-                circuitPanel.setVirtualComponent(component);
-            }
-        }
     }
 
     public LithographyMachineScreen(LithographyMachineMenu abstractContainerMenu, Inventory inventory, Component component) {
@@ -134,6 +112,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     protected void init() {
+        this.contextMenu = null;
+        this.toolboxDialog = null;
         updateScreenSize();
         super.init();
         this.titleLabelX = 6;
@@ -315,34 +295,207 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     private void initComponentList() {
         componentWidget.clearChildren();
-        componentCategories.clear();
-        CircuitComponentToolbox toolbox = ElementsPlusClient.getToolbox();
-        if (toolbox == null || toolbox.categories == null) return;
-        for (CircuitComponentToolbox.Category category : toolbox.categories) {
-            ComponentCategoryWidget widget = new ComponentCategoryWidget(0, 0, 79, category.name)
-                    .setCollapseListener(this::layoutComponentList);
-            if (category.components != null) {
-                for (CircuitComponent component : category.components) {
-                    widget.addEntry(new ComponentEntryButton(component));
-                }
-            }
-            componentWidget.addChild(widget);
-            componentCategories.add(widget);
-        }
-        layoutComponentList();
+        playerToolboxWidget = new PlayerToolboxWidget(0, 0, 79, componentWidget, this,
+                ElementsPlusClient.getToolbox().copy(),
+                circuitPanel == null ? () -> true : circuitPanel::isReadOnly,
+                menu::getCarried);
+        componentWidget.addChild(playerToolboxWidget);
     }
 
-    private void layoutComponentList() {
-        int y = 0;
-        for (ComponentCategoryWidget category : componentCategories) {
-            category.setY(y);
-            y += category.getHeight();
+    /** 服务端同步回玩家元件列表时更新列表。 */
+    public void onToolboxSynced(PlayerToolbox toolbox) {
+        if (playerToolboxWidget != null) {
+            playerToolboxWidget.setToolbox(toolbox);
         }
+    }
+
+    private void commitToolbox() {
+        if (playerToolboxWidget != null) {
+            ClientPlayNetworking.send(new ToolboxUpdatePayload(playerToolboxWidget.getToolbox()));
+        }
+    }
+
+    // ───────── PlayerToolboxWidget.Listener ─────────
+
+    public void onToolboxChanged() {
+        commitToolbox();
+    }
+
+    public void onPickup(CircuitComponent component) {
+        if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
+            circuitPanel.setVirtualWire(null);
+            circuitPanel.setVirtualComponent(component);
+        }
+    }
+
+    public void onRequestMenu(int screenX, int screenY, PlayerToolboxWidget.MenuRequest request) {
+        if (request == null || playerToolboxWidget == null) return;
+        ContextMenu menu = new ContextMenu(screenX + 2, screenY + 2);
+        switch (request.kind()) {
+            case CUSTOM_ENTRY -> menu.add(
+                    Component.translatable("gui.elements-plus.toolbox.menu.delete"),
+                    () -> playerToolboxWidget.removeEntry(request.groupIndex(), request.entryIndex()));
+            case BUILTIN_GROUP -> menu.add(
+                    Component.translatable("gui.elements-plus.toolbox.menu.insert_group"),
+                    () -> playerToolboxWidget.insertGroupBefore(request.groupIndex()));
+            case CUSTOM_GROUP -> {
+                menu.add(Component.translatable("gui.elements-plus.toolbox.menu.insert_group"),
+                        () -> playerToolboxWidget.insertGroupBefore(request.groupIndex()));
+                menu.add(Component.translatable("gui.elements-plus.toolbox.menu.rename_group"),
+                        () -> openRenameDialog(request.groupIndex()));
+                menu.add(Component.translatable("gui.elements-plus.toolbox.menu.delete_group"),
+                        () -> deleteGroupAction(request.groupIndex()));
+            }
+            case BOTTOM -> menu.add(
+                    Component.translatable("gui.elements-plus.toolbox.menu.add_group"),
+                    () -> playerToolboxWidget.addGroup(
+                            Component.translatable("gui.elements-plus.toolbox.new_group").getString()));
+        }
+        int maxX = Math.max(2, this.width - menu.getWidth() - 2);
+        int maxY = Math.max(2, this.height - menu.getHeight() - 2);
+        menu.setX(Math.min(screenX + 2, maxX));
+        menu.setY(Math.min(screenY + 2, maxY));
+        this.contextMenu = menu;
+    }
+
+    private void deleteGroupAction(int groupIndex) {
+        if (playerToolboxWidget == null || playerToolboxWidget.isGroupBuiltin(groupIndex)) return;
+        if (playerToolboxWidget.isGroupEmpty(groupIndex)) {
+            playerToolboxWidget.deleteGroup(groupIndex);
+        } else {
+            openDeleteConfirmDialog(groupIndex);
+        }
+    }
+
+    private void openRenameDialog(int groupIndex) {
+        String initial = playerToolboxWidget.getGroupName(groupIndex);
+        toolboxDialog = new ToolboxDialog(ToolboxDialog.Mode.RENAME,
+                Component.translatable("gui.elements-plus.toolbox.dialog.rename_title"),
+                null, initial, this.font, this.width, this.height,
+                new ToolboxDialog.Callback() {
+                    @Override
+                    public void onOk(ToolboxDialog dialog) {
+                        playerToolboxWidget.renameGroup(groupIndex, dialog.getText().trim());
+                        toolboxDialog = null;
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        toolboxDialog = null;
+                    }
+                });
+    }
+
+    private void openDeleteConfirmDialog(int groupIndex) {
+        String name = playerToolboxWidget.getGroupName(groupIndex);
+        Component message = Component.translatable("gui.elements-plus.toolbox.dialog.delete_message", name);
+        toolboxDialog = new ToolboxDialog(ToolboxDialog.Mode.DELETE_CONFIRM,
+                Component.translatable("gui.elements-plus.toolbox.dialog.delete_title"),
+                message, null, this.font, this.width, this.height,
+                new ToolboxDialog.Callback() {
+                    @Override
+                    public void onOk(ToolboxDialog dialog) {
+                        playerToolboxWidget.deleteGroup(groupIndex);
+                        toolboxDialog = null;
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        toolboxDialog = null;
+                    }
+                });
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (toolboxDialog != null) {
+            toolboxDialog.mouseClicked(mouseX, mouseY, button);
+            return true;
+        }
+        if (contextMenu != null) {
+            if (contextMenu.isMouseOver(mouseX, mouseY)) {
+                contextMenu.mouseClicked(mouseX, mouseY, button);
+                contextMenu = null;
+                return true;
+            }
+            contextMenu = null;
+        }
+        speedEditBox.setFocused(false);
+        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        if (isOverSlot(mouseX, mouseY) || button == 1) {
+            circuitPanel.setVirtualComponent(null);
+            circuitPanel.setVirtualWire(null);
+        }
+        return handled;
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (toolboxDialog != null || contextMenu != null) {
+            return true;
+        }
+        if (button == 2) {
+            circuitPanel.mouseReleased(mouseX, mouseY, button);
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (toolboxDialog != null) {
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (contextMenu != null) {
+            contextMenu = null;
+            return true;
+        }
+        if (toolboxDialog != null) {
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (toolboxDialog != null) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                toolboxDialog.cancel();
+                return true;
+            }
+            return toolboxDialog.keyPressed(keyCode, scanCode, modifiers);
+        }
+        if (contextMenu != null && keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            contextMenu = null;
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_DELETE && buttonGroup.getSelected() == tabButtonDesign
+                && (speedEditBox == null || !speedEditBox.isFocused())
+                && (circuitPanel.hasSelection() || circuitPanel.isMultiSelected())) {
+            circuitPanel.deleteSelection();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean charTyped(char c, int modifiers) {
+        if (toolboxDialog != null) {
+            return toolboxDialog.charTyped(c, modifiers);
+        }
+        return super.charTyped(c, modifiers);
     }
 
     @Override
     public void containerTick() {
         super.containerTick();
+        if (toolboxDialog != null) {
+            toolboxDialog.tick();
+        }
         boolean designTab = buttonGroup.getSelected() == tabButtonDesign;
         attributeWidget.visible = designTab;
         toolbarWidget.visible = designTab;
@@ -457,17 +610,6 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_DELETE && buttonGroup.getSelected() == tabButtonDesign
-                && (speedEditBox == null || !speedEditBox.isFocused())
-                && (circuitPanel.hasSelection() || circuitPanel.isMultiSelected())) {
-            circuitPanel.deleteSelection();
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
     public Point getSlotPosition(Slot slot) {
         if (slot.container instanceof Inventory && slot.getContainerSlot() >= 0 && slot.getContainerSlot() <= 35) {
             if (collapseButtonInventory.active) {
@@ -518,6 +660,12 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (virtualWire != null && !suppressVirtual) {
             drawVirtualWireCursor(guiGraphics, virtualWire, mouseX, mouseY);
         }
+        if (contextMenu != null) {
+            contextMenu.render(guiGraphics, mouseX, mouseY, delta);
+        }
+        if (toolboxDialog != null) {
+            toolboxDialog.render(guiGraphics, mouseX, mouseY, delta);
+        }
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
@@ -533,25 +681,6 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private void drawVirtualWireCursor(GuiGraphics guiGraphics, CircuitDiagram.Wire.WireMaterial material, int mouseX, int mouseY) {
         ItemStack stack = new ItemStack(material == CircuitDiagram.Wire.WireMaterial.GOLD ? ModItems.GOLD_WIRE : ModItems.COPPER_WIRE);
         guiGraphics.renderItem(stack, mouseX - 8, mouseY - 8);
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        speedEditBox.setFocused(false);
-        boolean handled = super.mouseClicked(mouseX, mouseY, button);
-        if (isOverSlot(mouseX, mouseY) || button == 1) {
-            circuitPanel.setVirtualComponent(null);
-            circuitPanel.setVirtualWire(null);
-        }
-        return handled;
-    }
-
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 2) {
-            circuitPanel.mouseReleased(mouseX, mouseY, button);
-        }
-        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private boolean isOverSlot(double mouseX, double mouseY) {
