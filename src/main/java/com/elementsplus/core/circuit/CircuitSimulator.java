@@ -23,27 +23,29 @@ import java.util.Set;
  * 纯客户端电路模拟器。
  *
  * 思路（参考 docs/参考算法描述.md）：
- * 1. 并查集把同材料、同位宽的四连通导线按"每一位"合并为网络节点：
- *    1 位导线只有 1 条信号道，8 位总线拆成 8 条相互独立的信号道；
+ * 1. 并查集把同材料、同位宽的导线四连通合并为"网络"节点：
+ *    1 位网络携带单个 0~15 值；8 位总线网络携带 8 元组（每位仍为 0~15，
+ *    信号强度得到保留），按位独立承载 8 路信号；
  * 2. 建依赖图：网络/组合元件/时序元件（电容 D 输入不建边，仅采样，切断时序环）；
  * 3. Kahn 拓扑排序；
  * 4. Tarjan SCC 把环内的网络标记为坏网；
- * 5. 按拓扑序传播求值（网络取所有驱动源对应信号道的最大值）；
+ * 5. 按拓扑序传播求值：1 位网络取所有驱动源的最大值；
+ *    总线网络有多个驱动源时按位取最大值（如 (12,11,10,...) | (10,11,12,...) = (12,11,12,...)）；
  * 6. 时钟步进：求值 -> 采样电容 D -> 统一更新状态 -> 重新求值；
  * 7. 复位：清空时序状态（电容 = 0，谐振器 = 初相）。
  *
  * 位宽语义：
- * - 元件结点值按输出引脚布局被拆成若干个位段，1 位引脚占 4 位（0~15 模拟值），
- *   8 位引脚占 8 位（每一位取值 0 或 1）；
- * - 网络结点值 = 该信号道上的信号（1 位模拟 0~15，8 位总线信号道 0 或 15）；
+ * - 元件结点值按输出引脚布局拆成若干位段：1 位引脚占 4 位（0~15 模拟值），
+ *   8 位引脚占 32 位（8 个 4 位通道，每个通道保存该位 0~15 的信号强度）；
  * - 不同位宽的线/引脚之间不传信号，并在连接处记录"位宽不匹配"告警；
- * - 8 位总线按位独立承载 8 路 1 位信号。
+ * - 加法器先从输入端读取 8 元组，按“位=非零”转成整数做二进制加法，
+ *   再把结果按位转成 8 元组输出（高=15，低=0）。
  *
  * 状态不持久化、不发送到服务端，仅用于屏幕内的模拟与渲染。
  */
 public class CircuitSimulator {
 
-    public record WirePoint(int x, int y, WireMaterial material, int bit) {
+    public record WirePoint(int x, int y, WireMaterial material) {
     }
 
     private enum NodeKind {
@@ -51,17 +53,17 @@ public class CircuitSimulator {
     }
 
     private enum DepKind {
-        /** 读取源结点值中的 4 位段（0~15）。位段起点由 Dep.bit 指定。 */
+        /** 读取源结点值中的一个 4 位通道（0~15）。通道起点由 Dep.bit 指定。 */
         WHOLE,
-        /** 读取源结点值中的 1 位（0/15 数字信号）。位由 Dep.bit 指定。 */
-        BIT
+        /** 读取源结点值中的一个 32 位（8×4 位）通道，即整个 8 元组。起点由 Dep.bit 指定。 */
+        TUPLE
     }
 
-    /** 一条入边依赖：源结点、取值方式、位段/位位置。 */
+    /** 一条入边依赖：源结点、取值方式、通道偏移。 */
     private record Dep(int node, DepKind kind, int bit) {
     }
 
-    /** 一个输入引脚的若干信号道依赖；位数 width 为 1 或 8。 */
+    /** 一个输入引脚的若干通道依赖；引脚位宽 width 为 1 或 8。 */
     private record InputPort(int width, Dep[] lanes) {
     }
 
@@ -72,7 +74,8 @@ public class CircuitSimulator {
     private int totalNodes;
     private int numNets;
     private NodeKind[] nodeKind = new NodeKind[0];
-    private int[] nodeVals = new int[0];
+    private long[] nodeVals = new long[0];
+    private int[] netWidth = new int[0];
     private int[] topo = new int[0];
     private int topoLen;
     private boolean hasCycle;
@@ -126,34 +129,30 @@ public class CircuitSimulator {
     }
 
     public int getWireValue(int x, int y, WireMaterial material) {
-        Integer v = wireValues.get(new WirePoint(x, y, material, 0));
+        Integer v = wireValues.get(new WirePoint(x, y, material));
         return v == null ? 0 : v;
     }
 
-    /** 8 位总线打包值：bit b = 第 b 位信号是否为高（0/1）。 */
+    /** 8 位总线打包值：bit b = 第 b 位（4 位通道）是否非零。 */
     public int getWireBusValue(int x, int y, WireMaterial material) {
-        int v = 0;
+        Integer net = wireNet.get(new WirePoint(x, y, material));
+        if (net == null) return 0;
+        long v = nodeVals[net];
+        int bits = 0;
         for (int b = 0; b < 8; b++) {
-            Integer lane = wireValues.get(new WirePoint(x, y, material, b));
-            if (lane != null && lane != 0) {
-                v |= (1 << b);
-            }
+            if (((v >> (4 * b)) & 0xF) != 0) bits |= (1 << b);
         }
-        return v;
+        return bits;
     }
 
-    /** 该格上 material 对应的导线是否为 8 位总线。 */
+    /** 该格上 material 对应的导线网络是否为 8 位总线。 */
     public boolean isWireBus(int x, int y, WireMaterial material) {
-        for (int b = 1; b < 8; b++) {
-            if (wireValues.containsKey(new WirePoint(x, y, material, b))) {
-                return true;
-            }
-        }
-        return wireValues.containsKey(new WirePoint(x, y, material, 0));
+        Integer net = wireNet.get(new WirePoint(x, y, material));
+        return net != null && net < netWidth.length && netWidth[net] == 8;
     }
 
     public boolean isWireBad(int x, int y, WireMaterial material) {
-        Boolean b = wireBad.get(new WirePoint(x, y, material, 0));
+        Boolean b = wireBad.get(new WirePoint(x, y, material));
         return b != null && b;
     }
 
@@ -181,7 +180,8 @@ public class CircuitSimulator {
             totalNodes = 0;
             numNets = 0;
             nodeKind = new NodeKind[0];
-            nodeVals = new int[0];
+            nodeVals = new long[0];
+            netWidth = new int[0];
             topo = new int[0];
             topoLen = 0;
             badNet = new boolean[0];
@@ -204,49 +204,48 @@ public class CircuitSimulator {
             comps.addAll(chunk.components);
         }
 
-        /* ---------- 1. 并查集：同材料、同位宽的导线按每一位合并网络 ---------- */
+        /* ---------- 1. 并查集：同材料、同位宽的导线合并为同一网络 ---------- */
         Map<WirePoint, Integer> elemIndex = new HashMap<>();
+        Map<Integer, Integer> indexBw = new HashMap<>();
         UnionFind uf = new UnionFind();
         for (Wire wire : wires) {
             for (WireMaterial m : new WireMaterial[]{WireMaterial.COPPER, WireMaterial.GOLD}) {
-                if (!hasSideMaterial(wire, m)) continue;
-                for (int b = 0; b < wire.bitWidth; b++) {
+                if (hasSideMaterial(wire, m)) {
                     int id = uf.add();
-                    elemIndex.put(new WirePoint(wire.x, wire.y, m, b), id);
+                    elemIndex.put(new WirePoint(wire.x, wire.y, m), id);
+                    indexBw.put(id, wire.bitWidth);
                 }
             }
         }
         for (Wire wire : wires) {
             for (WireMaterial m : new WireMaterial[]{WireMaterial.COPPER, WireMaterial.GOLD}) {
-                if (!hasSideMaterial(wire, m)) continue;
+                Integer self = elemIndex.get(new WirePoint(wire.x, wire.y, m));
+                if (self == null) continue;
                 for (Direction d : Direction.Plane.HORIZONTAL) {
                     if (materialAtSide(wire, d) != m) continue;
                     int nx = wire.x + d.getStepX();
                     int ny = wire.y + d.getStepZ();
                     Wire neighbor = findWire(nx, ny);
-                    if (neighbor == null
-                            || neighbor.bitWidth != wire.bitWidth
-                            || materialAtSide(neighbor, d.getOpposite()) != m) {
-                        continue;
-                    }
-                    for (int b = 0; b < wire.bitWidth; b++) {
-                        Integer self = elemIndex.get(new WirePoint(wire.x, wire.y, m, b));
-                        Integer other = elemIndex.get(new WirePoint(nx, ny, m, b));
-                        if (self != null && other != null) {
-                            uf.union(self, other);
-                        }
+                    if (neighbor != null
+                            && neighbor.bitWidth == wire.bitWidth
+                            && materialAtSide(neighbor, d.getOpposite()) == m) {
+                        Integer other = elemIndex.get(new WirePoint(nx, ny, m));
+                        if (other != null) uf.union(self, other);
                     }
                 }
             }
         }
 
         Map<Integer, Integer> rootToNet = new HashMap<>();
+        netWidth = new int[elemIndex.size()];
         for (Map.Entry<WirePoint, Integer> e : elemIndex.entrySet()) {
             int root = uf.find(e.getValue());
             int net = rootToNet.computeIfAbsent(root, k -> rootToNet.size());
+            netWidth[net] = indexBw.get(e.getValue());
             wireNet.put(e.getKey(), net);
         }
         numNets = rootToNet.size();
+        netWidth = Arrays.copyOf(netWidth, numNets);
         int numComps = comps.size();
         totalNodes = numNets + numComps;
 
@@ -304,10 +303,10 @@ public class CircuitSimulator {
                             WireMaterial m = materialAtSide(wire, pin.facing.getOpposite());
                             if (m != null) {
                                 if (wire.bitWidth == pinWidth) {
+                                    Integer net = wireNet.get(new WirePoint(pin.ex, pin.ey, m));
                                     for (int b = 0; b < pinWidth; b++) {
-                                        Integer net = wireNet.get(new WirePoint(pin.ex, pin.ey, m, b));
                                         if (net != null) {
-                                            lanes[b] = new Dep(net, DepKind.WHOLE, 0);
+                                            lanes[b] = new Dep(net, DepKind.WHOLE, 4 * b);
                                             if (kind != NodeKind.CAP) predSets[node].add(net);
                                             else dSample = net;
                                         }
@@ -325,9 +324,8 @@ public class CircuitSimulator {
                                     int otherNode = compIndex.get(key(other.x, other.y));
                                     if (slot.width() == pinWidth) {
                                         for (int b = 0; b < pinWidth; b++) {
-                                            lanes[b] = new Dep(otherNode,
-                                                    slot.width() == 8 ? DepKind.BIT : DepKind.WHOLE,
-                                                    slot.bitStart() + (slot.width() == 8 ? b : 0));
+                                            lanes[b] = new Dep(otherNode, DepKind.WHOLE,
+                                                    slot.bitStart() + 4 * b);
                                             if (kind != NodeKind.CAP) predSets[node].add(otherNode);
                                             else dSample = otherNode;
                                         }
@@ -345,14 +343,12 @@ public class CircuitSimulator {
                             if (m != null) {
                                 if (wire.bitWidth == pinWidth) {
                                     OutSlot slot = outputSlot(component.component, side, offset);
-                                    for (int b = 0; b < pinWidth; b++) {
-                                        Integer net = wireNet.get(new WirePoint(pin.ex, pin.ey, m, b));
-                                        if (net != null) {
-                                            netInputDeps[net].add(new Dep(node,
-                                                    pinWidth == 8 ? DepKind.BIT : DepKind.WHOLE,
-                                                    slot.bitStart() + (pinWidth == 8 ? b : 0)));
-                                            predSets[net].add(node);
-                                        }
+                                    Integer net = wireNet.get(new WirePoint(pin.ex, pin.ey, m));
+                                    if (net != null) {
+                                        netInputDeps[net].add(new Dep(node,
+                                                pinWidth == 8 ? DepKind.TUPLE : DepKind.WHOLE,
+                                                slot.bitStart()));
+                                        predSets[net].add(node);
                                     }
                                 } else {
                                     mismatchCells.add(key(pin.ex, pin.ey));
@@ -411,7 +407,7 @@ public class CircuitSimulator {
             tarjanMarkCycles(succs);
         }
 
-        nodeVals = new int[totalNodes];
+        nodeVals = new long[totalNodes];
     }
 
     private Component compAt(int x, int y) {
@@ -440,7 +436,7 @@ public class CircuitSimulator {
         return null;
     }
 
-    /** 元件输出引脚在节点值中的位段布局：1 位引脚占 4 位，8 位引脚占 8 位。 */
+    /** 元件输出引脚在节点值中的位段布局：1 位引脚占 4 位，8 位引脚占 32 位。 */
     private record OutSlot(int bitStart, int width) {
     }
 
@@ -454,7 +450,7 @@ public class CircuitSimulator {
                 if (s == side && o == offset) {
                     return new OutSlot(bitStart, w);
                 }
-                bitStart += (w == 8 ? 8 : 4);
+                bitStart += (w == 8 ? 32 : 4);
             }
         }
         return new OutSlot(0, cc.getPinBitWidth(side, offset));
@@ -535,14 +531,18 @@ public class CircuitSimulator {
     }
 
     private void evalOnce() {
-        Arrays.fill(nodeVals, 0);
+        Arrays.fill(nodeVals, 0L);
         for (int k = 0; k < topoLen; k++) {
             int node = topo[k];
             NodeKind kind = nodeKind[node];
             switch (kind) {
                 case NET -> {
-                    int v = 0;
-                    for (Dep d : netInputDeps[node]) v = Math.max(v, depValue(d));
+                    long v = 0L;
+                    if (netWidth[node] == 8) {
+                        for (Dep d : netInputDeps[node]) v = maxTuple(v, depValue(d));
+                    } else {
+                        for (Dep d : netInputDeps[node]) v = Math.max(v, depValue(d));
+                    }
                     nodeVals[node] = v;
                 }
                 case CAP -> {
@@ -559,36 +559,67 @@ public class CircuitSimulator {
         }
     }
 
-    private int depValue(Dep d) {
+    private long depValue(Dep d) {
         return switch (d.kind()) {
             case WHOLE -> (nodeVals[d.node()] >> d.bit()) & 0xF;
-            case BIT -> ((nodeVals[d.node()] >> d.bit()) & 1) * 15;
+            case TUPLE -> (nodeVals[d.node()] >> d.bit()) & 0xFFFFFFFFL;
         };
     }
 
-    /** 读取元件第 k 个输入引脚的值：1 位返回 0~15，8 位返回打包的 0~255。 */
-    private int inPort(int node, int k) {
-        InputPort[] ports = inputPorts[node];
-        if (ports == null || k >= ports.length) return 0;
-        InputPort p = ports[k];
-        if (p == null) return 0;
-        if (p.width() == 8) {
-            int v = 0;
-            for (int b = 0; b < 8; b++) {
-                Dep d = p.lanes()[b];
-                if (d != null && depValue(d) != 0) v |= (1 << b);
-            }
-            return v;
+    /** 两个 8 元组（8×4 位通道）按位取最大值。 */
+    private static long maxTuple(long a, long b) {
+        if (a == 0L) return b;
+        if (b == 0L) return a;
+        long r = 0L;
+        for (int lane = 0; lane < 8; lane++) {
+            int va = (int) ((a >> (4 * lane)) & 0xF);
+            int vb = (int) ((b >> (4 * lane)) & 0xF);
+            r |= ((long) Math.max(va, vb)) << (4 * lane);
         }
-        Dep d = p.lanes()[0];
-        return d == null ? 0 : depValue(d);
+        return r;
     }
 
-    private int evalCombinational(Component component, int node) {
+    /** 8 元组按“位非零即真”转成 8 位整数。 */
+    private static int tupleToInt(long tuple) {
+        int v = 0;
+        for (int b = 0; b < 8; b++) {
+            if (((tuple >> (4 * b)) & 0xF) != 0) v |= (1 << b);
+        }
+        return v;
+    }
+
+    /** 8 位整数转 8 元组：置位通道输出 15，其余 0。 */
+    private static long intToTuple(int bits) {
+        long t = 0L;
+        for (int b = 0; b < 8; b++) {
+            if (((bits >> b) & 1) != 0) t |= 15L << (4 * b);
+        }
+        return t;
+    }
+
+    /** 读取元件第 k 个输入引脚：1 位返回 0~15，8 位返回 8 元组。 */
+    private long inPort(int node, int k) {
+        InputPort[] ports = inputPorts[node];
+        if (ports == null || k >= ports.length) return 0L;
+        InputPort p = ports[k];
+        if (p == null) return 0L;
+        if (p.width() == 8) {
+            long tuple = 0L;
+            for (int b = 0; b < 8; b++) {
+                Dep d = p.lanes()[b];
+                if (d != null) tuple |= (depValue(d) & 0xF) << (4 * b);
+            }
+            return tuple;
+        }
+        Dep d = p.lanes()[0];
+        return d == null ? 0L : depValue(d);
+    }
+
+    private long evalCombinational(Component component, int node) {
         CircuitComponent cc = component.component;
         if (cc == BuiltinCircuitComponents.TRANSISTOR) {
-            int west = inPort(node, 0);
-            int south = inPort(node, 1);
+            int west = (int) inPort(node, 0);
+            int south = (int) inPort(node, 1);
             return Math.min((int) Math.floor(2.0 * west * (1.0 - south / 15.0)), 15);
         }
         if (cc == BuiltinCircuitComponents.DIODE) {
@@ -608,31 +639,34 @@ public class CircuitSimulator {
             return inPort(node, 0);
         }
         if (cc == BuiltinCircuitComponents.AND_GATE) {
-            int a = inPort(node, 0);
-            int b = inPort(node, 1);
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
             return a != 0 ? b : 0;
         }
         if (cc == BuiltinCircuitComponents.BUS_JOINER_8) {
-            int v = 0;
+            long tuple = 0L;
             for (int b = 0; b < 8; b++) {
-                if (inPort(node, 7 - b) != 0) v |= (1 << b);
+                tuple |= (inPort(node, 7 - b) & 0xF) << (4 * b);
             }
-            return v;
+            return tuple << outputSlot(cc, Direction.EAST, 0).bitStart();
         }
         if (cc == BuiltinCircuitComponents.BUS_SPLITTER_8) {
-            int bus = inPort(node, 0);
-            int v = 0;
+            long tuple = inPort(node, 0);
+            long v = 0L;
             for (int b = 0; b < 8; b++) {
-                if ((bus & (1 << b)) != 0) v |= (15 << (b * 4));
+                v |= ((tuple >> (4 * b)) & 0xF) << outputSlot(cc, Direction.EAST, b).bitStart();
             }
             return v;
         }
         if (cc == BuiltinCircuitComponents.ADDER_8) {
-            int a = inPort(node, 0);
-            int b = inPort(node, 1);
+            int a = tupleToInt(inPort(node, 0));
+            int b = tupleToInt(inPort(node, 1));
             int cin = inPort(node, 2) != 0 ? 1 : 0;
             int sum = a + b + cin;
-            return (sum & 0xFF) | ((((sum >> 8) & 1) * 15) << 8);
+            long v = 0L;
+            v |= intToTuple(sum & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
+            v |= ((long) ((((sum >> 8) & 1) * 15) & 0xF)) << outputSlot(cc, Direction.SOUTH, 0).bitStart();
+            return v;
         }
         return 0;
     }
@@ -642,7 +676,7 @@ public class CircuitSimulator {
         int phase = resPhase.getOrDefault(key(component.x, component.y), instance.getInitialPhase());
         int period = Math.max(1, instance.getHighDuration() + instance.getLowDuration());
         boolean high = phase % period < instance.getHighDuration();
-        return high ? inPort(node, 0) : 0;
+        return high ? (int) inPort(node, 0) : 0;
     }
 
     /* ============================================================
@@ -658,7 +692,7 @@ public class CircuitSimulator {
         Map<Integer, Integer> dSample = new HashMap<>();
         for (int node : capNodes) {
             int src = dSampleSource[node];
-            dSample.put(node, src >= 0 ? nodeVals[src] : 0);
+            dSample.put(node, src >= 0 ? (int) nodeVals[src] : 0);
         }
         for (int node : capNodes) {
             int idx = node - numNets;
@@ -695,12 +729,12 @@ public class CircuitSimulator {
         compValues.clear();
         for (Map.Entry<WirePoint, Integer> e : wireNet.entrySet()) {
             int net = e.getValue();
-            wireValues.put(e.getKey(), nodeVals[net]);
+            wireValues.put(e.getKey(), (int) nodeVals[net]);
             wireBad.put(e.getKey(), badNet[net]);
         }
         for (int i = 0; i < comps.size(); i++) {
             Component component = comps.get(i);
-            compValues.put(key(component.x, component.y), nodeVals[numNets + i]);
+            compValues.put(key(component.x, component.y), (int) nodeVals[numNets + i]);
         }
     }
 
