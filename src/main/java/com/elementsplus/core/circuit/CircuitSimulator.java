@@ -125,7 +125,16 @@ public class CircuitSimulator {
     }
 
     public boolean hasMismatch(int x, int y) {
-        return mismatchCells.contains(key(x, y));
+        for (long seam : mismatchCells) {
+            int sx = seamCellX(seam);
+            int sy = seamCellY(seam);
+            if (seamVertical(seam)) {
+                if ((x == sx || x == sx - 1) && y == sy) return true;
+            } else {
+                if (x == sx && (y == sy || y == sy - 1)) return true;
+            }
+        }
+        return false;
     }
 
     public int getWireValue(int x, int y, WireMaterial material) {
@@ -312,7 +321,7 @@ public class CircuitSimulator {
                                         }
                                     }
                                 } else {
-                                    mismatchCells.add(key(pin.ex, pin.ey));
+                                    mismatchCells.add(seamKey(pin.ex, pin.ey, pin.facing));
                                 }
                             }
                         } else {
@@ -330,7 +339,7 @@ public class CircuitSimulator {
                                             else dSample = otherNode;
                                         }
                                     } else {
-                                        mismatchCells.add(key(pin.ex, pin.ey));
+                                        mismatchCells.add(seamKey(pin.ex, pin.ey, pin.facing));
                                     }
                                 }
                             }
@@ -351,7 +360,7 @@ public class CircuitSimulator {
                                         predSets[net].add(node);
                                     }
                                 } else {
-                                    mismatchCells.add(key(pin.ex, pin.ey));
+                                    mismatchCells.add(seamKey(pin.ex, pin.ey, pin.facing));
                                 }
                             }
                         } else {
@@ -361,7 +370,7 @@ public class CircuitSimulator {
                                 if (ip != null) {
                                     int otherWidth = other.component.getPinBitWidth(ip.side, ip.offset);
                                     if (otherWidth != pinWidth) {
-                                        mismatchCells.add(key(pin.ex, pin.ey));
+                                        mismatchCells.add(seamKey(pin.ex, pin.ey, pin.facing));
                                     } else {
                                         int otherNode = compIndex.get(key(other.x, other.y));
                                         if (nodeKind[otherNode] != NodeKind.CAP) predSets[otherNode].add(node);
@@ -837,6 +846,38 @@ public class CircuitSimulator {
 
     private static long key(int x, int y) {
         return ((long) x << 32) | (y & 0xFFFFFFFFL);
+    }
+
+    /**
+     * 位宽不匹配接缝键：编码接缝中点（网格顶点的平行/垂直边）。
+     * 坐标意义：
+     * <ul>
+     * <li>水平接缝（NORTH/SOUTH 引脚）：中点 = (x0 + 0.5, y0)</li>
+     * <li>垂直接缝（WEST/EAST 引脚）：中点 = (x0, y0 + 0.5)</li>
+     * </ul>
+     */
+    private static long seamKey(int ex, int ey, Direction facing) {
+        int x0, y0;
+        boolean vertical;
+        switch (facing) {
+            case NORTH -> { x0 = ex; y0 = ey + 1; vertical = false; }
+            case SOUTH -> { x0 = ex; y0 = ey; vertical = false; }
+            case WEST -> { x0 = ex + 1; y0 = ey; vertical = true; }
+            default -> { x0 = ex; y0 = ey; vertical = true; }
+        }
+        return ((long) x0 << 33) | ((y0 & 0xFFFFFFFFL) << 1) | (vertical ? 1 : 0);
+    }
+
+    private static int seamCellX(long seam) {
+        return (int) (seam >> 33);
+    }
+
+    private static int seamCellY(long seam) {
+        return (int) ((seam >> 1) & 0xFFFFFFFFL);
+    }
+
+    private static boolean seamVertical(long seam) {
+        return (seam & 1) == 1;
     }
 
     private static final class UnionFind {

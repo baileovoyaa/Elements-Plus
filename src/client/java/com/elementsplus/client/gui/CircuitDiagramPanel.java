@@ -61,8 +61,6 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int COLOR_SELECTION = 0xFFFFC900;
     private static final int COLOR_CYCLE_BANNER = 0xCCB02020;
     private static final int COLOR_MISMATCH_BANNER = 0xCCB0A020;
-    private static final int COLOR_MISMATCH_TRIANGLE = 0xFFFFC000;
-    private static final int COLOR_MISMATCH_MARK = 0xFF000000;
     private static final int COLOR_SELBOX = 0xFF40E0D0;
     private static final int COLOR_BOX_FILL = 0x3030D0C0;
     private static final int COLOR_BUS_8 = 0xFFFF00FF;
@@ -73,6 +71,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final double DRAG_THRESHOLD = 4.0;
 
     private static final ResourceLocation CYCLE_TEXTURE = ElementsPlus.id("textures/gui/cycle.png");
+    private static final ResourceLocation MISMATCH_TEXTURE = ElementsPlus.id("textures/gui/bit_width_mismatch.png");
 
     private final LithographyMachineMenu menu;
     private final BooleanSupplier activeSupplier;
@@ -1133,35 +1132,29 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     /**
-     * 位宽不匹配告警：在存在 1 位/8 位引脚或导线宽度冲突的格子上叠加醒目标记。
+     * 位宽不匹配告警：在 1 位/8 位引脚或导线宽度冲突的接缝处叠加提示贴图。
+     * 接缝中点由 simulator 编码为 seam key（见 CircuitSimulator#seamKey）：
+     * 水平接缝中点 (x0+0.5, y0)，垂直接缝中点 (x0, y0+0.5)。
      */
     private void drawMismatchIcons(GuiGraphics guiGraphics) {
-        Set<Long> cells = simulator.getMismatchCells();
-        if (cells.isEmpty()) {
+        Set<Long> seams = simulator.getMismatchCells();
+        if (seams.isEmpty()) {
             return;
         }
-        int size = Mth.clamp((int) Math.round(zoom * 0.55), 4, 14);
-        for (Long cell : cells) {
-            int x = cellXOf(cell);
-            int y = cellYOf(cell);
-            double cx = getX() + (x + 0.5 - offsetX) * zoom;
-            double cy = getY() + (y + 0.5 - offsetY) * zoom;
+        int size = Mth.clamp((int) Math.round(zoom * 0.6F), 6, 16);
+        for (Long seam : seams) {
+            int sx = (int) (seam >> 33);
+            int sy = (int) ((seam >> 1) & 0xFFFFFFFFL);
+            boolean vert = (seam & 1) == 1;
+            double cx = getX() + (sx + (vert ? 0.0 : 0.5) - offsetX) * zoom;
+            double cy = getY() + (sy + (vert ? 0.5 : 0.0) - offsetY) * zoom;
             if (cx < getX() - size || cx > getX() + getWidth() + size
                     || cy < getY() - size || cy > getY() + getHeight() + size) {
                 continue;
             }
-            int sx = (int) Math.round(cx);
-            int sy = (int) Math.round(cy);
-            for (int dy = -size + 1; dy <= size - 1; dy++) {
-                int half = Math.max(0, (int) Math.round((double) (dy + size) * size / (2.0 * size - 1)));
-                if (sx - half < sx + half + 1) {
-                    guiGraphics.fill(sx - half, sy + dy, sx + half + 1, sy + dy + 1, COLOR_MISMATCH_TRIANGLE);
-                }
-            }
-            if (size >= 6) {
-                guiGraphics.fill(sx - 1, sy - size / 2, sx + 1, sy + size / 4, COLOR_MISMATCH_MARK);
-                guiGraphics.fill(sx - 1, sy + size / 2, sx + 1, sy + size * 2 / 3 + 1, COLOR_MISMATCH_MARK);
-            }
+            int px = (int) Math.round(cx - size / 2.0);
+            int py = (int) Math.round(cy - size / 2.0);
+            guiGraphics.blit(MISMATCH_TEXTURE, px, py, size, size, 0.0F, 0.0F, 16, 16, 16, 16);
         }
     }
 
