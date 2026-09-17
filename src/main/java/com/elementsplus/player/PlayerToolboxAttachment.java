@@ -30,15 +30,16 @@ public final class PlayerToolboxAttachment {
             return toolbox;
         }
 
-        // Hot path: on a fresh server start the Fabric attachment can still be empty even though the
-        // player save (dat) already contains a toolbox (the in-memory entity attachment load did not
-        // run yet / failed). Read the player data directly from disk so we never clobber persisted
-        // data with a freshly created default.
+        // On join, Fabric only deserializes persistent attachments inside Entity.readNbt, but in
+        // Vanilla 1.21.1 a player's save data is applied via Entity.load (which ends in
+        // readAdditionalSaveData), so the in-memory attachment can be empty even though the player
+        // save (dat) already contains a toolbox. Read the player data directly from disk so we never
+        // clobber persisted data with a freshly created default.
         PlayerToolbox restored = loadFromSavedData(player);
         if (restored != null) {
             player.setAttached(PLAYER_TOOLBOX, restored);
-            ElementsPlus.LOGGER.warn("[toolbox] in-memory attachment was empty for {}; recovered {} groups from saved player data",
-                    player.getName().getString(), restored.groups.size());
+            ElementsPlus.LOGGER.info("[toolbox] restored {} groups from saved player data for {} (Fabric does not auto-load persistent player attachments on join in MC 1.21.1)",
+                    restored.groups.size(), player.getName().getString());
             return restored;
         }
 

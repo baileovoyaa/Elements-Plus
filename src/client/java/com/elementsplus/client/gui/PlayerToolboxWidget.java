@@ -570,7 +570,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
         int bottomTop = contentHeight() - BOTTOM_AREA;
         int by = (int) screenY(bottomTop);
         Component hint = Component.translatable("gui.elements-plus.toolbox.bottom_hint");
-        g.drawString(font, hint, x + (w - font.width(hint)) / 2, by + (BOTTOM_AREA - 9) / 2, 0xFFB0B0B0, false);
+        g.drawString(font, hint, x + (w - font.width(hint)) / 2, by + (BOTTOM_AREA - 9) / 2, 0xFFE0E0E0, false);
     }
 
     private void renderBottomRect(GuiGraphics g) {
