@@ -27,4 +27,8 @@ public class ModMenuTypes {
     private static <T extends AbstractContainerMenu> MenuType<T> register(String string, MenuType.MenuSupplier<T> menuSupplier, FeatureFlag... featureFlags) {
         return Registry.register(BuiltInRegistries.MENU, ResourceLocation.fromNamespaceAndPath(MOD_ID, string), new MenuType<>(menuSupplier, FeatureFlags.REGISTRY.subset(featureFlags)));
     }
+
+    public static void initialize() {
+        // 物品已在静态块中注册
+    }
 }

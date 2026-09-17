@@ -72,6 +72,7 @@ public class ElementsPlus implements ModInitializer {
         ModBlocks.initialize();
         ModEffects.initialize();
         ModBlockEntityTypes.initialize();
+        ModMenuTypes.initialize();
         MetalCatalystRecipe.TYPE.toString();
         CrystallizerRecipe.TYPE.toString();
 
