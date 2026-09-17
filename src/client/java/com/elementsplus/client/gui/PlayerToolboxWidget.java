@@ -5,15 +5,21 @@ import com.elementsplus.ModDataComponents;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.player.PlayerToolbox;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.WidgetTooltipHolder;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +41,8 @@ public class PlayerToolboxWidget extends AbstractWidget {
     private static final int SEAM_HALF = 9;
     private static final int AUTOSCROLL_EDGE = 24;
     private static final double AUTOSCROLL_SPEED = 5.0;
+
+    private final WidgetTooltipHolder tooltip = new WidgetTooltipHolder();
 
     public interface Listener {
         /**
@@ -86,6 +94,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
     private int pressButton = -1;
     private double pressX, pressY;
     private PressTarget pressTarget;
+    private PressTarget hoverTarget;
 
     // 拖动状态
     private boolean dragging = false;
@@ -534,11 +543,17 @@ public class PlayerToolboxWidget extends AbstractWidget {
     @Override
     protected void renderWidget(GuiGraphics g, int screenMouseX, int screenMouseY, float partialTick) {
         if (toolbox == null) return;
+        tooltip.set(null);
         Font font = Minecraft.getInstance().font;
         double curY = contentMouseY(screenMouseY);
+        if (this.isHovered()) {
+            hoverTarget = resolvePressTarget(curY);
+        } else {
+            hoverTarget = null;
+        }
 
         for (int i = 0; i < toolbox.groups.size(); i++) {
-            renderGroup(g, font, i, screenMouseX, screenMouseY, curY);
+            renderGroup(g, font, i, screenMouseX, screenMouseY);
         }
         renderBottom(g, font);
 
@@ -561,21 +576,20 @@ public class PlayerToolboxWidget extends AbstractWidget {
                 else renderSeam(g, d.seamY);
             }
         }
+
+        tooltip.refreshTooltipForNextRenderPass(this.isHovered(), this.isFocused(), new ScreenRectangle(screenMouseX, screenMouseY, 0, 0));
+        tooltip.setDelay(Duration.ofMillis(500));
     }
 
-    private void renderGroup(GuiGraphics g, Font font, int i, int smx, int smy, double curY) {
+    private void renderGroup(GuiGraphics g, Font font, int i, int smx, int smy) {
         int x = getX();
         int w = getWidth();
         int top = groupTop(i);
         boolean expanded = isGroupExpanded(i);
 
         int hy = (int) screenY(top);
-//        g.fill(x, hy, x + w, hy + HEADER_HEIGHT, 0xFF000000);
         boolean headerHovered = false;
-        if (this.isHovered()) {
-            PressTarget pressTarget1 = resolvePressTarget(curY);
-            headerHovered = pressTarget1.kind == PressTarget.Kind.HEADER && pressTarget1.groupIndex == i;
-        }
+        headerHovered = hoverTarget != null && hoverTarget.kind == PressTarget.Kind.HEADER && hoverTarget.groupIndex == i;
         g.fill(x, hy, x + w, hy + HEADER_HEIGHT, headerHovered ? 0xFFFFFFFF : 0xFF000000);
         GuiUtil.drawSubPanel(g, x + 1, hy + 1, x + w - 1, hy + HEADER_HEIGHT - 1,
                 expanded ? 0xFFA0A0A0 : 0xFF808080, GuiUtil.SubPanelType.CONVEX);
@@ -594,6 +608,13 @@ public class PlayerToolboxWidget extends AbstractWidget {
             int ey = (int) screenY(top + HEADER_HEIGHT + j * ENTRY_HEIGHT);
             boolean hovered = smx >= x + 1 && smx < x + w - 1 && smy >= ey && smy < ey + ENTRY_HEIGHT;
             g.fill(x + 1, ey, x + w - 1, ey + ENTRY_HEIGHT, hovered ? 0xFFA0A0A0 : 0xFF808080);
+            if (hovered) {
+                if (component.getDescription() != null) {
+                    tooltip.set(Tooltip.create(Component.translatable("%s\n%s", component.getName(), component.getDescription().copy().withStyle(ChatFormatting.GRAY))));
+                } else {
+                    tooltip.set(Tooltip.create(component.getName()));
+                }
+            }
             ResourceLocation icon = component.getIcon();
             if (icon != null) {
                 g.blit(icon, x + 6, ey + 1, 0, 0, 16, 16, 16, 16);
