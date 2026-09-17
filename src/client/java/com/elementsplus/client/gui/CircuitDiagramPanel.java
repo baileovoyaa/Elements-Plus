@@ -69,6 +69,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int COLOR_BUS_64 = 0xFF0000FF;
 
     private static final double DRAG_THRESHOLD = 4.0;
+    private static final double PAN_KEEP_VISIBLE = 16.0;
+    private static final int COLOR_BOUNDS_BORDER = 0xFFB8B8B0;
 
     private static final ResourceLocation CYCLE_TEXTURE = ElementsPlus.id("textures/gui/cycle.png");
     private static final ResourceLocation MISMATCH_TEXTURE = ElementsPlus.id("textures/gui/bit_width_mismatch.png");
@@ -209,6 +211,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     drawSelBoxOutline(guiGraphics, selBoxX, selBoxY, selBoxW, selBoxH);
                 }
             }
+            drawBoundsBorder(guiGraphics);
             if (simulator != null && simulator.hasMismatchWarning()) {
                 drawMismatchIcons(guiGraphics);
             }
@@ -230,6 +233,59 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private CircuitDiagram getDiagram() {
         ItemStack stack = menu.slots.get(36).getItem();
         return stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+    }
+
+    private CircuitDiagram.Scale diagramScale() {
+        CircuitDiagram diagram = getDiagram();
+        return diagram == null ? null : diagram.scale;
+    }
+
+    /** 可用范围边长（单元格）；无限规模返回 -1。 */
+    private int boundsSize() {
+        CircuitDiagram.Scale scale = diagramScale();
+        return scale == null ? -1 : scale.sizeInCells();
+    }
+
+    private boolean hasBounds() {
+        int size = boundsSize();
+        return size > 0;
+    }
+
+    private boolean inBounds(int x, int y) {
+        int size = boundsSize();
+        return size < 0 || (x >= 0 && y >= 0 && x < size && y < size);
+    }
+
+    private boolean placementInBounds(int gx, int gy, int w, int h) {
+        int size = boundsSize();
+        return size < 0 || (gx >= 0 && gy >= 0 && gx + w <= size && gy + h <= size);
+    }
+
+    /**
+     * 平移（中键拖动/滚轮）后把视图钳制回可用范围内，保证可用范围不会完全
+     * 从视野中消失；无限规模不受限。
+     */
+    private void clampPan() {
+        int size = boundsSize();
+        if (size < 0) {
+            return;
+        }
+        double minX = -(getWidth() - PAN_KEEP_VISIBLE) / zoom;
+        double maxX = size - PAN_KEEP_VISIBLE / zoom;
+        double minY = -(getHeight() - PAN_KEEP_VISIBLE) / zoom;
+        double maxY = size - PAN_KEEP_VISIBLE / zoom;
+        if (minX > maxX) {
+            double midX = (minX + maxX) / 2.0;
+            minX = midX;
+            maxX = midX;
+        }
+        if (minY > maxY) {
+            double midY = (minY + maxY) / 2.0;
+            minY = midY;
+            maxY = midY;
+        }
+        offsetX = Mth.clamp(offsetX, minX, maxX);
+        offsetY = Mth.clamp(offsetY, minY, maxY);
     }
 
     public boolean isReadOnly() {
@@ -504,7 +560,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         int ty = (int) Math.floor(top);
         int rx = (int) Math.ceil(right);
         int by = (int) Math.ceil(bottom);
-        boolean conflict = diagramHasConflict(gx, gy, w, h);
+        boolean conflict = !placementInBounds(gx, gy, w, h) || diagramHasConflict(gx, gy, w, h);
         guiGraphics.fill(lx, ty, rx, by, conflict ? COLOR_GHOST_INVALID : COLOR_GHOST_VALID);
         if (zoom >= 3) {
             guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_GHOST_BORDER);
@@ -548,6 +604,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
         boolean force = Screen.hasShiftDown();
         int w = placementWidth(component);
         int h = placementHeight(component);
+        if (!placementInBounds(gx, gy, w, h)) {
+            playSound(INVALID_SOUND);
+            return;
+        }
         if (!force) {
             for (int dx = 0; dx < w; dx++) {
                 for (int dy = 0; dy < h; dy++) {
@@ -640,6 +700,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         int gx = cellX(mouseX);
         int gy = cellY(mouseY);
+        if (!inBounds(gx, gy)) {
+            return;
+        }
         double centerX = getX() + (gx + 0.5 - offsetX) * zoom;
         double centerY = getY() + (gy + 0.5 - offsetY) * zoom;
         int size = Math.max(2, (int) Math.round(zoom * 0.4));
@@ -692,6 +755,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return;
         }
         Direction fromSide = dx > 0 ? Direction.EAST : (dx < 0 ? Direction.WEST : (dy > 0 ? Direction.SOUTH : Direction.NORTH));
+        if (!inBounds(fromX, fromY) || !inBounds(toX, toY)) {
+            return;
+        }
         boolean force = Screen.hasShiftDown();
         CircuitDiagram.Block toBlock = diagram.getBlock(toX, toY);
         if (toBlock instanceof CircuitDiagram.Component && !force) {
@@ -736,11 +802,44 @@ public class CircuitDiagramPanel extends AbstractWidget {
         int size = Math.max(1, (int) Math.round(zoom * 0.22));
         for (int gx = startGX; gx <= endGX; gx += step) {
             for (int gy = startGY; gy <= endGY; gy += step) {
+                if (!inBounds(gx, gy)) {
+                    continue;
+                }
                 int sx = getX() + (int) Math.floor((gx - offsetX) * zoom);
                 int sy = getY() + (int) Math.floor((gy - offsetY) * zoom);
                 guiGraphics.fill(sx, sy, sx + size, sy + size, colorDot);
             }
         }
+    }
+
+    /**
+     * 绘制可用范围边框：单元格 (0,0)~(size,size) 围成的矩形四边。
+     */
+    private void drawBoundsBorder(GuiGraphics guiGraphics) {
+        int size = boundsSize();
+        if (size < 0) {
+            return;
+        }
+        int x0 = getX();
+        int y0 = getY();
+        int x1 = x0 + getWidth();
+        int y1 = y0 + getHeight();
+        double left = x0 + (0.0 - offsetX) * zoom;
+        double top = y0 + (0.0 - offsetY) * zoom;
+        double right = x0 + (size - offsetX) * zoom;
+        double bottom = y0 + (size - offsetY) * zoom;
+        int lx = Mth.clamp((int) Math.floor(left), x0, x1);
+        int ty = Mth.clamp((int) Math.floor(top), y0, y1);
+        int rx = Mth.clamp((int) Math.ceil(right), x0, x1);
+        int by = Mth.clamp((int) Math.ceil(bottom), y0, y1);
+        if (rx - lx < 1 || by - ty < 1) {
+            return;
+        }
+        int c = COLOR_BOUNDS_BORDER;
+        guiGraphics.fill(lx, ty, rx, ty + 2, c);
+        guiGraphics.fill(lx, by - 2, rx, by, c);
+        guiGraphics.fill(lx, ty, lx + 2, by, c);
+        guiGraphics.fill(rx - 2, ty, rx, by, c);
     }
 
     private void drawComponents(GuiGraphics guiGraphics, CircuitDiagram diagram) {
@@ -1296,6 +1395,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (dragging) {
             offsetX -= dx / zoom;
             offsetY -= dy / zoom;
+            clampPan();
         }
         if (erasing) {
             tryErase(cellX(mouseX), cellY(mouseY));
@@ -1401,6 +1501,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 for (int dy0 = 0; dy0 < c.getHeight(); dy0++) {
                     int x = c.x + dx0 + dx;
                     int y = c.y + dy0 + dy;
+                    if (!inBounds(x, y)) {
+                        return false;
+                    }
                     if (!dragOwnedCells.contains(cellKey(x, y)) && diagram.getBlock(x, y) != null) {
                         return false;
                     }
@@ -1410,6 +1513,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         for (CircuitDiagram.Wire w : dragWires) {
             int x = w.x + dx;
             int y = w.y + dy;
+            if (!inBounds(x, y)) {
+                return false;
+            }
             if (!dragOwnedCells.contains(cellKey(x, y)) && diagram.getBlock(x, y) != null) {
                 return false;
             }
@@ -1428,14 +1534,24 @@ public class CircuitDiagramPanel extends AbstractWidget {
         for (CircuitDiagram.Component c : dragComps) {
             for (int dx0 = 0; dx0 < c.getWidth(); dx0++) {
                 for (int dy0 = 0; dy0 < c.getHeight(); dy0++) {
-                    if (diagram.getBlock(c.x + dx0 + dx, c.y + dy0 + dy) != null) {
+                    int x = c.x + dx0 + dx;
+                    int y = c.y + dy0 + dy;
+                    if (!inBounds(x, y)) {
+                        return false;
+                    }
+                    if (diagram.getBlock(x, y) != null) {
                         return false;
                     }
                 }
             }
         }
         for (CircuitDiagram.Wire w : dragWires) {
-            if (diagram.getBlock(w.x + dx, w.y + dy) != null) {
+            int x = w.x + dx;
+            int y = w.y + dy;
+            if (!inBounds(x, y)) {
+                return false;
+            }
+            if (diagram.getBlock(x, y) != null) {
                 return false;
             }
         }
@@ -1446,8 +1562,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         int dx = cellX(mouseX) - pressCellX;
         int dy = cellY(mouseY) - pressCellY;
         if (Screen.hasShiftDown()) {
-            dispDx = dx;
-            dispDy = dy;
+            int[] clamped = clampGroupOffset(dx, dy);
+            dispDx = clamped[0];
+            dispDy = clamped[1];
             return;
         }
         if (groupMoveValid(dx, dy)) {
@@ -1457,8 +1574,41 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void updateCopyOffset(double mouseX, double mouseY) {
-        dispDx = cellX(mouseX) - pressCellX;
-        dispDy = cellY(mouseY) - pressCellY;
+        int dx = cellX(mouseX) - pressCellX;
+        int dy = cellY(mouseY) - pressCellY;
+        if (Screen.hasShiftDown()) {
+            int[] clamped = clampGroupOffset(dx, dy);
+            dispDx = clamped[0];
+            dispDy = clamped[1];
+            return;
+        }
+        dispDx = dx;
+        dispDy = dy;
+    }
+
+    /**
+     * 把选中框整体位移限制在可用范围内，保证拖动（含 Shift）不会越界。
+     */
+    private int[] clampGroupOffset(int dx, int dy) {
+        if (!hasBounds()) {
+            return new int[]{dx, dy};
+        }
+        dx = clampAxis(dx, dragBoxX, dragBoxW);
+        dy = clampAxis(dy, dragBoxY, dragBoxH);
+        return new int[]{dx, dy};
+    }
+
+    private int clampAxis(int d, int boxStart, int boxSpan) {
+        int size = boundsSize();
+        if (size < 0 || boxSpan <= 0) {
+            return d;
+        }
+        int min = -boxStart;
+        int max = size - boxStart - boxSpan;
+        if (max < min) {
+            return d;
+        }
+        return Mth.clamp(d, min, max);
     }
 
     private void finalizePress(int mouseX, int mouseY) {
@@ -1469,14 +1619,18 @@ public class CircuitDiagramPanel extends AbstractWidget {
         dragMode = DragMode.NONE;
         if (mode == DragMode.MOVE) {
             if (Screen.hasShiftDown()) {
-                commitMove(dx, dy);
+                int[] clamped = clampGroupOffset(dx, dy);
+                commitMove(clamped[0], clamped[1]);
             } else if (groupMoveValid(dx, dy)) {
                 commitMove(dx, dy);
             } else {
                 commitMove(dispDx, dispDy);
             }
         } else if (mode == DragMode.COPY) {
-            if (Screen.hasShiftDown() || copyPlacementValid(dx, dy)) {
+            if (Screen.hasShiftDown()) {
+                int[] clamped = clampGroupOffset(dx, dy);
+                commitCopy(clamped[0], clamped[1]);
+            } else if (copyPlacementValid(dx, dy)) {
                 commitCopy(dx, dy);
             }
         } else if (mode == DragMode.BOX_SELECT) {
@@ -1753,6 +1907,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
             for (int dx = 0; dx < w; dx++) {
                 for (int dy = 0; dy < h; dy++) {
                     Long key = cellKey(c.x + dx, c.y + dy);
+                    if (!inBounds(c.x + dx, c.y + dy)) {
+                        return false;
+                    }
                     if (!newOcc.add(key)) {
                         return false;
                     }
@@ -1807,6 +1964,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         offsetX -= sx * SCROLL_PIXELS / zoom;
         offsetY -= sy * SCROLL_PIXELS / zoom;
+        clampPan();
         return true;
     }
 

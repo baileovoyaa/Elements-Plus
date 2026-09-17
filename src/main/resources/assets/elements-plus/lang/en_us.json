@@ -161,6 +161,13 @@
   "item.elements-plus.waste_bottle": "Waste Bottle",
   "item.elements-plus.circuit_diagram": "Circuit Diagram",
 
+  "tooltip.elements-plus.circuit_diagram.scale": "Scale: %s",
+  "circuit_diagram.scale.small": "Small",
+  "circuit_diagram.scale.medium": "Medium",
+  "circuit_diagram.scale.large": "Large",
+  "circuit_diagram.scale.huge": "Huge",
+  "circuit_diagram.scale.infinite": "Infinite",
+
   "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield",
   "effect.elements-plus.rust_proof": "Rust Proof",
 

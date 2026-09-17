@@ -24,6 +24,60 @@ import java.util.Map;
 import java.util.Optional;
 
 public class CircuitDiagram {
+    /**
+     * 电路图可用范围规模。以"区块"（16x16 单元格）为单位：
+     * 小=2x2、中=4x4、大=8x8、超大=16x16、无限=无边界。
+     */
+    public enum Scale implements StringRepresentable {
+        SMALL("small", 2),
+        MEDIUM("medium", 4),
+        LARGE("large", 8),
+        HUGE("huge", 16),
+        INFINITE("infinite", 0);
+
+        public static final Codec<Scale> CODEC = StringRepresentable.fromEnum(Scale::values);
+
+        public final String serializedName;
+        public final int chunks;
+
+        Scale(String serializedName, int chunks) {
+            this.serializedName = serializedName;
+            this.chunks = chunks;
+        }
+
+        /** 无限规模没有边界限制。 */
+        public boolean isInfinite() {
+            return chunks == 0;
+        }
+
+        /** 边长的单元格数；无限规模为 -1。 */
+        public int sizeInCells() {
+            return isInfinite() ? -1 : chunks * 16;
+        }
+
+        /** 能否在工作台用纸升级（无限与超大不可再升级）。 */
+        public boolean canUpgrade() {
+            return !isInfinite() && this != HUGE;
+        }
+
+        public Scale upgrade() {
+            return switch (this) {
+                case SMALL -> MEDIUM;
+                case MEDIUM -> LARGE;
+                case LARGE -> HUGE;
+                default -> this;
+            };
+        }
+
+        @Override
+        public String getSerializedName() {
+            return serializedName;
+        }
+    }
+
+    /** 可用范围规模，默认小（2x2 区块）。 */
+    public Scale scale = Scale.SMALL;
+
     public static class Chunk {
         public Wire[][] wires = new Wire[16][16];
         public List<Component> components = new ArrayList<>();
@@ -220,6 +274,7 @@ public class CircuitDiagram {
 
     public CircuitDiagram copy() {
         CircuitDiagram copy = new CircuitDiagram();
+        copy.scale = this.scale;
         for (Map.Entry<Long, Chunk> entry : chunks.entrySet()) {
             Chunk source = entry.getValue();
             Chunk target = new Chunk();
@@ -382,14 +437,16 @@ public class CircuitDiagram {
     ).apply(instance, ChunkEntry::new));
 
     public static final Codec<CircuitDiagram> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            Scale.CODEC.optionalFieldOf("scale", Scale.SMALL).forGetter(diagram -> diagram.scale),
             CHUNK_ENTRY_CODEC.listOf().optionalFieldOf("chunks", List.of()).forGetter(diagram -> {
                 List<ChunkEntry> entries = new ArrayList<>();
                 diagram.chunks.forEach((key, chunk) ->
                         entries.add(new ChunkEntry((int) (key >> 32), (int) (key & 0xFFFFFFFFL), chunk)));
                 return entries;
             })
-    ).apply(instance, chunks -> {
+    ).apply(instance, (scale, chunks) -> {
         CircuitDiagram diagram = new CircuitDiagram();
+        diagram.scale = scale;
         for (ChunkEntry entry : chunks) {
             diagram.chunks.put((((long) entry.cx()) << 32) | (entry.cy() & 0xFFFFFFFFL), entry.chunk());
         }
@@ -416,6 +473,7 @@ public class CircuitDiagram {
     }
 
     private static void writeToBuf(FriendlyByteBuf buf, CircuitDiagram diagram) {
+        buf.writeVarInt(diagram.scale.ordinal());
         buf.writeVarInt(diagram.chunks.size());
         for (Map.Entry<Long, Chunk> entry : diagram.chunks.entrySet()) {
             buf.writeVarInt((int) (entry.getKey() >> 32));
@@ -462,6 +520,8 @@ public class CircuitDiagram {
 
     private static CircuitDiagram readFromBuf(FriendlyByteBuf buf) {
         CircuitDiagram diagram = new CircuitDiagram();
+        Scale[] scales = Scale.values();
+        diagram.scale = scales[Math.max(0, Math.min(buf.readVarInt(), scales.length - 1))];
         int chunkCount = buf.readVarInt();
         for (int i = 0; i < chunkCount; i++) {
             long cx = buf.readVarInt();

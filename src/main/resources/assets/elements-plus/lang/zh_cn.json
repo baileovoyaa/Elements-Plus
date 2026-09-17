@@ -160,6 +160,13 @@
   "item.elements-plus.waste_bottle": "废液瓶",
   "item.elements-plus.circuit_diagram": "电路图",
 
+  "tooltip.elements-plus.circuit_diagram.scale": "规模：%s",
+  "circuit_diagram.scale.small": "小",
+  "circuit_diagram.scale.medium": "中",
+  "circuit_diagram.scale.large": "大",
+  "circuit_diagram.scale.huge": "超大",
+  "circuit_diagram.scale.infinite": "无限",
+
   "effect.elements-plus.steel_pipe_shield": "钢管护盾",
   "effect.elements-plus.rust_proof": "防锈",
 

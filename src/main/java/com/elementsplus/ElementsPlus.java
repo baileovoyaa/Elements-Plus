@@ -12,6 +12,7 @@ import com.elementsplus.network.UpdateCircuitDiagramPayload;
 import com.elementsplus.player.PlayerToolboxAttachment;
 import com.elementsplus.recipe.CrystallizerRecipe;
 import com.elementsplus.recipe.MetalCatalystRecipe;
+import com.elementsplus.recipe.ScaleUpgradeRecipe;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 
@@ -75,6 +76,7 @@ public class ElementsPlus implements ModInitializer {
         ModMenuTypes.initialize();
         MetalCatalystRecipe.TYPE.toString();
         CrystallizerRecipe.TYPE.toString();
+        ScaleUpgradeRecipe.TYPE_ID.toString();
 
         PayloadTypeRegistry.playC2S().register(ReturnCarriedPayload.TYPE, ReturnCarriedPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ReturnCarriedPayload.TYPE, (payload, context) ->

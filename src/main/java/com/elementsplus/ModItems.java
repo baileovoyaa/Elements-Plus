@@ -263,6 +263,12 @@ public class ModItems {
                     list.add(component.getName().copy().withStyle(style -> style.withColor(0xFFD700)));
                 }
             }
+            CircuitDiagram diagram = itemStack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+            if (diagram != null) {
+                list.add(Component.translatable("tooltip.elements-plus.circuit_diagram.scale",
+                                Component.translatable("circuit_diagram.scale." + diagram.scale.getSerializedName()))
+                        .withStyle(ChatFormatting.GRAY));
+            }
         }
     }, "circuit_diagram");
 

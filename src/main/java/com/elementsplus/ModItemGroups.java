@@ -1,5 +1,6 @@
 package com.elementsplus;
 
+import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.core.Registry;
@@ -108,6 +109,12 @@ public class ModItemGroups {
                 ModItems.COUNTER
                 // 可以继续添加更多物品
         );
+        // 无限规模电路图不能合成，仅在创造模式物品栏中提供
+        ItemStack infiniteDiagram = new ItemStack(ModItems.CIRCUIT_DIAGRAM);
+        CircuitDiagram infinite = new CircuitDiagram();
+        infinite.scale = CircuitDiagram.Scale.INFINITE;
+        infiniteDiagram.set(ModDataComponents.CIRCUIT_DIAGRAM, infinite);
+        addItemStacksToTab("circuit", infiniteDiagram);
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());
     }
     private static void registerTab(String tabId, Supplier<ItemStack> icon,
@@ -147,6 +154,18 @@ public class ModItemGroups {
             }
         });
         ElementsPlus.LOGGER.debug("Added {} item(s) to tab: {}", items.length, tabId);
+    }
+
+    public static void addItemStacksToTab(String tabId, ItemStack... stacks) {
+        ResourceKey<CreativeModeTab> tabKey = getTabKey(tabId);
+        ItemGroupEvents.modifyEntriesEvent(tabKey).register(itemGroup -> {
+            for (ItemStack stack : stacks) {
+                if (stack != null) {
+                    itemGroup.accept(stack);
+                }
+            }
+        });
+        ElementsPlus.LOGGER.debug("Added {} item stack(s) to tab: {}", stacks.length, tabId);
     }
     private record TabConfig(String tabId, ResourceKey<CreativeModeTab> tabKey, ItemLike[] items) {
     }
