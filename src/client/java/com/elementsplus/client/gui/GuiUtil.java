@@ -1,9 +1,14 @@
 package com.elementsplus.client.gui;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import org.joml.Vector3f;
 
 public class GuiUtil {
+
     public enum SubPanelType {
         NONE,
         SOLID,
@@ -59,6 +64,10 @@ public class GuiUtil {
 
         // 4. 重新组装
         return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    public static int setAlpha(int color, int alpha) {
+        return (alpha << 24) | (color & 0x00FFFFFF);
     }
 
     public static void drawMainPanel(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2) {
@@ -207,5 +216,43 @@ public class GuiUtil {
 
     public static void drawSlot(GuiGraphics guiGraphics, int x, int y) {
         drawSlot(guiGraphics, x, y, x + 18, y + 18);
+    }
+//    public static boolean isFullyInDefaultFont(String text) {
+//        Minecraft minecraft = Minecraft.getInstance();
+//        // 获取默认字体的 FontStorage
+//        FontStorage storage = minecraft.fontStorage.get(
+//                new ResourceLocation("minecraft", "default")
+//        );
+//        // 遍历存储中的所有 Font，合并它们提供的码点集合
+//        IntSet provided = new IntOpenHashSet();
+//        for (Font font : storage.getAllFonts()) {
+//            provided.addAll(font.getProvidedGlyphs());
+//        }
+//        // 逐字符检查
+//        for (int i = 0; i < text.length(); i++) {
+//            int codePoint = text.codePointAt(i);
+//            if (!provided.contains(codePoint)) {
+//                return false; // 该字符需要回落到 Unifont
+//            }
+//            // 跳过代理对中的低代理项
+//            if (Character.isSupplementaryCodePoint(codePoint)) {
+//                i++;
+//            }
+//        }
+//        return true;
+//    }
+    public static void drawShadowString(GuiGraphics guiGraphics, Component text, int x, int y, int color) {
+        float offset = 1;
+
+
+
+        guiGraphics.pose().translate(offset, offset, 0);
+        guiGraphics.drawString(Minecraft.getInstance().font, text, x, y, setAlpha(multiplyColor(color, 0xFF303030), 0xA0), false);
+        guiGraphics.pose().translate(offset, offset, 0);
+        guiGraphics.drawString(Minecraft.getInstance().font, text, x, y, color, false);
+    }
+
+    public static void drawCenteredShadowString(GuiGraphics guiGraphics, Component text, int x, int y, int color) {
+        drawShadowString(guiGraphics, text, x - Minecraft.getInstance().font.width(text) / 2, y, color);
     }
 }

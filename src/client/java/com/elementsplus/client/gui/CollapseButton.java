@@ -71,10 +71,10 @@ public class CollapseButton extends Button {
             double f = Math.sin((Math.PI / 2) * Math.cos((Math.PI * 2) * d / e)) / 2.0 + 0.5;
             double g = Mth.lerp(f, 0.0, r);
             guiGraphics.enableScissor(j, k, l, m);
-            guiGraphics.drawString(font, component, j - (int) g, p, n);
+            GuiUtil.drawShadowString(guiGraphics, component, j - (int) g, p, n);
             guiGraphics.disableScissor();
         } else {
-            guiGraphics.drawString(font, component, j + 4, p, n);
+            GuiUtil.drawShadowString(guiGraphics, component, j + 4, p, n);
         }
     }
 }

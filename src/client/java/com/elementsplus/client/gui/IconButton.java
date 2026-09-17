@@ -44,7 +44,7 @@ public class IconButton extends Button {
             guiGraphics.blit(icon, this.getX(), this.getY(), 0, 0, this.getWidth(), this.getHeight(), textureWidth, textureHeight);
         }
         if (message != null) {
-            guiGraphics.drawCenteredString(this.font, this.message, this.getX() + this.getWidth() / 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 16777215 | Mth.ceil(this.alpha * 255.0F) << 24);
+            GuiUtil.drawCenteredShadowString(guiGraphics, this.message, this.getX() + this.getWidth() / 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 16777215 | Mth.ceil(this.alpha * 255.0F) << 24);
         }
         if (this.isHovered) {
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x80FFFFFF);
@@ -52,7 +52,6 @@ public class IconButton extends Button {
 
         guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         int k = this.active ? 16777215 : 10526880;
-        this.renderString(guiGraphics, minecraft.font, k | Mth.ceil(this.alpha * 255.0F) << 24);
     }
 
     @Override
