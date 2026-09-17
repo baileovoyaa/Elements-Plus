@@ -21,7 +21,6 @@ public final class PlayerToolboxAttachment {
             AttachmentRegistry.<PlayerToolbox>builder()
                     .persistent(PlayerToolbox.CODEC)
                     .copyOnDeath()
-                    .syncWith(PlayerToolbox.STREAM_CODEC, AttachmentSyncPredicate.targetOnly())
                     .buildAndRegister(ElementsPlus.id("player_toolbox"));
 
     public static PlayerToolbox get(net.minecraft.world.entity.player.Player player) {
