@@ -14,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,7 +79,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
 
     private PlayerToolbox toolbox;
 
-    private final Map<String, Boolean> expanded = new HashMap<>();
+    private final Map<PlayerToolbox.Group, Boolean> expanded = new HashMap<>();
     private boolean collapsedForDrag = false;
 
     // 按下状态
@@ -109,8 +110,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
     private boolean isGroupExpanded(int i) {
         if (collapsedForDrag) return false;
         PlayerToolbox.Group g = toolbox.groups.get(i);
-        String key = g.isBuiltin() ? "b:" + g.id : "c:" + g.name;
-        return expanded.getOrDefault(key, true);
+        return expanded.getOrDefault(g, true);
     }
 
     private int groupHeight(int i) {
@@ -139,9 +139,48 @@ public class PlayerToolboxWidget extends AbstractWidget {
     }
 
     public void setToolbox(PlayerToolbox toolbox) {
+        if (this.toolbox != null && this.toolbox != toolbox) {
+            migrateExpanded(this.toolbox, toolbox);
+        }
         this.toolbox = toolbox;
         cancelDrag();
         refreshLayout();
+    }
+
+    /**
+     * 服务端回传的 ToolboxSyncPayload 是反序列化出的新分组实例，若直接按 Group 实例
+     * 记录展开状态，回传后全部状态都会丢失。这里按 (内置 id | 分组名) 顺序匹配，
+     * 把旧分组的状态迁移到新分组上：既保证同名分组各自独立（不同实例），
+     * 又保证记录在重命名字符串变化后仍能沿用（实例匹配）。同名分组按出现顺序一一对应。
+     */
+    private void migrateExpanded(PlayerToolbox oldTools, PlayerToolbox newTools) {
+        List<PlayerToolbox.Group> remaining = new ArrayList<>(oldTools.groups);
+        Map<PlayerToolbox.Group, Boolean> next = new HashMap<>();
+        for (PlayerToolbox.Group ng : newTools.groups) {
+            boolean state = true;
+            if (!ng.isBuiltin()) {
+                for (int k = 0; k < remaining.size(); k++) {
+                    PlayerToolbox.Group og = remaining.get(k);
+                    if (!og.isBuiltin() && og.name.equals(ng.name)) {
+                        state = expanded.getOrDefault(og, true);
+                        remaining.remove(k);
+                        break;
+                    }
+                }
+            } else {
+                for (int k = 0; k < remaining.size(); k++) {
+                    PlayerToolbox.Group og = remaining.get(k);
+                    if (og.isBuiltin() && og.id.equals(ng.id)) {
+                        state = expanded.getOrDefault(og, true);
+                        remaining.remove(k);
+                        break;
+                    }
+                }
+            }
+            next.put(ng, state);
+        }
+        expanded.clear();
+        expanded.putAll(next);
     }
 
     public PlayerToolbox getToolbox() {
@@ -300,8 +339,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
 
     public void toggleGroup(int groupIndex) {
         PlayerToolbox.Group g = toolbox.groups.get(groupIndex);
-        String key = g.isBuiltin() ? "b:" + g.id : "c:" + g.name;
-        expanded.put(key, !isGroupExpanded(groupIndex));
+        expanded.put(g, !isGroupExpanded(groupIndex));
         refreshLayout();
     }
 
