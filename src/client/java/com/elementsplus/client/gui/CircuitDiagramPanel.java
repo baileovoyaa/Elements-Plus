@@ -787,7 +787,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (dx == 0 && dy == 0 && (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.OUTPUT)) {
             int value = simulator != null ? simulator.getComponentValue(component.x, component.y) : 0;
             String text = String.valueOf(value);
-            GuiUtil.drawShadowString(guiGraphics, Component.nullToEmpty(text),
+            guiGraphics.drawString(font, Component.nullToEmpty(text),
                     (int) Math.round((left + right) / 2.0 - font.width(text) / 2.0),
                     (int) Math.round((top + bottom) / 2.0 - 4),
                     0xFFFFFFFF);
@@ -1128,7 +1128,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         int y = getY() + getHeight() - bannerHeight - 2;
         guiGraphics.fill(getX() + 2, y, getX() + getWidth() - 2, y + bannerHeight, COLOR_CYCLE_BANNER);
         Component text = Component.translatable("gui.elements-plus.lithography_machine.cycle_warning");
-        GuiUtil.drawShadowString(guiGraphics, text, getX() + 6, y + 3, 0xFFFFFFFF);
+        guiGraphics.drawString(Minecraft.getInstance().font, text, getX() + 6, y + 3, 0xFFFFFFFF);
     }
 
     /**
@@ -1166,7 +1166,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         guiGraphics.fill(getX() + 2, y, getX() + getWidth() - 2, y + bannerHeight, COLOR_MISMATCH_BANNER);
         Component text = Component.translatable("gui.elements-plus.lithography_machine.bit_width_mismatch");
-        GuiUtil.drawShadowString(guiGraphics, text, getX() + 6, y + 3, 0xFFFFFFFF);
+        guiGraphics.drawString(Minecraft.getInstance().font, text, getX() + 6, y + 3, 0xFFFFFFFF);
     }
 
     private int wireColor(CircuitDiagram.Wire.WireMaterial material) {

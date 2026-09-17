@@ -40,6 +40,7 @@ public class ContextMenu extends AbstractWidget {
         int y = getY();
         int w = getWidth();
         int h = getHeight();
+        GuiUtil.raisePose(g);
         GuiUtil.drawSubPanel(g, x, y, x + w, y + h, 0xFFA0A0A0, GuiUtil.SubPanelType.BORDERED);
         for (int i = 0; i < entries.size(); i++) {
             int ry = y + 2 + i * ROW_HEIGHT;

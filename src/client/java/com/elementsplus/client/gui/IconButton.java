@@ -44,7 +44,7 @@ public class IconButton extends Button {
             guiGraphics.blit(icon, this.getX(), this.getY(), 0, 0, this.getWidth(), this.getHeight(), textureWidth, textureHeight);
         }
         if (message != null) {
-            GuiUtil.drawCenteredShadowString(guiGraphics, this.message, this.getX() + this.getWidth() / 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 16777215 | Mth.ceil(this.alpha * 255.0F) << 24);
+            guiGraphics.drawCenteredString(font, this.message, this.getX() + this.getWidth() / 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 16777215 | Mth.ceil(this.alpha * 255.0F) << 24);
         }
         if (this.isHovered) {
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x80FFFFFF);

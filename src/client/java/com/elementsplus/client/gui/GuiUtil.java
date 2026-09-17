@@ -1,11 +1,6 @@
 package com.elementsplus.client.gui;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import org.joml.Vector3f;
 
 public class GuiUtil {
 
@@ -64,6 +59,23 @@ public class GuiUtil {
 
         // 4. 重新组装
         return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    public static int screenColor(int color1, int color2) {
+        int a1 = (color1 >> 24) & 0xFF;
+        int r1 = (color1 >> 16) & 0xFF;
+        int g1 = (color1 >> 8) & 0xFF;
+        int b1 = color1 & 0xFF;
+
+        int r2 = (color2 >> 16) & 0xFF;
+        int g2 = (color2 >> 8) & 0xFF;
+        int b2 = color2 & 0xFF;
+
+        int r = 255 - (255 - r1) * (255 - r2) / 255;
+        int g = 255 - (255 - g1) * (255 - g2) / 255;
+        int b = 255 - (255 - b1) * (255 - b2) / 255;
+
+        return (a1 << 24) | (r << 16) | (g << 8) | b;
     }
 
     public static int setAlpha(int color, int alpha) {
@@ -129,12 +141,13 @@ public class GuiUtil {
                 fillContext.fillRelative(0, 0, -1, -1, colorMultiply);
             }
             case CONVEX -> {
-                int color2 = multiplyColor(0xFF555555, colorMultiply);
+                int color1 = multiplyColor(0xFFA0A0A0, colorMultiply);
+                int color2 = screenColor(0xFFE0E0E0, colorMultiply);
                 fillContext.fillRelative(0, 0, -1, -1, colorMultiply);
-                fillContext.fillRelative(0, 0, 1, -1, 0xFFE0E0E0);
-                fillContext.fillRelative(0, 0, -1, 1, 0xFFE0E0E0);
-                fillContext.fillRelative(-2, 1, -1, -1, 0xFF555555);
-                fillContext.fillRelative(1, -3, -1, -1, 0xFF555555);
+                fillContext.fillRelative(0, 0, 1, -1, color2);
+                fillContext.fillRelative(0, 0, -1, 1, color2);
+                fillContext.fillRelative(-2, 1, -1, -1, color1);
+                fillContext.fillRelative(1, -3, -1, -1, color1);
             }
             case BOX -> {
                 fillContext.fill(0xFF000000);
@@ -217,42 +230,8 @@ public class GuiUtil {
     public static void drawSlot(GuiGraphics guiGraphics, int x, int y) {
         drawSlot(guiGraphics, x, y, x + 18, y + 18);
     }
-//    public static boolean isFullyInDefaultFont(String text) {
-//        Minecraft minecraft = Minecraft.getInstance();
-//        // 获取默认字体的 FontStorage
-//        FontStorage storage = minecraft.fontStorage.get(
-//                new ResourceLocation("minecraft", "default")
-//        );
-//        // 遍历存储中的所有 Font，合并它们提供的码点集合
-//        IntSet provided = new IntOpenHashSet();
-//        for (Font font : storage.getAllFonts()) {
-//            provided.addAll(font.getProvidedGlyphs());
-//        }
-//        // 逐字符检查
-//        for (int i = 0; i < text.length(); i++) {
-//            int codePoint = text.codePointAt(i);
-//            if (!provided.contains(codePoint)) {
-//                return false; // 该字符需要回落到 Unifont
-//            }
-//            // 跳过代理对中的低代理项
-//            if (Character.isSupplementaryCodePoint(codePoint)) {
-//                i++;
-//            }
-//        }
-//        return true;
-//    }
-    public static void drawShadowString(GuiGraphics guiGraphics, Component text, int x, int y, int color) {
-        float offset = 1;
 
-
-
-        guiGraphics.pose().translate(offset, offset, 0);
-        guiGraphics.drawString(Minecraft.getInstance().font, text, x, y, setAlpha(multiplyColor(color, 0xFF303030), 0xA0), false);
-        guiGraphics.pose().translate(offset, offset, 0);
-        guiGraphics.drawString(Minecraft.getInstance().font, text, x, y, color, false);
-    }
-
-    public static void drawCenteredShadowString(GuiGraphics guiGraphics, Component text, int x, int y, int color) {
-        drawShadowString(guiGraphics, text, x - Minecraft.getInstance().font.width(text) / 2, y, color);
+    public static void raisePose(GuiGraphics guiGraphics) {
+        guiGraphics.pose().translate(0, 0, 500);
     }
 }

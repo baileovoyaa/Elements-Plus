@@ -1,5 +1,6 @@
 package com.elementsplus.client.gui;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -10,9 +11,11 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
-/** 模态对话框：全屏半透明遮罩 + 主面板窗体。由 Screen 直接渲染与分发输入。 */
+/**
+ * 模态对话框：全屏半透明遮罩 + 主面板窗体。由 Screen 直接渲染与分发输入。
+ */
 public class ToolboxDialog {
-    public enum Mode { RENAME, DELETE_CONFIRM }
+    public enum Mode {RENAME, DELETE_CONFIRM}
 
     public interface Callback {
         void onOk(ToolboxDialog dialog);
@@ -73,13 +76,14 @@ public class ToolboxDialog {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
+        GuiUtil.raisePose(g);
         g.fill(0, 0, mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight(), 0x80000000);
         GuiUtil.drawMainPanel(g, winX, winY, winX + winW, winY + winH);
         g.drawCenteredString(font, title, winX + winW / 2, winY + 10, 0xFFFFFFFF);
 
         if (mode == Mode.RENAME) {
             if (editBox != null) editBox.render(g, mouseX, mouseY, partialTick);
-        } else {
+        } else if (mode == Mode.DELETE_CONFIRM) {
             List<net.minecraft.util.FormattedCharSequence> lines = font.split(message, winW - 20);
             int ly = winY + 32;
             for (net.minecraft.util.FormattedCharSequence line : lines) {
@@ -87,15 +91,17 @@ public class ToolboxDialog {
                 ly += 10;
             }
         }
-        renderButton(g, font, cancelX, cancelY,
-                Component.translatable("gui.elements-plus.toolbox.dialog.cancel"), mouseX, mouseY);
-        renderButton(g, font, okX, okY,
-                Component.translatable("gui.elements-plus.toolbox.dialog.ok"), mouseX, mouseY);
+        renderButton(g, font, cancelX, cancelY, Component.translatable("gui.elements-plus.toolbox.dialog.cancel"), mouseX, mouseY, false);
+        renderButton(g, font, okX, okY, Component.translatable("gui.elements-plus.toolbox.dialog.ok"), mouseX, mouseY, mode == Mode.DELETE_CONFIRM);
     }
 
-    private static void renderButton(GuiGraphics g, Font font, int x, int y, Component label, int mouseX, int mouseY) {
+    private static void renderButton(GuiGraphics g, Font font, int x, int y, Component label, int mouseX, int mouseY, boolean danger) {
         boolean hovered = mouseX >= x && mouseX < x + BTN_W && mouseY >= y && mouseY < y + BTN_H;
-        g.fill(x, y, x + BTN_W, y + BTN_H, hovered ? 0xFFA0A0A0 : 0xFF808080);
+        g.fill(x, y, x + BTN_W, y + BTN_H, hovered ? 0xFFFFFFFF : 0xFF000000);
+        GuiUtil.drawSubPanel(g, x + 1, y + 1, x + BTN_W - 1, y + BTN_H - 1, danger ? 0xFF800000 : 0xFF808080, GuiUtil.SubPanelType.CONVEX);
+        if (hovered) {
+            g.fill(x, y, x + BTN_W, y + BTN_H, 0x30FFFFFF);
+        }
         g.drawCenteredString(font, label, x + BTN_W / 2, y + (BTN_H - 9) / 2, 0xFFFFFFFF);
     }
 

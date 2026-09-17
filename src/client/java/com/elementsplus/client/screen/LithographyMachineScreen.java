@@ -16,7 +16,9 @@ import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxUpdatePayload;
 import com.elementsplus.player.PlayerToolbox;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -117,8 +119,6 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         this.toolboxDialog = null;
         updateScreenSize();
         super.init();
-
-//        ClientPlayNetworking.send(new ToolboxRequestPayload());
 
         this.titleLabelX = 6;
         this.addRenderableWidget(tabButtonDesign = new TabButton(this.leftPos + this.font.width(this.title) + 10, this.topPos, 50, 22, Component.translatable("gui.elements-plus.lithography_machine.design")));
@@ -394,7 +394,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     private void openDeleteConfirmDialog(int groupIndex) {
         String name = playerToolboxWidget.getGroupName(groupIndex);
-        Component message = Component.translatable("gui.elements-plus.toolbox.dialog.delete_message", name);
+        Component message = Component.translatable("gui.elements-plus.toolbox.dialog.delete_message", name).withStyle(ChatFormatting.RED);
         toolboxDialog = new ToolboxDialog(ToolboxDialog.Mode.DELETE_CONFIRM,
                 Component.translatable("gui.elements-plus.toolbox.dialog.delete_title"),
                 message, null, this.font, this.width, this.height,
@@ -650,7 +650,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             circuitPanel.setPreviewStack(carried);
             this.menu.setCarried(ItemStack.EMPTY);
         }
-        super.render(guiGraphics, mouseX, mouseY, delta);
+        super.render(guiGraphics, toolboxDialog == null ? mouseX : -1, toolboxDialog == null ? mouseY : -1, delta);
         if (hideCarried) {
             this.menu.setCarried(carried);
             circuitPanel.setPreviewStack(ItemStack.EMPTY);
