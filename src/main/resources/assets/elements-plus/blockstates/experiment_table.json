@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "elements-plus:block/experiment_table"
+    },
+    "facing=east": {
+      "model": "elements-plus:block/experiment_table",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "elements-plus:block/experiment_table",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "elements-plus:block/experiment_table",
+      "y": 270
     }
   }
 }

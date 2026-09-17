@@ -64,6 +64,8 @@
   "block.elements-plus.silver_ore": "Silver Ore",
   "block.elements-plus.silver_block": "Silver Block",
   "block.elements-plus.experiment_table": "Experiment Table",
+  "container.elements-plus.experiment_table": "Experiment Table",
+  "gui.elements-plus.experiment_table.tab": "Experiment",
 
   "item.elements-plus.silver_ingot": "Silver Ingot",
   "tooltip.elements-plus.silver_ingot": "A Silver Ingot",

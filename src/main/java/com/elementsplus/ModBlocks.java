@@ -244,7 +244,7 @@ public class ModBlocks {
     );
 
     public static final Block EXPERIMENT_TABLE = register(
-            new Block(BlockBehaviour.Properties.of()
+            new ExperimentTableBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
                     .noOcclusion()

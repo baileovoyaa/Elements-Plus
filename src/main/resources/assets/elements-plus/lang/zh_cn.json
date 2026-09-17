@@ -66,6 +66,8 @@
   "block.elements-plus.silver_ore": "银矿石",
   "block.elements-plus.silver_block": "银块",
   "block.elements-plus.experiment_table": "实验桌",
+  "container.elements-plus.experiment_table": "实验桌",
+  "gui.elements-plus.experiment_table.tab": "实验",
 
   "item.elements-plus.amethyst_transistor": "紫水晶晶体管",
   "item.elements-plus.amethyst_diode": "紫水晶二极管",

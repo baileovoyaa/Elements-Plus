@@ -3,6 +3,7 @@ package com.elementsplus.client;
 import com.elementsplus.ModMenuTypes;
 import com.elementsplus.client.screen.AdvancedCraftingTableScreen;
 import com.elementsplus.client.screen.CrystallizerScreen;
+import com.elementsplus.client.screen.ExperimentTableScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
 import com.elementsplus.client.screen.MetalCatalystScreen;
 import net.fabricmc.api.EnvType;
@@ -16,5 +17,6 @@ public class ModMenuScreens {
         MenuScreens.register(ModMenuTypes.ADVANCED_CRAFTING_TABLE, AdvancedCraftingTableScreen::new);
         MenuScreens.register(ModMenuTypes.METAL_CATALYST, MetalCatalystScreen::new);
         MenuScreens.register(ModMenuTypes.LITHOGRAPHY_MACHINE, LithographyMachineScreen::new);
+        MenuScreens.register(ModMenuTypes.EXPERIMENT_TABLE, ExperimentTableScreen::new);
     }
 }
