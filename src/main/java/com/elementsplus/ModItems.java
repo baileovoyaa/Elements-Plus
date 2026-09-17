@@ -4,6 +4,7 @@ import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.item.WrenchItem;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -132,6 +133,7 @@ public class ModItems {
     public static final Item AMETHYST_TRANSISTOR = register(
             new Item(new Item.Properties()
                     .stacksTo(64)
+                    .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.TRANSISTOR.getId())
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -145,6 +147,7 @@ public class ModItems {
     public static final Item AMETHYST_DIODE = register(
             new Item(new Item.Properties()
                     .stacksTo(64)
+                    .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.DIODE.getId())
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -158,6 +161,7 @@ public class ModItems {
     public static final Item AMETHYST_CAPACITOR = register(
             new Item(new Item.Properties()
                     .stacksTo(64)
+                    .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.CAPACITOR.getId())
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -171,6 +175,7 @@ public class ModItems {
     public static final Item AMETHYST_RESISTOR = register(
             new Item(new Item.Properties()
                     .stacksTo(64)
+                    .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.RESISTOR.getId())
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -184,6 +189,7 @@ public class ModItems {
     public static final Item AMETHYST_RESONATOR = register(
             new Item(new Item.Properties()
                     .stacksTo(64)
+                    .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.RESONATOR.getId())
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -197,6 +203,7 @@ public class ModItems {
     public static final Item AMETHYST_BATTERY = register(
             new Item(new Item.Properties()
                     .stacksTo(64)
+                    .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.BATTERY.getId())
             ) {
                 @Override
                 public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
@@ -274,9 +281,10 @@ public class ModItems {
         return register(new Item(new Item.Properties()
                 .stacksTo(1)
                 .component(ModDataComponents.EQUIVALENT_COMPONENT, id)) {
+
             @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(component.getName().copy().withStyle(style -> style.withColor(0xFFD700)));
+            public @NotNull Component getName(ItemStack itemStack) {
+                return Component.translatable("创造模式[%s]元件", component.getName().copy().withStyle(style -> style.withColor(0xFFD700))).withStyle(ChatFormatting.LIGHT_PURPLE);
             }
         }, id.getPath());
     }
