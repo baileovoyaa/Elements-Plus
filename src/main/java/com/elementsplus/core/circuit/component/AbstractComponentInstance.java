@@ -16,6 +16,8 @@ public abstract class AbstractComponentInstance implements CircuitComponentInsta
                 values.put(ic.key, ic.defaultValue);
             } else if (config instanceof FloatConfig fc) {
                 values.put(fc.key, fc.defaultValue);
+            } else if (config instanceof StringConfig sc) {
+                values.put(sc.key, sc.defaultValue);
             }
         }
     }
@@ -46,12 +48,23 @@ public abstract class AbstractComponentInstance implements CircuitComponentInsta
     }
 
     @Override
+    public String getString(String key) {
+        Object v = values.get(key);
+        return v instanceof String s ? s : "";
+    }
+
+    @Override
     public void setInt(String key, int value) {
         values.put(key, value);
     }
 
     @Override
     public void setFloat(String key, float value) {
+        values.put(key, value);
+    }
+
+    @Override
+    public void setString(String key, String value) {
         values.put(key, value);
     }
 

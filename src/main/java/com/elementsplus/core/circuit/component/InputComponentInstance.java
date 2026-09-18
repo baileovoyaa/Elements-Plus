@@ -7,6 +7,7 @@ import java.util.List;
 public class InputComponentInstance extends AbstractComponentInstance {
 
     public static final String KEY_SIGNAL = "signal";
+    public static final String KEY_LABEL = "label";
 
     public static final IntConfig SIGNAL = new IntConfig(
             KEY_SIGNAL,
@@ -19,7 +20,15 @@ public class InputComponentInstance extends AbstractComponentInstance {
             true
     );
 
-    public static final List<Config> CONFIGS = List.of(SIGNAL);
+    public static final StringConfig LABEL = new StringConfig(
+            KEY_LABEL,
+            Component.translatable("circuit.elements-plus.config.label"),
+            null,
+            "",
+            64
+    );
+
+    public static final List<Config> CONFIGS = List.of(LABEL, SIGNAL);
 
     public InputComponentInstance() {
         super();
@@ -45,5 +54,13 @@ public class InputComponentInstance extends AbstractComponentInstance {
 
     public void setSignal(int value) {
         setInt(KEY_SIGNAL, value);
+    }
+
+    public String getLabel() {
+        return getString(KEY_LABEL);
+    }
+
+    public void setLabel(String value) {
+        setString(KEY_LABEL, value);
     }
 }

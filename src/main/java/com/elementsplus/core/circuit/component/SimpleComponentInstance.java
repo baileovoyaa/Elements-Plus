@@ -24,11 +24,20 @@ public class SimpleComponentInstance implements CircuitComponentInstance {
     }
 
     @Override
+    public String getString(String key) {
+        return "";
+    }
+
+    @Override
     public void setInt(String key, int value) {
     }
 
     @Override
     public void setFloat(String key, float value) {
+    }
+
+    @Override
+    public void setString(String key, String value) {
     }
 
     @Override

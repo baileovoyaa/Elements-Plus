@@ -2,6 +2,7 @@ package com.elementsplus.client.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -37,7 +38,7 @@ public class ScrollPanelWidget extends AbstractWidget {
     }
 
     @Nullable
-    protected AbstractWidget focusedChild;
+    protected GuiEventListener focusedChild;
 
     public ScrollPanelWidget(int x, int y, int width, int height, GuiUtil.SubPanelType subPanelType, int backgroundColor) {
         super(x, y, width, height, Component.empty());
@@ -243,15 +244,11 @@ public class ScrollPanelWidget extends AbstractWidget {
         for (int i = children.size() - 1; i >= 0; i--) {
             AbstractWidget child = children.get(i);
             if (child.mouseClicked(localX, localY, button)) {
-                focusedChild = child;
-                child.setFocused(true);
+                this.setFocusedChild(child);
                 return true;
             }
         }
-        if (focusedChild != null) {
-            focusedChild.setFocused(false);
-            focusedChild = null;
-        }
+        this.setFocusedChild(null);
         return true; // 面板内点击被吃掉，避免穿透
     }
 
@@ -383,5 +380,29 @@ public class ScrollPanelWidget extends AbstractWidget {
     @Override
     protected void updateWidgetNarration(NarrationElementOutput output) {
         // 根据需要递归调用子 widget 的 narration
+    }
+
+    @Override
+    public void setFocused(boolean bl) {
+        super.setFocused(bl);
+        if (!bl && focusedChild != null) {
+            setFocusedChild(null);
+        }
+    }
+
+    public void setFocusedChild(@Nullable GuiEventListener guiEventListener) {
+        if (guiEventListener != this.getFocusedChild()) {
+            if (focusedChild != null) {
+                this.focusedChild.setFocused(false);
+            }
+            this.focusedChild = guiEventListener;
+            if (guiEventListener != null) {
+                guiEventListener.setFocused(true);
+            }
+        }
+    }
+
+    private @Nullable GuiEventListener getFocusedChild() {
+        return focusedChild;
     }
 }

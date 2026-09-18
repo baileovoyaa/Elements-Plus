@@ -117,6 +117,8 @@
   "circuit.elements-plus.config.discharge_speed": "Discharge Speed",
   "circuit.elements-plus.config.signal": "Signal",
 
+  "circuit.elements-plus.config.label": "Label",
+
   "gui.elements-plus.lithography_machine.cycle_warning": "Combinational cycle detected",
   "gui.elements-plus.lithography_machine.bit_width_mismatch": "Bit width mismatch",
   "gui.elements-plus.lithography_machine.multiple_selected": "Multiple selected",

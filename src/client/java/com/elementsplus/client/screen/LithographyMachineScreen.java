@@ -19,11 +19,14 @@ import com.elementsplus.player.PlayerToolbox;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -31,7 +34,9 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 public class LithographyMachineScreen extends AbstractContainerScreen<LithographyMachineMenu> implements SlotPositionProvider, PlayerToolboxWidget.Listener {
@@ -54,6 +59,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public IntSliderWidget speedSlider;
     public EditBox speedEditBox;
     public boolean syncingSpeed = false;
+    private LabelAttributeEditBox attributeEditBox;
 
     public CircuitDiagramPanel circuitPanel;
 
@@ -426,7 +432,6 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             }
             contextMenu = null;
         }
-        speedEditBox.setFocused(false);
         boolean handled = super.mouseClicked(mouseX, mouseY, button);
         if (isOverSlot(mouseX, mouseY) || button == 1) {
             circuitPanel.setVirtualComponent(null);
@@ -481,6 +486,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
         if (keyCode == GLFW.GLFW_KEY_DELETE && buttonGroup.getSelected() == tabButtonDesign
                 && (speedEditBox == null || !speedEditBox.isFocused())
+                && (attributeEditBox == null || !attributeEditBox.isFocused())
                 && (circuitPanel.hasSelection() || circuitPanel.isMultiSelected())) {
             circuitPanel.deleteSelection();
             return true;
@@ -513,7 +519,17 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         circuitPanel.setWireBitWidth(bitWidth);
         CircuitDiagram.Component current = circuitPanel.getSelectedComponent();
         int selVer = circuitPanel.getSelectionVersion();
-        if (selVer != lastSelectionVersion || sx != lastAttrX || sy != lastAttrY || current != lastAttrComponent) {
+        // 服务端回显会替换整个电路图，导致选中元件的对象引用变化。
+        // 若正在编辑标签输入框且选中内容只是"刷新"（同格、同类型），跳过重建，避免丢失焦点。
+        boolean refreshedOnly = current != null && lastAttrComponent != null
+                && sx == lastAttrX && sy == lastAttrY
+                && current.component == lastAttrComponent.component;
+        if (refreshedOnly && attributeEditBox != null && attributeEditBox.isFocused()) {
+            lastSelectionVersion = selVer;
+            lastAttrX = sx;
+            lastAttrY = sy;
+            lastAttrComponent = current;
+        } else if (selVer != lastSelectionVersion || sx != lastAttrX || sy != lastAttrY || current != lastAttrComponent) {
             lastSelectionVersion = selVer;
             lastAttrX = sx;
             lastAttrY = sy;
@@ -555,6 +571,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
      * 只读模式下仍显示名称与当前值，但不提供控件。
      */
     private void rebuildAttributes() {
+//        flushAttributeEditBox();
         attributeWidget.clearChildren();
         attributeWidget.scrollToTop();
         if (circuitPanel.isMultiSelected()) {
@@ -603,7 +620,39 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             }
         });
         int y = 22;
+        attributeEditBox = null;
         for (CircuitComponentInstance.Config config : selected.instance.getConfigs()) {
+            if (config instanceof CircuitComponentInstance.StringConfig stringConfig) {
+                attributeWidget.addChild(new AbstractWidget(2, y, attributeWidget.getWidth() - 4, 9, Component.empty()) {
+                    @Override
+                    protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                        guiGraphics.drawString(font, config.name, this.getX(), this.getY(), 0xFFFFFFFF, false);
+                    }
+
+                    @Override
+                    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+                    }
+
+                    @Override
+                    public boolean mouseDragged(double d, double e, int i, double f, double g) {
+                        return false;
+                    }
+                });
+                LabelAttributeEditBox editBox = new LabelAttributeEditBox(font, 2, y + 9,
+                        attributeWidget.getWidth() - 4, 18, Component.empty(),
+                        config.key,
+                        () -> {
+                            CircuitDiagram.Component component = circuitPanel.getSelectedComponent();
+                            return component != null ? component.instance : null;
+                        },
+                        this::commitAttributes);
+                editBox.setMaxLength(stringConfig.maxLength);
+                editBox.setValue(selected.instance.getString(config.key));
+                attributeWidget.addChild(editBox);
+                attributeEditBox = editBox;
+                y += 9 + 18 + 2;
+                continue;
+            }
             ComponentConfigWidget widget = attributeWidget.addChild(
                     new ComponentConfigWidget(2, y, attributeWidget.getWidth() - 4, 22,
                             selected.instance, config, !readOnly, this::commitAttributes));
@@ -613,6 +662,18 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     private void commitAttributes() {
         circuitPanel.commitDiagram();
+    }
+
+    private void flushAttributeEditBox() {
+        if (attributeEditBox != null) {
+            attributeEditBox.flush();
+        }
+    }
+
+    @Override
+    public void onClose() {
+        flushAttributeEditBox();
+        super.onClose();
     }
 
     @Override
@@ -710,4 +771,54 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
     }
 
+    @Override
+    public void setFocused(@Nullable GuiEventListener guiEventListener) {
+        if (guiEventListener != this.getFocused()) {
+            super.setFocused(guiEventListener);
+        }
+    }
+
+    private static class LabelAttributeEditBox extends RefinedEditBox {
+        private final String key;
+        private final Supplier<CircuitComponentInstance> instanceSupplier;
+        private final Runnable onCommit;
+
+        LabelAttributeEditBox(Font font, int x, int y, int width, int height, MutableComponent message,
+                              String key, Supplier<CircuitComponentInstance> instanceSupplier, Runnable onCommit) {
+            super(font, x, y, width, height, message);
+            this.key = key;
+            this.instanceSupplier = instanceSupplier;
+            this.onCommit = onCommit;
+            this.setResponder(text -> {
+                CircuitComponentInstance instance = instanceSupplier.get();
+                instance.setString(key, text);
+            });
+        }
+
+        void flush() {
+            CircuitComponentInstance instance = instanceSupplier.get();
+            if (instance == null) {
+                return;
+            }
+            onCommit.run();
+        }
+
+        @Override
+        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                flush();
+                return true;
+            }
+
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
+
+        @Override
+        public void setFocused(boolean bl) {
+            if (this.isFocused() && !bl) {
+                flush();
+            }
+            super.setFocused(bl);
+        }
+    }
 }

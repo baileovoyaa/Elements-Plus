@@ -16,17 +16,23 @@ public interface CircuitComponentInstance {
 
     float getFloat(String key);
 
+    String getString(String key);
+
     void setInt(String key, int value);
 
     void setFloat(String key, float value);
 
+    void setString(String key, String value);
+
     boolean hasConfig(String key);
 
-    /** 当前值（Integer / Float） */
+    /** 当前值（Integer / Float / String） */
     default Object getValue(String key) {
         for (Config config : getConfigs()) {
             if (config.key.equals(key)) {
-                return config instanceof IntConfig ? getInt(key) : getFloat(key);
+                if (config instanceof IntConfig) return getInt(key);
+                if (config instanceof FloatConfig) return getFloat(key);
+                return getString(key);
             }
         }
         return null;
@@ -77,6 +83,17 @@ public interface CircuitComponentInstance {
             this.max = max;
             this.defaultValue = defaultValue;
             this.showSlider = showSlider;
+        }
+    }
+
+    class StringConfig extends Config {
+        public final String defaultValue;
+        public final int maxLength;
+
+        public StringConfig(String key, Component name, Component description, String defaultValue, int maxLength) {
+            super(key, name, description);
+            this.defaultValue = defaultValue;
+            this.maxLength = Math.max(1, maxLength);
         }
     }
 }

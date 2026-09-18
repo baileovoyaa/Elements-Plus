@@ -116,6 +116,8 @@
   "circuit.elements-plus.config.discharge_speed": "放电速度",
   "circuit.elements-plus.config.signal": "信号",
 
+  "circuit.elements-plus.config.label": "标签",
+
   "gui.elements-plus.lithography_machine.cycle_warning": "检测到组合环路",
   "gui.elements-plus.lithography_machine.bit_width_mismatch": "位宽不匹配",
   "gui.elements-plus.lithography_machine.multiple_selected": "已选中多个元件",
