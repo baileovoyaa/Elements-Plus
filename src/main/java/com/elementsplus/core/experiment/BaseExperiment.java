@@ -18,10 +18,10 @@ public interface BaseExperiment {
     }
 
     /**
-     * 返回false会中止实验
+     * 会在实验的每个tick执行
      *
      * @param context
-     * @return
+     * @return 返回false会中止实验
      */
     boolean tick(Context context);
 

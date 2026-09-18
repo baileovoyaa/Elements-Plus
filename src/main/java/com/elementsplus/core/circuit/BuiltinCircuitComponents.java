@@ -1,10 +1,7 @@
 package com.elementsplus.core.circuit;
 
 import com.elementsplus.ElementsPlus;
-import com.elementsplus.core.circuit.component.CapacitorComponentInstance;
-import com.elementsplus.core.circuit.component.InputComponentInstance;
-import com.elementsplus.core.circuit.component.ResistorComponentInstance;
-import com.elementsplus.core.circuit.component.ResonatorComponentInstance;
+import com.elementsplus.core.circuit.component.*;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -50,6 +47,7 @@ public class BuiltinCircuitComponents {
     }};
     public static final CircuitComponent OUTPUT = new CircuitComponent(ElementsPlus.id("output"), Component.translatable("circuit.elements-plus.component.output"), Component.translatable("circuit.elements-plus.component.output.description"), ElementsPlus.id("textures/circuit/output.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
+        setInstanceFactory(OutputComponentInstance::new);
     }};
     // 逻辑门
     public static final CircuitComponent AND_GATE = new CircuitComponent(ElementsPlus.id("and_gate"), Component.nullToEmpty("与门"), Component.nullToEmpty("与门描述"), ElementsPlus.id("textures/circuit/and_gate.png"), 1, 2) {{

@@ -571,7 +571,6 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
      * 只读模式下仍显示名称与当前值，但不提供控件。
      */
     private void rebuildAttributes() {
-//        flushAttributeEditBox();
         attributeWidget.clearChildren();
         attributeWidget.scrollToTop();
         if (circuitPanel.isMultiSelected()) {
@@ -623,7 +622,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         attributeEditBox = null;
         for (CircuitComponentInstance.Config config : selected.instance.getConfigs()) {
             if (config instanceof CircuitComponentInstance.StringConfig stringConfig) {
-                attributeWidget.addChild(new AbstractWidget(2, y, attributeWidget.getWidth() - 4, 9, Component.empty()) {
+                attributeWidget.addChild(new AbstractWidget(4, y, attributeWidget.getWidth() - 4, 9, Component.empty()) {
                     @Override
                     protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
                         guiGraphics.drawString(font, config.name, this.getX(), this.getY(), 0xFFFFFFFF, false);
