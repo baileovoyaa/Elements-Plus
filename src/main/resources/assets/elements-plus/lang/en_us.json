@@ -67,6 +67,16 @@
   "container.elements-plus.experiment_table": "Experiment Table",
   "gui.elements-plus.experiment_table.tab": "Experiment",
 
+  "experiment.elements-plus.and_gate": "AND Gate",
+  "experiment.elements-plus.or_gate": "OR Gate",
+  "experiment.elements-plus.not_gate": "NOT Gate",
+  "experiment.elements-plus.nand_gate": "NAND Gate",
+  "experiment.elements-plus.nor_gate": "NOR Gate",
+  "experiment.elements-plus.xor_gate": "XOR Gate",
+  "experiment.elements-plus.xnor_gate": "XNOR Gate",
+  "experiment.elements-plus.half_adder": "Half Adder",
+  "experiment.elements-plus.full_adder": "Full Adder",
+
   "item.elements-plus.silver_ingot": "Silver Ingot",
   "tooltip.elements-plus.silver_ingot": "A Silver Ingot",
 

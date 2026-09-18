@@ -28,7 +28,7 @@ public class ButtonGroup {
 
     public void setSelected(GroupButton button) {
         if (button != null && !buttons.contains(button)) {
-            throw new IllegalArgumentException("button 不属于这个 TabGroup");
+            throw new IllegalArgumentException("button 不属于这个 ButtonGroup");
         }
         this.selected = button;
         for (GroupButton groupButton : this.getButtons()) {

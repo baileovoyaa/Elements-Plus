@@ -69,6 +69,16 @@
   "container.elements-plus.experiment_table": "实验桌",
   "gui.elements-plus.experiment_table.tab": "实验",
 
+  "experiment.elements-plus.and_gate": "与门",
+  "experiment.elements-plus.or_gate": "或门",
+  "experiment.elements-plus.not_gate": "非门",
+  "experiment.elements-plus.nand_gate": "与非门",
+  "experiment.elements-plus.nor_gate": "或非门",
+  "experiment.elements-plus.xor_gate": "异或门",
+  "experiment.elements-plus.xnor_gate": "同或门",
+  "experiment.elements-plus.half_adder": "半加器",
+  "experiment.elements-plus.full_adder": "全加器",
+
   "item.elements-plus.amethyst_transistor": "紫水晶晶体管",
   "item.elements-plus.amethyst_diode": "紫水晶二极管",
   "item.elements-plus.amethyst_capacitor": "紫水晶电容器",
