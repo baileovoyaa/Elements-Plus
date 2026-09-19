@@ -3,7 +3,7 @@ package com.elementsplus.core.experiment;
 import java.util.List;
 import java.util.Map;
 
-public class CircuitExperiment implements BaseExperiment {
+public class CircuitExperiment extends BaseExperiment {
 
     public static class PinValue {
         public int bitWidth;
@@ -82,20 +82,9 @@ public class CircuitExperiment implements BaseExperiment {
 
     public List<TestCase> testCases;
     public Map<String, Integer> bitWidthsPrecheck;
-    public String name;
 
     public CircuitExperiment(List<TestCase> testCases) {
         this.testCases = testCases;
-    }
-
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public void setName(String name) {
-        this.name = name;
     }
 
     @Override
@@ -107,7 +96,7 @@ public class CircuitExperiment implements BaseExperiment {
     public boolean preCheck(Context context) {
         // 检查电路是否无错误（组合环路）
 
-        // 检查是否有重复出现的输入/输出标签
+        // 检查是否有重复/缺少的输入/输出标签
 
         // 检查位宽不匹配
         for (Map.Entry<String, Integer> entry : bitWidthsPrecheck.entrySet()) {

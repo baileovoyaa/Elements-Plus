@@ -3,7 +3,7 @@ package com.elementsplus.core.experiment;
 /**
  * TODO: WIP
  */
-public class ElementalExperiment implements BaseExperiment {
+public class ElementalExperiment extends BaseExperiment {
     @Override
     public boolean tick(Context context) {
         return false;

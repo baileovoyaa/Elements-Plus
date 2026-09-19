@@ -1,19 +1,14 @@
 package com.elementsplus.client.screen;
 
-import com.elementsplus.client.gui.ButtonGroup;
-import com.elementsplus.client.gui.CollapseButton;
-import com.elementsplus.client.gui.GroupButton;
-import com.elementsplus.client.gui.GuiUtil;
-import com.elementsplus.client.gui.ListEntryButton;
-import com.elementsplus.client.gui.Point;
-import com.elementsplus.client.gui.ScrollPanelWidget;
-import com.elementsplus.client.gui.SlotPositionProvider;
-import com.elementsplus.client.gui.TabButton;
+import com.elementsplus.ElementsPlus;
+import com.elementsplus.client.gui.*;
 import com.elementsplus.core.experiment.BaseExperiment;
 import com.elementsplus.core.experiment.BuiltinExperiments;
 import com.elementsplus.menu.ExperimentTableMenu;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -27,12 +22,21 @@ import java.util.Map;
 public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTableMenu> implements SlotPositionProvider {
     public TabButton tabButtonExperiment;
     public CollapseButton collapseButtonInventory;
+    public CollapseButton collapseButtonTestCases;
     public boolean inventoryActive = true;
+    public boolean testCasesActive = true;
     public Map<Integer, Point> slotPosition;
 
     public ScrollPanelWidget experimentWidget;
+    public ScrollPanelWidget experimentChapterWidget;
+    public ScrollPanelWidget testCaseWidget;
     public ButtonGroup experimentGroup;
+
     public BaseExperiment selectedExperiment;
+    public AbstractWidget currentExperimentWidget;
+
+    public IconButton startExperimentButton;
+    public AbstractWidget progressBar;
 
     public ExperimentTableScreen(ExperimentTableMenu experimentTableMenu, Inventory inventory, Component component) {
         super(experimentTableMenu, inventory, component);
@@ -106,6 +110,83 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         for (int l = 0; l < 9; l++) {
             slotPosition.put(l, Point.of(11 + 3 * 18, this.imageHeight - 6 - 9 * 18 + l * 18));
         }
+
+        this.addRenderableWidget(experimentChapterWidget = new ScrollPanelWidget(leftPos + 9 + 80, topPos + 48, Math.max(1, imageWidth - 95), Math.max(1, imageHeight - 195), GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        this.addRenderableWidget(testCaseWidget = new ScrollPanelWidget(leftPos + 9 + 80, topPos + imageHeight - 125, Math.max(1, imageWidth - 95), 120, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        this.addRenderableWidget(collapseButtonTestCases = new CollapseButton(this.leftPos + 89, testCasesActive ? this.topPos + this.imageHeight - 142 : this.topPos + this.imageHeight - 23, imageWidth - 95, 18, Component.nullToEmpty("测例信息")) {
+            @Override
+            public void onClick(double d, double e) {
+                super.onClick(d, e);
+                testCasesActive = active;
+                this.setY(testCasesActive ? topPos + imageHeight - 142 : topPos + imageHeight - 23);
+                experimentChapterWidget.setHeight(testCasesActive ? imageHeight - 195 : imageHeight - 75);
+                testCaseWidget.visible = testCasesActive;
+            }
+        });
+        collapseButtonTestCases.active = testCasesActive;
+
+        // 当前实验（宽度可变）
+        this.addRenderableWidget(currentExperimentWidget = new AbstractWidget(leftPos + 110, topPos + 26, 0, 16, Component.empty()) {
+
+            @Override
+            protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x80000000);
+                if (selectedExperiment != null) {
+                    if (selectedExperiment.getIcon() != null) {
+                        guiGraphics.blit(selectedExperiment.getIcon(), 5 + this.getX(), this.getY(), 0, 0, 16, 16, 16, 16);
+                        guiGraphics.drawString(font, selectedExperiment.getDisplayName(), 5 + this.getX() + 16 + 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, false);
+                    } else {
+                        guiGraphics.drawString(font, selectedExperiment.getDisplayName(), 5 + this.getX(), this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, false);
+                    }
+                } else {
+                    guiGraphics.drawString(font, Component.translatable("gui.elements-plus.experiment_table.no_experiment"), this.getX(), this.getY(), 0xFFFFFFFF, false);
+                }
+            }
+
+            @Override
+            protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+
+            }
+        });
+
+        // 开始实验（动态x）
+        this.addRenderableWidget(startExperimentButton = new IconButton(0, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/play.png"), (button) -> {
+        }));
+
+        // 进度条（动态x，宽度可变）
+        this.addRenderableWidget(progressBar = new AbstractWidget(0, topPos + 26, 0, 16, Component.empty()) {
+            @Override
+            protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x80000000);
+            }
+
+            @Override
+            protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+            }
+        });
+
+        // 实验状态
+        this.addRenderableWidget(new IconButton(leftPos + imageWidth - 22, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/experiment_table/idle.png"), (button) -> {
+        }));
+
+        updateCurrentExperimentDisplay();
+    }
+
+    public void updateCurrentExperimentDisplay() {
+        if (selectedExperiment == null) {
+            Component text = Component.translatable("gui.elements-plus.experiment_table.no_experiment");
+            currentExperimentWidget.setWidth(10 + font.width(text));
+        } else {
+            currentExperimentWidget.setWidth(12 + (selectedExperiment.getIcon() != null ? 16 : 0) + font.width(selectedExperiment.getDisplayName()));
+        }
+        startExperimentButton.setX(leftPos + currentExperimentWidget.getWidth() + 114);
+        progressBar.setX(leftPos + currentExperimentWidget.getWidth() + 114 + 16 + 5);
+        progressBar.setWidth(imageWidth - currentExperimentWidget.getWidth() - 162);
+    }
+
+    public void setCurrentExperiment(BaseExperiment experiment) {
+        selectedExperiment = experiment;
+        updateCurrentExperimentDisplay();
     }
 
     @Override
@@ -127,8 +208,8 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     private void updateScreenSize() {
-        this.imageWidth = Math.max(220, this.width - 80);
-        this.imageHeight = Math.max(210, this.height - 40);
+        this.imageWidth = Math.clamp(this.width - 80, 220, 300);
+        this.imageHeight = Math.max(230, this.height - 40);
         this.topPos = this.height / 2 - this.imageHeight / 2;
         this.leftPos = this.width / 2 - this.imageWidth / 2;
     }
@@ -157,7 +238,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         @Override
         public void onClick(double d, double e) {
             super.onClick(d, e);
-            selectedExperiment = experiment;
+            setCurrentExperiment(experiment);
         }
 
         @Override

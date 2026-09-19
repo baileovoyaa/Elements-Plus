@@ -25,7 +25,7 @@ public class ExperimentTableMenu extends AbstractContainerMenu {
         super(ModMenuTypes.EXPERIMENT_TABLE, i);
         this.access = containerLevelAccess;
         this.container = container;
-        extraSlot = this.addSlot(new Slot(container, 0, 110, 28));
+        extraSlot = this.addSlot(new Slot(container, 0, 90, 26));
 
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 9; k++) {

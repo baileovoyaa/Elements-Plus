@@ -1,5 +1,6 @@
 package com.elementsplus.client.gui;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 public class GuiUtil {
@@ -233,5 +234,13 @@ public class GuiUtil {
 
     public static void raisePose(GuiGraphics guiGraphics) {
         guiGraphics.pose().translate(0, 0, 500);
+    }
+
+    public static String getCurrentLanguage() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null) {
+            return "en_us"; // 游戏未初始化时的回退
+        }
+        return mc.getLanguageManager().getSelected();
     }
 }
