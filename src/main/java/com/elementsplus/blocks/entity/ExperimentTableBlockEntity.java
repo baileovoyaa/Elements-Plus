@@ -24,6 +24,7 @@ import java.util.Objects;
 public class ExperimentTableBlockEntity extends BaseContainerBlockEntity {
     private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
     private String selectedChapter = null;
+    private String selectedExperiment = null;
 
     public ExperimentTableBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntityTypes.EXPERIMENT_TABLE, blockPos, blockState);
@@ -40,12 +41,24 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity {
         }
     }
 
+    public String getSelectedExperiment() {
+        return selectedExperiment;
+    }
+
+    public void setSelectedExperiment(String selectedExperiment) {
+        if (!Objects.equals(this.selectedExperiment, selectedExperiment)) {
+            this.selectedExperiment = selectedExperiment;
+            this.setChanged();
+        }
+    }
+
     @Override
     protected void loadAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
         super.loadAdditional(compoundTag, provider);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(compoundTag, this.items, provider);
         this.selectedChapter = compoundTag.contains("SelectedChapter") ? compoundTag.getString("SelectedChapter") : null;
+        this.selectedExperiment = compoundTag.contains("SelectedExperiment") ? compoundTag.getString("SelectedExperiment") : null;
     }
 
     @Override
@@ -54,6 +67,9 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity {
         ContainerHelper.saveAllItems(compoundTag, this.items, provider);
         if (this.selectedChapter != null) {
             compoundTag.putString("SelectedChapter", this.selectedChapter);
+        }
+        if (this.selectedExperiment != null) {
+            compoundTag.putString("SelectedExperiment", this.selectedExperiment);
         }
     }
 

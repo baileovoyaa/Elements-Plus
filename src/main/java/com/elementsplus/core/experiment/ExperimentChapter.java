@@ -76,4 +76,31 @@ public class ExperimentChapter {
         return experiments;
     }
 
+    public BaseExperiment getFirstExperiment() {
+        for (Section section : sections) {
+            if (section instanceof ExperimentSection experimentSection) {
+                for (BaseExperiment experiment : experimentSection.experiments) {
+                    if (experimentSection.optional == null || !experimentSection.optional.contains(experiment)) {
+                        return experiment;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean containsExperiment(BaseExperiment experiment) {
+        if (experiment == null) {
+            return false;
+        }
+        for (Section section : sections) {
+            if (section instanceof ExperimentSection experimentSection) {
+                if (experimentSection.experiments.contains(experiment)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 }

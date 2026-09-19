@@ -4,10 +4,11 @@ import com.elementsplus.ElementsPlus;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.core.experiment.BaseExperiment;
 import com.elementsplus.core.experiment.BuiltinExperimentChapters;
+import com.elementsplus.core.experiment.BuiltinExperiments;
 import com.elementsplus.core.experiment.ExperimentChapter;
 import com.elementsplus.menu.ExperimentTableMenu;
-import com.elementsplus.network.ExperimentTableChapterUpdatePayload;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
+import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -202,7 +203,14 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     public void setCurrentExperiment(BaseExperiment experiment) {
+        setCurrentExperiment(experiment, true);
+    }
+
+    private void setCurrentExperiment(BaseExperiment experiment, boolean announce) {
         selectedExperiment = experiment;
+        if (announce && tablePos != null && experiment != null) {
+            ClientPlayNetworking.send(new ExperimentTableSelectionUpdatePayload(tablePos, null, experiment.getName()));
+        }
         updateCurrentExperimentDisplay();
     }
 
@@ -261,7 +269,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         experimentChapterWidget.addChild(new EmptyWidget(0, y));
     }
 
-    public void onServerData(BlockPos pos, String selectedName, Set<String> unlocked) {
+    public void onServerData(BlockPos pos, String selectedName, String selectedExperimentName, Set<String> unlocked) {
         this.tablePos = pos;
         unlockedChapters.clear();
         unlockedChapters.addAll(unlocked);
@@ -284,18 +292,36 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             experimentGroup.setSelected(target);
             setSelectedChapter(target.chapter);
         }
+        if (selectedExperimentName != null) {
+            BaseExperiment experiment = BuiltinExperiments.byId(selectedExperimentName);
+            if (experiment != null) {
+                setCurrentExperiment(experiment, false);
+            }
+        } else {
+            setCurrentExperiment(null, false);
+        }
     }
 
-    public void onChapterChanged(BlockPos pos, String chapterName) {
+    public void onSelectionChanged(BlockPos pos, String chapterName, String experimentName) {
         if (tablePos == null || !pos.equals(tablePos)) {
             return;
         }
-        for (ChapterEntryButton button : chapterButtons) {
-            if (button.chapter.name.equals(chapterName)) {
-                experimentGroup.setSelected(button);
-                setSelectedChapter(button.chapter);
-                return;
+        if (chapterName != null) {
+            for (ChapterEntryButton button : chapterButtons) {
+                if (button.chapter.name.equals(chapterName)) {
+                    experimentGroup.setSelected(button);
+                    setSelectedChapter(button.chapter);
+                    break;
+                }
             }
+        }
+        if (experimentName != null) {
+            BaseExperiment experiment = BuiltinExperiments.byId(experimentName);
+            if (experiment != null) {
+                setCurrentExperiment(experiment, false);
+            }
+        } else {
+            setCurrentExperiment(null, false);
         }
     }
 
@@ -348,7 +374,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             }
             super.onClick(d, e);
             if (tablePos != null) {
-                ClientPlayNetworking.send(new ExperimentTableChapterUpdatePayload(tablePos, chapter.name));
+                ClientPlayNetworking.send(new ExperimentTableSelectionUpdatePayload(tablePos, chapter.name, null));
             }
             setSelectedChapter(chapter);
         }

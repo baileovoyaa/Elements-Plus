@@ -10,10 +10,10 @@ import com.elementsplus.core.experiment.BuiltinExperiments;
 import com.elementsplus.core.experiment.ExperimentChapter;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
-import com.elementsplus.network.ExperimentTableChapterChangePayload;
-import com.elementsplus.network.ExperimentTableChapterUpdatePayload;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
+import com.elementsplus.network.ExperimentTableSelectionChangePayload;
+import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
 import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
@@ -142,9 +142,9 @@ public class ElementsPlus implements ModInitializer {
                 }));
 
         PayloadTypeRegistry.playC2S().register(ExperimentTableDataRequestPayload.TYPE, ExperimentTableDataRequestPayload.STREAM_CODEC);
-        PayloadTypeRegistry.playC2S().register(ExperimentTableChapterUpdatePayload.TYPE, ExperimentTableChapterUpdatePayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(ExperimentTableSelectionUpdatePayload.TYPE, ExperimentTableSelectionUpdatePayload.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ExperimentTableScreenDataPayload.TYPE, ExperimentTableScreenDataPayload.STREAM_CODEC);
-        PayloadTypeRegistry.playS2C().register(ExperimentTableChapterChangePayload.TYPE, ExperimentTableChapterChangePayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(ExperimentTableSelectionChangePayload.TYPE, ExperimentTableSelectionChangePayload.STREAM_CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(ExperimentTableDataRequestPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
@@ -157,23 +157,51 @@ public class ElementsPlus implements ModInitializer {
                     for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player))) {
                         unlocked.add(chapter.name);
                     }
-                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), unlocked));
+                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), table.getSelectedExperiment(), unlocked));
                 }));
 
-        ServerPlayNetworking.registerGlobalReceiver(ExperimentTableChapterUpdatePayload.TYPE, (payload, context) ->
+        ServerPlayNetworking.registerGlobalReceiver(ExperimentTableSelectionUpdatePayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
                     ServerPlayer player = context.player();
                     BlockPos pos = payload.pos();
                     if (!(player.level().getBlockEntity(pos) instanceof ExperimentTableBlockEntity table)) {
                         return;
                     }
-                    ExperimentChapter chapter = BuiltinExperimentChapters.byName(payload.chapterName());
-                    if (chapter == null || !BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player)).contains(chapter)) {
+                    Set<ExperimentChapter> unlocked = BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player));
+                    boolean changed = false;
+                    String chapterName = payload.chapterName();
+                    if (chapterName != null) {
+                        ExperimentChapter chapter = BuiltinExperimentChapters.byName(chapterName);
+                        if (chapter == null || !unlocked.contains(chapter)) {
+                            return;
+                        }
+                        table.setSelectedChapter(chapter.name);
+                        changed = true;
+                    }
+                    String experimentName = payload.experimentName();
+                    if (experimentName != null) {
+                        BaseExperiment experiment = BuiltinExperiments.byId(experimentName);
+                        if (experiment == null) {
+                            return;
+                        }
+                        boolean inUnlockedChapter = false;
+                        for (ExperimentChapter chapter : unlocked) {
+                            if (chapter.containsExperiment(experiment)) {
+                                inUnlockedChapter = true;
+                                break;
+                            }
+                        }
+                        if (!inUnlockedChapter) {
+                            return;
+                        }
+                        table.setSelectedExperiment(experiment.getName());
+                        changed = true;
+                    }
+                    if (!changed) {
                         return;
                     }
-                    table.setSelectedChapter(chapter.name);
                     for (ServerPlayer tracking : PlayerLookup.tracking(table)) {
-                        ServerPlayNetworking.send(tracking, new ExperimentTableChapterChangePayload(pos, chapter.name));
+                        ServerPlayNetworking.send(tracking, new ExperimentTableSelectionChangePayload(pos, table.getSelectedChapter(), table.getSelectedExperiment()));
                     }
                 }));
 

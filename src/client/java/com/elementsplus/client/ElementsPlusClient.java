@@ -7,8 +7,8 @@ import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.gui.CircuitDiagramPanel;
 import com.elementsplus.client.screen.ExperimentTableScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
-import com.elementsplus.network.ExperimentTableChapterChangePayload;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
+import com.elementsplus.network.ExperimentTableSelectionChangePayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
 import com.elementsplus.player.PlayerToolbox;
@@ -58,14 +58,14 @@ public class ElementsPlusClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(ExperimentTableScreenDataPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
-                        screen.onServerData(payload.pos(), payload.selectedChapter(), payload.unlockedChapters());
+                        screen.onServerData(payload.pos(), payload.selectedChapter(), payload.selectedExperiment(), payload.unlockedChapters());
                     }
                 }));
 
-        ClientPlayNetworking.registerGlobalReceiver(ExperimentTableChapterChangePayload.TYPE, (payload, context) ->
+        ClientPlayNetworking.registerGlobalReceiver(ExperimentTableSelectionChangePayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
-                        screen.onChapterChanged(payload.pos(), payload.chapterName());
+                        screen.onSelectionChanged(payload.pos(), payload.chapterName(), payload.experimentName());
                     }
                 }));
 
