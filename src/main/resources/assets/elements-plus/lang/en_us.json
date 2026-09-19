@@ -67,6 +67,7 @@
   "container.elements-plus.experiment_table": "Experiment Table",
   "gui.elements-plus.experiment_table.tab": "Experiment",
 
+  "experiment.elements-plus.amplifier": "Amplifier",
   "experiment.elements-plus.and_gate": "AND Gate",
   "experiment.elements-plus.or_gate": "OR Gate",
   "experiment.elements-plus.not_gate": "NOT Gate",
@@ -209,5 +210,28 @@
   "experiment.elements-plus.group.intro.section1.text5": "If the experiment fails, the progress bar will turn red, and hovering over it will show the specific failure reason. The state of the input components in the circuit diagram will be frozen at the failed test case, and you can view the specific failure logic by placing it in the lithography machine later.",
   "experiment.elements-plus.group.intro.section2.text0": "That's all to be introduced, start your experiment journey now, have fun!",
 
-  "experiment.elements-plus.group.basic_gate": "Basic Gate"
+  "experiment.elements-plus.group.amplifier": "Amplifier",
+  "experiment.elements-plus.group.amplifier.section0.text0": "Signals have 0~15 strengths in total, but we mostly focus on \"yes\" and \"no\".",
+  "experiment.elements-plus.group.amplifier.section0.text1": "To achieve this, we introduce a simple component - the amplifier. As long as the input signal strength is greater than 0, the output signal strength is 15. Thus, we can focus on higher-level logic without worrying about the details.",
+  "experiment.elements-plus.group.amplifier.section0.text2": "To achieve this, we need a component that can amplify the signal strength. And that is the %s.",
+  "experiment.elements-plus.group.amplifier.section0.text2.arg0": "Transistor",
+  "experiment.elements-plus.group.amplifier.section0.text3": "A transistor is a component that can amplify signals. When there is no input on the side, it can amplify the input on the front by two times. (Side input will be mentioned later, this experiment does not require it)",
+  "experiment.elements-plus.group.amplifier.section0.text4": "Now, try to use this property to complete the experiment.",
+  "experiment.elements-plus.group.amplifier.section1.text0": "Input A, as long as A is non-zero, output Y=15, otherwise output Y=0.",
+  "experiment.elements-plus.group.amplifier.section1.text1": "Please build the circuit in the lithography machine, and place the circuit diagram into the slot above after completion. Click the \"Start Experiment\" button, and the experiment will be automatically performed.",
+
+  "experiment.elements-plus.group.first_gate": "First Gate",
+  "experiment.elements-plus.group.basic_gate": "Basic Gate",
+  "experiment.elements-plus.group.advanced_gate": "Advanced Gate",
+  "experiment.elements-plus.group.one_bit_adder": "One-bit Adder",
+  "experiment.elements-plus.group.one_bit_adder.section0.text0": "Now that we have learned how to use transistors to build basic logic gates, let's move on to more complex circuits.",
+  "experiment.elements-plus.group.one_bit_adder.section0.text1": "In this experiment, we will build a one-bit adder. Given two input signals A and B, the output should be the sum of A and B. For example, if A=1 and B=1, the output should be 10.",
+  "experiment.elements-plus.group.one_bit_adder.section0.text2": "To build a one-bit adder, we need to use multiple logic gates. Let's start by building the half adder.",
+  "experiment.elements-plus.group.one_bit_adder.section0.text3": "A half adder is a circuit that takes two input signals and produces two output signals. The first output is the sum, and the second output is the carry. For example, if A=1 and B=1, the output should be 10.",
+  "experiment.elements-plus.group.one_bit_adder.section0.text4": "Now, let's build the half adder using the logic gates we learned earlier.",
+  "experiment.elements-plus.group.one_bit_adder.section0.text5": "The half adder works as follows: If both inputs are 0, the output is 0. If one of the inputs is 1, the output is 1. If both inputs are 1, the output is 10.",
+  "experiment.elements-plus.group.one_bit_adder.section1.text0": "Now that we have built the half adder, let's build the full adder.",
+  "experiment.elements-plus.group.one_bit_adder.section1.text1": "A full adder is a circuit that takes three input signals and produces two output signals. The first output is the sum, and the second output is the carry. For example, if A=1, B=1, and C=1, the output should be 11.",
+  "experiment.elements-plus.group.one_bit_adder.section1.text2": "Now, let's build the full adder using the half adder we built earlier.",
+  "experiment.elements-plus.group.one_bit_adder.section1.text3": "The full adder works as follows: If all three inputs are 0, the output is 0. If one or two of the inputs are 1, the output is 1. If all three inputs are 1, the output is 11."
 }

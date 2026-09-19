@@ -150,6 +150,15 @@ public class GuiUtil {
                 fillContext.fillRelative(-2, 1, -1, -1, color1);
                 fillContext.fillRelative(1, -3, -1, -1, color1);
             }
+            case CONCAVE -> {
+                int color1 = multiplyColor(0xFFA0A0A0, colorMultiply);
+                int color2 = screenColor(0xFFE0E0E0, colorMultiply);
+                fillContext.fillRelative(0, 0, -1, -1, colorMultiply);
+                fillContext.fillRelative(-2, 1, -1, -1, color2);
+                fillContext.fillRelative(1, -2, -1, -1, color2);
+                fillContext.fillRelative(0, 0, 1, -2, color1);
+                fillContext.fillRelative(0, 0, -2, 1, color1);
+            }
             case BOX -> {
                 fillContext.fill(0xFF000000);
                 fillContext.fillRelative(1, 1, -2, -2, colorMultiply);

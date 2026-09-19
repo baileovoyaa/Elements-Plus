@@ -174,7 +174,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.addRenderableWidget(progressBar = new AbstractWidget(0, topPos + 26, 0, 16, Component.empty()) {
             @Override
             protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-                guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x80000000);
+                GuiUtil.drawSubPanel(guiGraphics, this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x80000000, GuiUtil.SubPanelType.CONCAVE);
             }
 
             @Override
@@ -229,7 +229,8 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                             @Override
                             protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
                                 guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), isHovered ? 0xFFFFFFFF : 0xFF000000);
-                                GuiUtil.drawSubPanel(guiGraphics, this.getX() + 1, this.getY() + 1, this.getX() + this.getWidth() - 1, this.getY() + this.getHeight() - 1, 0xFFA0A0A0, GuiUtil.SubPanelType.CONVEX);
+                                boolean selected = experiment == selectedExperiment;
+                                GuiUtil.drawSubPanel(guiGraphics, this.getX() + 1, this.getY() + 1, this.getX() + this.getWidth() - 1, this.getY() + this.getHeight() - 1, selected ? 0xFF808080 : 0xFFA0A0A0, selected ? GuiUtil.SubPanelType.CONCAVE : GuiUtil.SubPanelType.CONVEX);
                                 if (experiment.getIcon() != null) {
                                     guiGraphics.blit(experiment.getIcon(), 5 + this.getX(), this.getY() + 2, 0, 0, 16, 16, 16, 16);
                                 }
@@ -239,6 +240,13 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                             @Override
                             protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
 
+                            }
+
+                            @Override
+                            public void onClick(double d, double e) {
+                                if (unlockedChapters.contains(selectedChapter.name)){
+                                    setCurrentExperiment(experiment);
+                                }
                             }
                         };
                         addChild(experimentWidget);

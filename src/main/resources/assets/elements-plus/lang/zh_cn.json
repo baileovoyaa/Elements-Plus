@@ -69,6 +69,7 @@
   "container.elements-plus.experiment_table": "实验桌",
   "gui.elements-plus.experiment_table.tab": "实验",
 
+  "experiment.elements-plus.amplifier": "放大器",
   "experiment.elements-plus.and_gate": "与门",
   "experiment.elements-plus.or_gate": "或门",
   "experiment.elements-plus.not_gate": "非门",
@@ -208,5 +209,18 @@
   "experiment.elements-plus.group.intro.section1.text5": "如果实验失败，进度条会变成红色，悬停可查看具体失败原因。电路图的输入元件的状态会停留在失败的测例上，稍后你可以放到光刻机里查看具体失败逻辑。",
   "experiment.elements-plus.group.intro.section2.text0": "要介绍的就这么多了，开始你的实验之旅吧，玩得愉快！",
 
-  "experiment.elements-plus.group.basic_gate": "基础逻辑门"
+  "experiment.elements-plus.group.amplifier": "放大器",
+  "experiment.elements-plus.group.amplifier.section0.text0": "信号虽然有0~15一共16种强度，但我们大部分时候关注的只是“有”和“没有”。",
+  "experiment.elements-plus.group.amplifier.section0.text1": "为此，这一章我们引入一个简单的元件——放大器。只要输入信号强度大于0，输出信号强度就是15。从而可以将注意力放到更上层的逻辑上，而无需在意底层的细节。",
+  "experiment.elements-plus.group.amplifier.section0.text2": "为了实现这一元件，我们需要一个可以将信号强度放大的元件。而这就是%s。",
+  "experiment.elements-plus.group.amplifier.section0.text2.arg0": "晶体管",
+  "experiment.elements-plus.group.amplifier.section0.text3": "晶体管是一种可以放大信号的元件。当侧面没有输入时，它可以将正面输入放大两倍。（侧面输入以后会提到，本实验暂时用不到）",
+  "experiment.elements-plus.group.amplifier.section0.text4": "现在，尝试利用这种特性，把实验完成吧。",
+  "experiment.elements-plus.group.amplifier.section1.text0": "输入A，只要A的值非0即输出Y=15，否则输出Y=0。",
+  "experiment.elements-plus.group.amplifier.section1.text1": "请在光刻机中搭建电路，完成后将电路图放入上方槽位，点击“开始实验”按钮，实验将会自动进行",
+
+  "experiment.elements-plus.group.first_gate": "第一个逻辑门",
+  "experiment.elements-plus.group.basic_gate": "基础逻辑门",
+  "experiment.elements-plus.group.advanced_gate": "高级逻辑门",
+  "experiment.elements-plus.group.one_bit_adder": "一位加法器"
 }

@@ -31,6 +31,38 @@ public class BuiltinExperimentChapters {
             )
     );
 
+    public static final ExperimentChapter AMPLIFIER = register(
+            new ExperimentChapter("amplifier", null,
+                    List.of(
+                            new ExperimentChapter.TextSection(List.of(
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text0"),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text1"),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text2", Component.translatable("experiment.elements-plus.group.amplifier.section0.text2.arg0").withStyle(ChatFormatting.GOLD)),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text3"),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text4"),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section1.text0"),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section1.text1")
+                            )),
+                            new ExperimentChapter.ExperimentSection(List.of(
+                                    BuiltinExperiments.AMPLIFIER
+                            ))
+                    ), Set.of(INTRO)
+            )
+    );
+
+    public static final ExperimentChapter FIRST_GATE = register(
+            new ExperimentChapter("first_gate", null,
+                    List.of(
+                            new ExperimentChapter.TextSection(List.of(
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text0")
+                            )),
+                            new ExperimentChapter.ExperimentSection(List.of(
+                                    BuiltinExperiments.NOT_GATE
+                            ))
+                    ), Set.of(AMPLIFIER)
+            )
+    );
+
     public static final ExperimentChapter BASIC_GATE = register(
             new ExperimentChapter("basic_gate", null,
                     List.of(
@@ -38,13 +70,12 @@ public class BuiltinExperimentChapters {
                                     Component.translatable("experiment.elements-plus.group.basic_gate.section0.text0")
                             )),
                             new ExperimentChapter.ExperimentSection(List.of(
-                                    BuiltinExperiments.AND_GATE,
                                     BuiltinExperiments.OR_GATE,
-                                    BuiltinExperiments.NOT_GATE,
+                                    BuiltinExperiments.NOR_GATE,
                                     BuiltinExperiments.NAND_GATE,
-                                    BuiltinExperiments.NOR_GATE
+                                    BuiltinExperiments.AND_GATE
                             ))
-                    ), Set.of(INTRO)
+                    ), Set.of(FIRST_GATE)
             )
     );
 
@@ -56,11 +87,23 @@ public class BuiltinExperimentChapters {
                             )),
                             new ExperimentChapter.ExperimentSection(List.of(
                                     BuiltinExperiments.XOR_GATE,
-                                    BuiltinExperiments.XNOR_GATE,
+                                    BuiltinExperiments.XNOR_GATE
+                            ))
+                    ), Set.of(BASIC_GATE)
+            )
+    );
+
+    public static final ExperimentChapter ONE_BIT_ADDER = register(
+            new ExperimentChapter("one_bit_adder", null,
+                    List.of(
+                            new ExperimentChapter.TextSection(List.of(
+                                    Component.translatable("experiment.elements-plus.group.one_bit_adder.section0.text0")
+                            )),
+                            new ExperimentChapter.ExperimentSection(List.of(
                                     BuiltinExperiments.HALF_ADDER,
                                     BuiltinExperiments.FULL_ADDER
                             ))
-                    ), Set.of(BASIC_GATE)
+                    ), Set.of(ADVANCED_GATE)
             )
     );
 
