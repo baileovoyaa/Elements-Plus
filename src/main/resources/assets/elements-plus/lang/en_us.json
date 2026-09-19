@@ -76,6 +76,12 @@
   "experiment.elements-plus.xnor_gate": "XNOR Gate",
   "experiment.elements-plus.half_adder": "Half Adder",
   "experiment.elements-plus.full_adder": "Full Adder",
+  "command.elements-plus.experiments.granted": "Completed %s experiment(s) for %s player(s)",
+  "command.elements-plus.experiments.revoked": "Revoked %s experiment(s) from %s player(s)",
+  "command.elements-plus.experiments.unknown": "Unknown experiment: %s",
+  "command.elements-plus.experiments.none": "No experiments available",
+  "command.elements-plus.experiments.list": "%s completed experiments: %s",
+  "command.elements-plus.experiments.list_empty": "%s has not completed any experiments",
 
   "item.elements-plus.silver_ingot": "Silver Ingot",
   "tooltip.elements-plus.silver_ingot": "A Silver Ingot",
@@ -148,6 +154,8 @@
   "gui.elements-plus.toolbox.dialog.cancel": "Cancel",
   "gui.elements-plus.toolbox.dialog.delete_message": "Delete group \"%s\"? This group and all its components will be deleted.",
 
+  "gui.elements-plus.experiment_table.no_experiment": "No experiment selected",
+
   "item.elements-plus.gold_wire": "Gold Wire",
   "item.elements-plus.copper_wire": "Copper Wire",
   "item.elements-plus.insulating_layer": "Insulating Layer",
@@ -191,6 +199,7 @@
   "gui.jei.category.elements-plus.advanced_crafting": "Advanced Crafting",
   "gui.jei.category.elements-plus.high_pressure_crystallizer": "High Pressure Crystallizer",
 
+  "experiment.elements-plus.group.intro": "Introduction",
   "experiment.elements-plus.group.intro.section0.text0": "Welcome to the ElementsPlus Experiment Table!",
   "experiment.elements-plus.group.intro.section1.text0": "Circuit Experiment",
   "experiment.elements-plus.group.intro.section1.text1": "Here you can test your own circuits and gradually unlock various advanced components.",
@@ -198,5 +207,7 @@
   "experiment.elements-plus.group.intro.section1.text3": "After the experiment is successful, you will obtain a compiled circuit diagram, which is associated with a component. It can be used directly as a component in the lithography machine, or used in the \"Manufacture\" tab of the lithography machine to manufacture chips.",
   "experiment.elements-plus.group.intro.section1.text4": "Note: Compiled circuit diagrams cannot be edited further, but you can create a copy of the circuit diagram in the lithography machine manufacturing page, and uncheck the \"Keep Compiled\" option. The copy will no longer have the compiled status and can be edited further.",
   "experiment.elements-plus.group.intro.section1.text5": "If the experiment fails, the progress bar will turn red, and hovering over it will show the specific failure reason. The state of the input components in the circuit diagram will be frozen at the failed test case, and you can view the specific failure logic by placing it in the lithography machine later.",
-  "experiment.elements-plus.group.intro.section2.text0": "That's all to be introduced, start your experiment journey now, have fun!"
+  "experiment.elements-plus.group.intro.section2.text0": "That's all to be introduced, start your experiment journey now, have fun!",
+
+  "experiment.elements-plus.group.basic_gate": "Basic Gate"
 }

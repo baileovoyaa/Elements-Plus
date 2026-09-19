@@ -3,21 +3,28 @@ package com.elementsplus.client.screen;
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.core.experiment.BaseExperiment;
-import com.elementsplus.core.experiment.BuiltinExperiments;
+import com.elementsplus.core.experiment.BuiltinExperimentChapters;
+import com.elementsplus.core.experiment.ExperimentChapter;
 import com.elementsplus.menu.ExperimentTableMenu;
+import com.elementsplus.network.ExperimentTableChapterUpdatePayload;
+import com.elementsplus.network.ExperimentTableDataRequestPayload;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTableMenu> implements SlotPositionProvider {
     public TabButton tabButtonExperiment;
@@ -32,8 +39,13 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     public ScrollPanelWidget testCaseWidget;
     public ButtonGroup experimentGroup;
 
+    public ExperimentChapter selectedChapter;
     public BaseExperiment selectedExperiment;
     public AbstractWidget currentExperimentWidget;
+
+    public BlockPos tablePos;
+    private final Set<String> unlockedChapters = new HashSet<>();
+    private List<ChapterEntryButton> chapterButtons = new ArrayList<>();
 
     public IconButton startExperimentButton;
     public AbstractWidget progressBar;
@@ -68,6 +80,18 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         updateScreenSize();
         super.init();
 
+        slotPosition = new HashMap<>();
+
+        for (int l = 0; l < 3; l++) {
+            for (int k = 0; k < 9; k++) {
+                slotPosition.put(l * 9 + k + 9, Point.of(8 + l * 18, this.imageHeight - 6 - 9 * 18 + k * 18));
+            }
+        }
+
+        for (int l = 0; l < 9; l++) {
+            slotPosition.put(l, Point.of(11 + 3 * 18, this.imageHeight - 6 - 9 * 18 + l * 18));
+        }
+
         this.titleLabelX = 6;
         this.addRenderableWidget(tabButtonExperiment = new TabButton(this.leftPos + this.font.width(this.title) + 10, this.topPos, 50, 22, Component.translatable("gui.elements-plus.experiment_table.tab")));
         tabButtonExperiment.active = true;
@@ -87,31 +111,24 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         experimentWidget.setHeight(inventoryActive ? imageHeight - 218 : imageHeight - 53);
         experimentWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
 
-        List<GroupButton> experimentButtons = new ArrayList<>();
+        this.addRenderableWidget(experimentChapterWidget = new ScrollPanelWidget(leftPos + 9 + 80, topPos + 48, Math.max(1, imageWidth - 95), Math.max(1, imageHeight - 195), GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        experimentChapterWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
+
+        List<ChapterEntryButton> chapterButtons = new ArrayList<>();
         int entryY = 2;
-        for (BaseExperiment experiment : BuiltinExperiments.BUILTIN_EXPERIMENTS) {
-            ExperimentEntryButton button = experimentWidget.addChild(new ExperimentEntryButton(1, entryY, experimentWidget.getWidth() - 2, 18, experiment));
-            experimentButtons.add(button);
+        for (ExperimentChapter chapter : BuiltinExperimentChapters.BUILTIN_EXPERIMENT_CHAPTERS) {
+            ChapterEntryButton button = experimentWidget.addChild(new ChapterEntryButton(1, entryY, experimentWidget.getWidth() - 2, 18, chapter));
+            chapterButtons.add(button);
             entryY += 18;
         }
-        if (!experimentButtons.isEmpty()) {
-            selectedExperiment = ((ExperimentEntryButton) experimentButtons.get(0)).experiment;
-            experimentGroup = new ButtonGroup(experimentButtons.toArray(new GroupButton[0]));
+        this.chapterButtons = chapterButtons;
+        if (!chapterButtons.isEmpty()) {
+            experimentGroup = new ButtonGroup(chapterButtons.toArray(new GroupButton[0]));
+            setSelectedChapter(chapterButtons.get(0).chapter);
         }
 
-        slotPosition = new HashMap<>();
+        ClientPlayNetworking.send(new ExperimentTableDataRequestPayload());
 
-        for (int l = 0; l < 3; l++) {
-            for (int k = 0; k < 9; k++) {
-                slotPosition.put(l * 9 + k + 9, Point.of(8 + l * 18, this.imageHeight - 6 - 9 * 18 + k * 18));
-            }
-        }
-
-        for (int l = 0; l < 9; l++) {
-            slotPosition.put(l, Point.of(11 + 3 * 18, this.imageHeight - 6 - 9 * 18 + l * 18));
-        }
-
-        this.addRenderableWidget(experimentChapterWidget = new ScrollPanelWidget(leftPos + 9 + 80, topPos + 48, Math.max(1, imageWidth - 95), Math.max(1, imageHeight - 195), GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
         this.addRenderableWidget(testCaseWidget = new ScrollPanelWidget(leftPos + 9 + 80, topPos + imageHeight - 125, Math.max(1, imageWidth - 95), 120, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
         this.addRenderableWidget(collapseButtonTestCases = new CollapseButton(this.leftPos + 89, testCasesActive ? this.topPos + this.imageHeight - 142 : this.topPos + this.imageHeight - 23, imageWidth - 95, 18, Component.nullToEmpty("测例信息")) {
             @Override
@@ -139,7 +156,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                         guiGraphics.drawString(font, selectedExperiment.getDisplayName(), 5 + this.getX(), this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, false);
                     }
                 } else {
-                    guiGraphics.drawString(font, Component.translatable("gui.elements-plus.experiment_table.no_experiment"), this.getX(), this.getY(), 0xFFFFFFFF, false);
+                    guiGraphics.drawString(font, Component.translatable("gui.elements-plus.experiment_table.no_experiment"), 5 + this.getX(), this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, false);
                 }
             }
 
@@ -189,6 +206,91 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         updateCurrentExperimentDisplay();
     }
 
+    public void setSelectedChapter(ExperimentChapter chapter) {
+        this.selectedChapter = chapter;
+        // 不改变选中的实验，允许在实验过程中浏览其他章节
+        experimentChapterWidget.clearChildren();
+        experimentChapterWidget.scrollToTop();
+        int y = 10;
+        for (ExperimentChapter.Section section : chapter.sections) {
+            if (section instanceof ExperimentChapter.TextSection textSection) {
+                TextSectionWidget textSectionWidget = new TextSectionWidget(5, y, experimentChapterWidget.getWidth() - 10, textSection.text);
+                experimentChapterWidget.addChild(textSectionWidget);
+                y += textSectionWidget.getHeight();
+            } else if (section instanceof ExperimentChapter.ImageSection imageSection) {
+                TranslatedImage imageSectionWidget = new TranslatedImage(5, y, experimentChapterWidget.getWidth() - 15, imageSection.image, imageSection.width, imageSection.height);
+                experimentChapterWidget.addChild(imageSectionWidget);
+                y += imageSectionWidget.getHeight();
+            } else if (section instanceof ExperimentChapter.ExperimentSection experimentSection) {
+                ScrollPanelWidget experimentSectionWidget = new ScrollPanelWidget(5, y, experimentChapterWidget.getWidth() - 10, experimentSection.experiments.size() * 25 + 2, GuiUtil.SubPanelType.NONE, 0x00000000) {{
+                    int y = 0;
+                    for (BaseExperiment experiment : experimentSection.experiments) {
+                        AbstractWidget experimentWidget = new AbstractWidget(0, y, experimentChapterWidget.getWidth() - 11, 20, Component.empty()) {
+                            @Override
+                            protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                                guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), isHovered ? 0xFFFFFFFF : 0xFF000000);
+                                GuiUtil.drawSubPanel(guiGraphics, this.getX() + 1, this.getY() + 1, this.getX() + this.getWidth() - 1, this.getY() + this.getHeight() - 1, 0xFFA0A0A0, GuiUtil.SubPanelType.CONVEX);
+                                if (experiment.getIcon() != null) {
+                                    guiGraphics.blit(experiment.getIcon(), 5 + this.getX(), this.getY() + 2, 0, 0, 16, 16, 16, 16);
+                                }
+                                guiGraphics.drawString(font, experiment.getDisplayName(), 5 + this.getX() + 16 + 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, false);
+                            }
+
+                            @Override
+                            protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+
+                            }
+                        };
+                        addChild(experimentWidget);
+                        y += 25;
+                    }
+                }};
+                experimentChapterWidget.addChild(experimentSectionWidget);
+                y += experimentSectionWidget.getHeight();
+            }
+            y += 10;
+        }
+        experimentChapterWidget.addChild(new EmptyWidget(0, y));
+    }
+
+    public void onServerData(BlockPos pos, String selectedName, Set<String> unlocked) {
+        this.tablePos = pos;
+        unlockedChapters.clear();
+        unlockedChapters.addAll(unlocked);
+        for (ChapterEntryButton button : chapterButtons) {
+            button.locked = !unlockedChapters.contains(button.chapter.name);
+        }
+        ChapterEntryButton target = null;
+        if (selectedName != null) {
+            for (ChapterEntryButton button : chapterButtons) {
+                if (button.chapter.name.equals(selectedName)) {
+                    target = button;
+                    break;
+                }
+            }
+        }
+        if (target == null && !chapterButtons.isEmpty()) {
+            target = chapterButtons.get(0);
+        }
+        if (target != null) {
+            experimentGroup.setSelected(target);
+            setSelectedChapter(target.chapter);
+        }
+    }
+
+    public void onChapterChanged(BlockPos pos, String chapterName) {
+        if (tablePos == null || !pos.equals(tablePos)) {
+            return;
+        }
+        for (ChapterEntryButton button : chapterButtons) {
+            if (button.chapter.name.equals(chapterName)) {
+                experimentGroup.setSelected(button);
+                setSelectedChapter(button.chapter);
+                return;
+            }
+        }
+    }
+
     @Override
     public Point getSlotPosition(Slot slot) {
         if (slot.container instanceof Inventory && slot.getContainerSlot() >= 0 && slot.getContainerSlot() <= 35) {
@@ -222,31 +324,34 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }
     }
 
-    private static Component experimentLabel(BaseExperiment experiment) {
-        String name = experiment.getName();
-        return name == null ? Component.literal("?") : Component.translatable("experiment.elements-plus." + name);
-    }
+    private class ChapterEntryButton extends ListEntryButton {
+        private final ExperimentChapter chapter;
+        private boolean locked = true;
 
-    private class ExperimentEntryButton extends ListEntryButton {
-        private final BaseExperiment experiment;
-
-        ExperimentEntryButton(int x, int y, int width, int height, BaseExperiment experiment) {
-            super(x, y, width, height, experimentLabel(experiment));
-            this.experiment = experiment;
+        ChapterEntryButton(int x, int y, int width, int height, ExperimentChapter chapter) {
+            super(x, y, width, height, chapter.getDisplayName());
+            this.chapter = chapter;
         }
 
         @Override
         public void onClick(double d, double e) {
+            if (locked) {
+                return;
+            }
             super.onClick(d, e);
-            setCurrentExperiment(experiment);
+            if (tablePos != null) {
+                ClientPlayNetworking.send(new ExperimentTableChapterUpdatePayload(tablePos, chapter.name));
+            }
+            setSelectedChapter(chapter);
         }
 
         @Override
         public void renderString(GuiGraphics guiGraphics, Font font, int i) {
             int left = this.getX() + 3;
             int right = this.getX() + this.getWidth() - 3;
+            int color = locked ? 0xFF808080 : i;
             guiGraphics.enableScissor(left, this.getY(), right, this.getY() + this.getHeight());
-            guiGraphics.drawString(font, this.getMessage(), left, this.getY() + (this.getHeight() - 9) / 2, i);
+            guiGraphics.drawString(font, this.getMessage(), left, this.getY() + (this.getHeight() - 9) / 2, color);
             guiGraphics.disableScissor();
         }
     }

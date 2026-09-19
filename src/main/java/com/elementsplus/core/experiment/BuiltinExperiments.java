@@ -83,4 +83,13 @@ public class BuiltinExperiments {
         BUILTIN_EXPERIMENTS.add(experiment);
         return experiment;
     }
+
+    public static BaseExperiment byId(String name) {
+        for (BaseExperiment experiment : BUILTIN_EXPERIMENTS) {
+            if (name.equals(experiment.getName())) {
+                return experiment;
+            }
+        }
+        return null;
+    }
 }

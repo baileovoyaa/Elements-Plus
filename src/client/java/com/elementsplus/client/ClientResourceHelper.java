@@ -1,8 +1,14 @@
 package com.elementsplus.client;
 
+import com.elementsplus.ElementsPlus;
+import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Optional;
 
 
 public class ClientResourceHelper {
@@ -73,5 +79,27 @@ public class ClientResourceHelper {
 
         // 3. 回退到默认路径
         return defaultPath;
+    }
+
+    /**
+     * 获取指定纹理文件的原始宽高
+     *
+     * @return int[]{width, height}，若文件不存在或读取失败则返回 null
+     */
+    public static int[] getRawTextureSize(ResourceLocation textureLoc) {
+        Minecraft mc = Minecraft.getInstance();
+        Optional<Resource> resourceOpt = mc.getResourceManager().getResource(textureLoc);
+        if (resourceOpt.isEmpty()) {
+            return null; // 资源不存在
+        }
+
+        try (InputStream stream = resourceOpt.get().open();
+             NativeImage image = NativeImage.read(stream)) {
+            // NativeImage 提供了 getWidth() 和 getHeight()
+            return new int[]{image.getWidth(), image.getHeight()};
+        } catch (IOException e) {
+            ElementsPlus.LOGGER.error("Failed to read texture size: {}", textureLoc, e);
+            return null;
+        }
     }
 }

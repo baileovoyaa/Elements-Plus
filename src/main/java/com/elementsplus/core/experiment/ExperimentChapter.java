@@ -3,6 +3,7 @@ package com.elementsplus.core.experiment;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -26,13 +27,13 @@ public class ExperimentChapter {
 
     public static class ExperimentSection extends Section {
         public List<BaseExperiment> experiments;
-        public List<BaseExperiment> optional;
+        public Set<BaseExperiment> optional;
 
         public ExperimentSection(List<BaseExperiment> experiments) {
             this.experiments = experiments;
         }
 
-        public void setOptional(List<BaseExperiment> optional) {
+        public void setOptional(Set<BaseExperiment> optional) {
             this.optional = optional;
         }
     }
@@ -58,6 +59,21 @@ public class ExperimentChapter {
 
     public Component getDisplayName() {
         return Component.translatable("experiment.elements-plus.group." + name);
+    }
+
+    public Set<BaseExperiment> getExperiments() {
+        Set<BaseExperiment> experiments = new HashSet<>();
+        for (Section section : sections) {
+            if (section instanceof ExperimentSection experimentSection) {
+                experiments.addAll(new HashSet<>() {{
+                    addAll(experimentSection.experiments);
+                    if (experimentSection.optional != null) {
+                        removeAll(experimentSection.optional);
+                    }
+                }});
+            }
+        }
+        return experiments;
     }
 
 }

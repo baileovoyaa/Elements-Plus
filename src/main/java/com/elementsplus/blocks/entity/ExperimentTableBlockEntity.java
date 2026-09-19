@@ -16,14 +16,28 @@ import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 /**
  * 实验桌方块实体：额外槽位会持久保存在这里。
  */
 public class ExperimentTableBlockEntity extends BaseContainerBlockEntity {
     private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
+    private String selectedChapter = null;
 
     public ExperimentTableBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntityTypes.EXPERIMENT_TABLE, blockPos, blockState);
+    }
+
+    public String getSelectedChapter() {
+        return selectedChapter;
+    }
+
+    public void setSelectedChapter(String selectedChapter) {
+        if (!Objects.equals(this.selectedChapter, selectedChapter)) {
+            this.selectedChapter = selectedChapter;
+            this.setChanged();
+        }
     }
 
     @Override
@@ -31,12 +45,16 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity {
         super.loadAdditional(compoundTag, provider);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(compoundTag, this.items, provider);
+        this.selectedChapter = compoundTag.contains("SelectedChapter") ? compoundTag.getString("SelectedChapter") : null;
     }
 
     @Override
     protected void saveAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
         super.saveAdditional(compoundTag, provider);
         ContainerHelper.saveAllItems(compoundTag, this.items, provider);
+        if (this.selectedChapter != null) {
+            compoundTag.putString("SelectedChapter", this.selectedChapter);
+        }
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.elementsplus.menu;
 
 import com.elementsplus.ModBlocks;
 import com.elementsplus.ModMenuTypes;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -11,8 +12,14 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class ExperimentTableMenu extends AbstractContainerMenu {
+    private static final Map<UUID, BlockPos> OPEN_EXPERIMENT_TABLES = new HashMap<>();
     private final ContainerLevelAccess access;
     public final Container container;
     public final Slot extraSlot;
@@ -36,6 +43,27 @@ public class ExperimentTableMenu extends AbstractContainerMenu {
         for (int j = 0; j < 9; j++) {
             this.addSlot(new Slot(inventory, j, 6 + 3 * 18 + 3, 8 + j * 18));
         }
+
+        if (inventory.player != null) {
+            containerLevelAccess.evaluate((level, pos) -> {
+                OPEN_EXPERIMENT_TABLES.put(inventory.player.getUUID(), pos.immutable());
+                return pos;
+            });
+        }
+    }
+
+    public static @Nullable BlockPos getOpenTable(UUID uuid) {
+        return OPEN_EXPERIMENT_TABLES.get(uuid);
+    }
+
+    public static void closeTable(UUID uuid) {
+        OPEN_EXPERIMENT_TABLES.remove(uuid);
+    }
+
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        OPEN_EXPERIMENT_TABLES.remove(player.getUUID());
     }
 
     @Override

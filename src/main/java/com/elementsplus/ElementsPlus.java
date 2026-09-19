@@ -1,19 +1,35 @@
 package com.elementsplus;
 
+import com.elementsplus.blocks.entity.ExperimentTableBlockEntity;
 import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
+import com.elementsplus.core.experiment.BaseExperiment;
+import com.elementsplus.core.experiment.BuiltinExperimentChapters;
+import com.elementsplus.core.experiment.BuiltinExperiments;
+import com.elementsplus.core.experiment.ExperimentChapter;
+import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
+import com.elementsplus.network.ExperimentTableChapterChangePayload;
+import com.elementsplus.network.ExperimentTableChapterUpdatePayload;
+import com.elementsplus.network.ExperimentTableDataRequestPayload;
+import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
 import com.elementsplus.network.ToolboxUpdatePayload;
 import com.elementsplus.network.UpdateCircuitDiagramPayload;
+import com.elementsplus.player.PlayerExperimentsAttachment;
 import com.elementsplus.player.PlayerToolboxAttachment;
 import com.elementsplus.recipe.CrystallizerRecipe;
 import com.elementsplus.recipe.MetalCatalystRecipe;
 import com.elementsplus.recipe.ScaleUpgradeRecipe;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
@@ -22,6 +38,8 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.registry.OxidizableBlocksRegistry;
 import net.fabricmc.fabric.api.registry.StrippableBlockRegistry;
@@ -29,11 +47,14 @@ import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.dispenser.DispenseItemBehavior;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 
@@ -58,8 +79,13 @@ import net.minecraft.world.phys.HitResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 public class ElementsPlus implements ModInitializer {
     public static final String MOD_ID = "elements-plus";
@@ -114,6 +140,45 @@ public class ElementsPlus implements ModInitializer {
                     context.player().setAttached(PlayerToolboxAttachment.PLAYER_TOOLBOX, payload.toolbox());
                     ServerPlayNetworking.send(context.player(), new ToolboxSyncPayload(payload.toolbox()));
                 }));
+
+        PayloadTypeRegistry.playC2S().register(ExperimentTableDataRequestPayload.TYPE, ExperimentTableDataRequestPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(ExperimentTableChapterUpdatePayload.TYPE, ExperimentTableChapterUpdatePayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(ExperimentTableScreenDataPayload.TYPE, ExperimentTableScreenDataPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(ExperimentTableChapterChangePayload.TYPE, ExperimentTableChapterChangePayload.STREAM_CODEC);
+
+        ServerPlayNetworking.registerGlobalReceiver(ExperimentTableDataRequestPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    BlockPos pos = ExperimentTableMenu.getOpenTable(player.getUUID());
+                    if (pos == null || !(player.level().getBlockEntity(pos) instanceof ExperimentTableBlockEntity table)) {
+                        return;
+                    }
+                    Set<String> unlocked = new HashSet<>();
+                    for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player))) {
+                        unlocked.add(chapter.name);
+                    }
+                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), unlocked));
+                }));
+
+        ServerPlayNetworking.registerGlobalReceiver(ExperimentTableChapterUpdatePayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    BlockPos pos = payload.pos();
+                    if (!(player.level().getBlockEntity(pos) instanceof ExperimentTableBlockEntity table)) {
+                        return;
+                    }
+                    ExperimentChapter chapter = BuiltinExperimentChapters.byName(payload.chapterName());
+                    if (chapter == null || !BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player)).contains(chapter)) {
+                        return;
+                    }
+                    table.setSelectedChapter(chapter.name);
+                    for (ServerPlayer tracking : PlayerLookup.tracking(table)) {
+                        ServerPlayNetworking.send(tracking, new ExperimentTableChapterChangePayload(pos, chapter.name));
+                    }
+                }));
+
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
+                ExperimentTableMenu.closeTable(handler.player.getUUID()));
 
         LOGGER.info("Hello Fabric world!");
 
@@ -192,10 +257,25 @@ public class ElementsPlus implements ModInitializer {
         );
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(Commands.literal("elements-plus").requires((source) -> source.hasPermission(2)).then(Commands.literal("debug").executes((source) -> {
-                doSomething(source);
-                return 1;
-            })));
+            dispatcher.register(Commands.literal("elements-plus").requires((source) -> source.hasPermission(2))
+                    .then(Commands.literal("debug").executes((source) -> {
+                        doSomething(source);
+                        return 1;
+                    }))
+                    .then(Commands.literal("experiments")
+                            .then(Commands.literal("grant")
+                                    .then(Commands.argument("players", EntityArgument.players())
+                                            .then(Commands.argument("experiment", StringArgumentType.string())
+                                                    .suggests(ElementsPlus::suggestExperiments)
+                                                    .executes((source) -> setExperiments(source, true)))))
+                            .then(Commands.literal("revoke")
+                                    .then(Commands.argument("players", EntityArgument.players())
+                                            .then(Commands.argument("experiment", StringArgumentType.string())
+                                                    .suggests(ElementsPlus::suggestExperiments)
+                                                    .executes((source) -> setExperiments(source, false)))))
+                            .then(Commands.literal("list")
+                                    .then(Commands.argument("player", EntityArgument.player())
+                                            .executes(ElementsPlus::listExperiments)))));
         });
     }
 
@@ -209,5 +289,80 @@ public class ElementsPlus implements ModInitializer {
 
     public static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
+    }
+
+    private static int setExperiments(CommandContext<CommandSourceStack> source, boolean grant) throws CommandSyntaxException {
+        Collection<ServerPlayer> targets = EntityArgument.getPlayers(source, "players");
+        String raw = StringArgumentType.getString(source, "experiment");
+
+        List<String> ids;
+        if ("*".equals(raw)) {
+            ids = new ArrayList<>();
+            for (BaseExperiment experiment : BuiltinExperiments.BUILTIN_EXPERIMENTS) {
+                if (experiment.getName() != null) {
+                    ids.add(experiment.getName());
+                }
+            }
+        } else {
+            if (BuiltinExperiments.byId(raw) == null) {
+                source.getSource().sendFailure(Component.translatable("command.elements-plus.experiments.unknown", raw));
+                return 0;
+            }
+            ids = List.of(raw);
+        }
+
+        if (ids.isEmpty()) {
+            source.getSource().sendFailure(Component.translatable("command.elements-plus.experiments.none"));
+            return 0;
+        }
+
+        for (ServerPlayer player : targets) {
+            Set<String> completed = PlayerExperimentsAttachment.get(player);
+            if (grant) {
+                completed.addAll(ids);
+            } else {
+                completed.removeAll(ids);
+            }
+        }
+
+        source.getSource().sendSuccess(() -> Component.translatable(
+                grant ? "command.elements-plus.experiments.granted" : "command.elements-plus.experiments.revoked",
+                targets.size(), ids.size()), true);
+        return 1;
+    }
+
+    private static int listExperiments(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {
+        ServerPlayer player = EntityArgument.getPlayer(source, "player");
+        Set<String> completed = PlayerExperimentsAttachment.get(player);
+
+        if (completed.isEmpty()) {
+            source.getSource().sendSuccess(() -> Component.translatable("command.elements-plus.experiments.list_empty", player.getName()), false);
+            return 0;
+        }
+
+        MutableComponent line = Component.empty();
+        boolean first = true;
+        for (String id : completed) {
+            BaseExperiment experiment = BuiltinExperiments.byId(id);
+            Component name = experiment != null ? experiment.getDisplayName() : Component.literal(id);
+            if (!first) {
+                line.append(Component.literal(", "));
+            }
+            line.append(name);
+            first = false;
+        }
+        source.getSource().sendSuccess(() -> Component.translatable("command.elements-plus.experiments.list",
+                player.getName(), line), false);
+        return 1;
+    }
+
+    private static CompletableFuture<Suggestions> suggestExperiments(CommandContext<CommandSourceStack> source, SuggestionsBuilder builder) {
+        builder.suggest("*");
+        for (BaseExperiment experiment : BuiltinExperiments.BUILTIN_EXPERIMENTS) {
+            if (experiment.getName() != null) {
+                builder.suggest(experiment.getName(), experiment.getDisplayName());
+            }
+        }
+        return builder.buildFuture();
     }
 }
