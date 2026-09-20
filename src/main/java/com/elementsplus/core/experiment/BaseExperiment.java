@@ -5,6 +5,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import java.util.function.Function;
+
 public abstract class BaseExperiment {
     public static class Context {
         public int time = 0;
@@ -15,6 +17,19 @@ public abstract class BaseExperiment {
          * 结束实验
          */
         public void complete(boolean success) {
+            // TODO
+        }
+
+        public ItemStack getItemStack() {
+            return itemStack;
+        }
+
+        /**
+         * 设置实验转化的物品
+         *
+         * @param itemStack
+         */
+        public void setItemStack(Function<ItemStack, ItemStack> itemStackFunction) {
             // TODO
         }
     }
@@ -55,5 +70,14 @@ public abstract class BaseExperiment {
 
     public void setIcon(ResourceLocation icon) {
         this.icon = icon;
+    }
+
+    /**
+     * 由子类重写，在实验结束时执行（如转化物品）
+     *
+     * @param ctx
+     */
+    public void onComplete(Context ctx, boolean success) {
+
     }
 }

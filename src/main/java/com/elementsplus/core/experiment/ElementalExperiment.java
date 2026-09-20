@@ -1,7 +1,7 @@
 package com.elementsplus.core.experiment;
 
 /**
- * TODO: WIP
+ * FUTURE
  */
 public class ElementalExperiment extends BaseExperiment {
     @Override

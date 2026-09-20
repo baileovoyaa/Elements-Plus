@@ -2,14 +2,12 @@ package com.elementsplus.client.screen;
 
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.client.gui.*;
-import com.elementsplus.core.experiment.BaseExperiment;
-import com.elementsplus.core.experiment.BuiltinExperimentChapters;
-import com.elementsplus.core.experiment.BuiltinExperiments;
-import com.elementsplus.core.experiment.ExperimentChapter;
+import com.elementsplus.core.experiment.*;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
 import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -37,7 +35,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     public ScrollPanelWidget experimentWidget;
     public ScrollPanelWidget experimentChapterWidget;
-    public ScrollPanelWidget testCaseWidget;
+    public ScrollPanelWidget testCasePanelWidget;
     public ButtonGroup experimentGroup;
 
     public ExperimentChapter selectedChapter;
@@ -46,10 +44,12 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     public BlockPos tablePos;
     private final Set<String> unlockedChapters = new HashSet<>();
+    private final Set<String> completedExperiments = new HashSet<>();
     private List<ChapterEntryButton> chapterButtons = new ArrayList<>();
 
     public IconButton startExperimentButton;
-    public AbstractWidget progressBar;
+    public ProgressBar progressBar;
+    public IconButton statusButton;
 
     public ExperimentTableScreen(ExperimentTableMenu experimentTableMenu, Inventory inventory, Component component) {
         super(experimentTableMenu, inventory, component);
@@ -130,7 +130,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
         ClientPlayNetworking.send(new ExperimentTableDataRequestPayload());
 
-        this.addRenderableWidget(testCaseWidget = new ScrollPanelWidget(leftPos + 9 + 80, topPos + imageHeight - 125, Math.max(1, imageWidth - 95), 120, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        this.addRenderableWidget(testCasePanelWidget = new ScrollPanelWidget(leftPos + 9 + 80, topPos + imageHeight - 125, Math.max(1, imageWidth - 95), 120, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
         this.addRenderableWidget(collapseButtonTestCases = new CollapseButton(this.leftPos + 89, testCasesActive ? this.topPos + this.imageHeight - 142 : this.topPos + this.imageHeight - 23, imageWidth - 95, 18, Component.nullToEmpty("测例信息")) {
             @Override
             public void onClick(double d, double e) {
@@ -138,7 +138,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                 testCasesActive = active;
                 this.setY(testCasesActive ? topPos + imageHeight - 142 : topPos + imageHeight - 23);
                 experimentChapterWidget.setHeight(testCasesActive ? imageHeight - 195 : imageHeight - 75);
-                testCaseWidget.visible = testCasesActive;
+                testCasePanelWidget.visible = testCasesActive;
             }
         });
         collapseButtonTestCases.active = testCasesActive;
@@ -167,27 +167,70 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             }
         });
 
-        // 开始实验（动态x）
+        // 开始实验（动态x坐标）
         this.addRenderableWidget(startExperimentButton = new IconButton(0, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/play.png"), (button) -> {
+            // TODO: 开始实验
+            // 解锁的章节包含该实验的玩家才能开始实验
         }));
 
         // 进度条（动态x，宽度可变）
-        this.addRenderableWidget(progressBar = new AbstractWidget(0, topPos + 26, 0, 16, Component.empty()) {
-            @Override
-            protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-                GuiUtil.drawSubPanel(guiGraphics, this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x80000000, GuiUtil.SubPanelType.CONCAVE);
-            }
-
-            @Override
-            protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
-            }
-        });
+        this.addRenderableWidget(progressBar = new ProgressBar(0, topPos + 26, 0, 16));
 
         // 实验状态
-        this.addRenderableWidget(new IconButton(leftPos + imageWidth - 22, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/experiment_table/idle.png"), (button) -> {
+        this.addRenderableWidget(statusButton = new IconButton(leftPos + imageWidth - 22, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/experiment_table/idle.png"), (button) -> {
         }));
 
         updateCurrentExperimentDisplay();
+    }
+
+    public static class ProgressBar extends AbstractWidget {
+
+        public float progress = 0.0f;
+        public int color = 0xFF00A000;
+
+        public ProgressBar(int x, int y, int width, int height) {
+            super(x, y, width, height, Component.empty());
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+            GuiUtil.drawSubPanel(guiGraphics, this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0xFF808080, GuiUtil.SubPanelType.CONCAVE);
+            guiGraphics.fill(this.getX() + 1, this.getY() + 1, (int) (this.getX() + 1 + (this.getWidth() - 2) * this.progress), this.getY() + this.getHeight() - 1, this.color);
+        }
+
+        @Override
+        protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+        }
+    }
+
+    public static class TestCaseWidget extends AbstractWidget {
+
+        public int color;
+        public Component centerText;
+        public Component cornerText;
+        public Component bottomText;
+        public TestCase testCase;
+
+        public TestCaseWidget(int x, int y, int width, int height) {
+            super(x, y, width, height, Component.empty());
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+            GuiUtil.drawSubPanel(guiGraphics, this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), this.color, GuiUtil.SubPanelType.CONVEX);
+            Font font = Minecraft.getInstance().font;
+            if (centerText != null) {
+                guiGraphics.drawCenteredString(font, centerText, this.getX() + this.getWidth() / 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF);
+            }
+            if (cornerText != null) {
+                guiGraphics.drawString(font, cornerText, this.getX() + 4, this.getY() + 4, 0xFFFFFFFF);
+            }
+        }
+
+        @Override
+        protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+
+        }
     }
 
     public void updateCurrentExperimentDisplay() {
@@ -200,6 +243,26 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         startExperimentButton.setX(leftPos + currentExperimentWidget.getWidth() + 114);
         progressBar.setX(leftPos + currentExperimentWidget.getWidth() + 114 + 16 + 5);
         progressBar.setWidth(imageWidth - currentExperimentWidget.getWidth() - 162);
+        testCasePanelWidget.clearChildren();
+        if (selectedExperiment instanceof CircuitExperiment circuitExperiment) {
+            int x = 0;
+            int y = 0;
+            int i = 1;
+            for (TestCase testCase : circuitExperiment.testCases) {
+                TestCaseWidget testCaseWidget = new TestCaseWidget(x, y, 50, 50);
+                testCaseWidget.color = 0xFF808080;
+                testCaseWidget.centerText = Component.literal("Waiting");
+                testCaseWidget.cornerText = Component.translatable("#%s", i);
+                testCaseWidget.testCase = testCase;
+                testCasePanelWidget.addChild(testCaseWidget);
+                x += 50;
+                if (x + 50 > testCasePanelWidget.getWidth()) {
+                    x = 0;
+                    y += 50;
+                }
+                i++;
+            }
+        }
     }
 
     public void setCurrentExperiment(BaseExperiment experiment) {
@@ -212,6 +275,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             ClientPlayNetworking.send(new ExperimentTableSelectionUpdatePayload(tablePos, null, experiment.getName()));
         }
         updateCurrentExperimentDisplay();
+    }
+
+    public boolean hasCompletedExperiment(BaseExperiment experiment) {
+        return experiment != null && experiment.getName() != null && completedExperiments.contains(experiment.getName());
     }
 
     public void setSelectedChapter(ExperimentChapter chapter) {
@@ -243,6 +310,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                                     guiGraphics.blit(experiment.getIcon(), 5 + this.getX(), this.getY() + 2, 0, 0, 16, 16, 16, 16);
                                 }
                                 guiGraphics.drawString(font, experiment.getDisplayName(), 5 + this.getX() + 16 + 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, false);
+                                if (hasCompletedExperiment(experiment)) {
+                                    guiGraphics.blit(ElementsPlus.id("textures/gui/experiment_table/success.png"), 5 + this.getX() + this.getWidth() - 24, this.getY() + this.getHeight() / 2 - 8, 0, 0, 16, 16, 16, 16);
+                                }
                             }
 
                             @Override
@@ -252,7 +322,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
                             @Override
                             public void onClick(double d, double e) {
-                                if (unlockedChapters.contains(selectedChapter.name)){
+                                if (unlockedChapters.contains(selectedChapter.name)) {
                                     setCurrentExperiment(experiment);
                                 }
                             }
@@ -269,10 +339,12 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         experimentChapterWidget.addChild(new EmptyWidget(0, y));
     }
 
-    public void onServerData(BlockPos pos, String selectedName, String selectedExperimentName, Set<String> unlocked) {
+    public void onServerData(BlockPos pos, String selectedName, String selectedExperimentName, Set<String> unlocked, Set<String> completed) {
         this.tablePos = pos;
         unlockedChapters.clear();
         unlockedChapters.addAll(unlocked);
+        completedExperiments.clear();
+        completedExperiments.addAll(completed);
         for (ChapterEntryButton button : chapterButtons) {
             button.locked = !unlockedChapters.contains(button.chapter.name);
         }
@@ -288,7 +360,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         if (target == null && !chapterButtons.isEmpty()) {
             target = chapterButtons.get(0);
         }
-        if (target != null) {
+        if (target != null && target.chapter != selectedChapter) {
             experimentGroup.setSelected(target);
             setSelectedChapter(target.chapter);
         }
@@ -306,7 +378,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         if (tablePos == null || !pos.equals(tablePos)) {
             return;
         }
-        if (chapterName != null) {
+        if (chapterName != null && !chapterName.equals(selectedChapter.name)) {
             for (ChapterEntryButton button : chapterButtons) {
                 if (button.chapter.name.equals(chapterName)) {
                     experimentGroup.setSelected(button);

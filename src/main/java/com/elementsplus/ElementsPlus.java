@@ -157,7 +157,7 @@ public class ElementsPlus implements ModInitializer {
                     for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player))) {
                         unlocked.add(chapter.name);
                     }
-                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), table.getSelectedExperiment(), unlocked));
+                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), table.getSelectedExperiment(), unlocked, PlayerExperimentsAttachment.get(player)));
                 }));
 
         ServerPlayNetworking.registerGlobalReceiver(ExperimentTableSelectionUpdatePayload.TYPE, (payload, context) ->

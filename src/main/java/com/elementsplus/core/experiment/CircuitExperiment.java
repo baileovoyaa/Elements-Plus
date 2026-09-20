@@ -1,5 +1,9 @@
 package com.elementsplus.core.experiment;
 
+import com.elementsplus.ModDataComponents;
+import com.elementsplus.core.circuit.CircuitComponent;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,10 +26,6 @@ public class CircuitExperiment extends BaseExperiment {
         public PinValue(int value) {
             this((byte) value);
         }
-    }
-
-    public interface TestCase {
-
     }
 
     public interface CombinationalTestCase extends TestCase {
@@ -82,9 +82,28 @@ public class CircuitExperiment extends BaseExperiment {
 
     public List<TestCase> testCases;
     public Map<String, Integer> bitWidthsPrecheck;
+    public CircuitComponent circuitComponent;
+
+    public CircuitExperiment(List<TestCase> testCases, CircuitComponent component) {
+        this.testCases = testCases;
+        this.bitWidthsPrecheck = new HashMap<>();
+        for (TestCase testCase : testCases) {
+            if (testCase instanceof CombinationalTestCase combinationalTestCase) {
+                for (Map.Entry<String, PinValue> entry : combinationalTestCase.getInputs().entrySet()) {
+                    String pinName = entry.getKey();
+                    int bitWidth = entry.getValue().bitWidth;
+                    if (bitWidthsPrecheck.containsKey(pinName) && bitWidthsPrecheck.get(pinName) != bitWidth) {
+                        throw new IllegalStateException("Bit width ambiguous for pin " + pinName);
+                    }
+                    bitWidthsPrecheck.put(pinName, bitWidth);
+                }
+            }
+        }
+        this.circuitComponent = component;
+    }
 
     public CircuitExperiment(List<TestCase> testCases) {
-        this.testCases = testCases;
+        this(testCases, null);
     }
 
     @Override
@@ -104,5 +123,15 @@ public class CircuitExperiment extends BaseExperiment {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public void onComplete(Context ctx, boolean success) {
+        if (success && circuitComponent != null) {
+            ctx.setItemStack(itemStack -> {
+                itemStack.set(ModDataComponents.EQUIVALENT_COMPONENT, circuitComponent.getId());
+                return itemStack;
+            });
+        }
     }
 }

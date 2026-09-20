@@ -50,16 +50,23 @@ public class ModItemGroups {
                 ModBlocks.SILVER_ORE,
                 ModBlocks.SILVER_BLOCK,
                 ModBlocks.CHARGED_LIGHTNING_ROD,
-                ModItems.PLASTIC
+                ModBlocks.ADVANCED_CRAFTING_TABLE,
+                ModBlocks.CRYSTALLIZER,
+                ModBlocks.METAL_CATALYST,
+                ModItems.PLASTIC,
+                ModItems.AMETHYST_LENS,
+                ModItems.COPPER_WIRE,
+                ModItems.GOLD_WIRE,
+                ModItems.HIGH_VOLTAGE_COIL,
+                ModItems.CATALYST,
+                ModItems.LIGHTNING_BOTTLE,
+                ModItems.WASTE_BOTTLE
                 // 可以继续添加更多物品
         );
         registerTab(
                 "circuit",
                 () -> new ItemStack(Items.AMETHYST_SHARD),
                 "itemGroup.elements-plus.circuit",
-                ModBlocks.CRYSTALLIZER,
-                ModBlocks.ADVANCED_CRAFTING_TABLE,
-                ModBlocks.METAL_CATALYST,
                 ModBlocks.LITHOGRAPHY_MACHINE,
                 ModBlocks.EXPERIMENT_TABLE,
                 ModItems.AMETHYST_TRANSISTOR,
@@ -89,15 +96,10 @@ public class ModItemGroups {
                 ModItems.DOPED_REDSTONE_DUST,
                 ModItems.DOPED_GLOWSTONE_DUST,
                 ModItems.HEAT_SINK_SUBSTRATE,
-                ModItems.HIGH_VOLTAGE_COIL,
-                ModItems.AMETHYST_LENS,
                 ModItems.INSULATING_LAYER,
                 ModItems.NETHERITE_FRAGMENT,
                 ModItems.PHOTORESIST,
                 ModItems.LITHOGRAPHY_MASK,
-                ModItems.CATALYST,
-                ModItems.LIGHTNING_BOTTLE,
-                ModItems.WASTE_BOTTLE,
                 ModItems.COMPUTER,
                 ModItems.AND_GATE,
                 ModItems.OR_GATE,
@@ -117,6 +119,7 @@ public class ModItemGroups {
         addItemStacksToTab("circuit", infiniteDiagram);
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());
     }
+
     private static void registerTab(String tabId, Supplier<ItemStack> icon,
                                     String translationKey, ItemLike... items) {
         ResourceKey<CreativeModeTab> tabKey = ResourceKey.create(
@@ -138,12 +141,14 @@ public class ModItemGroups {
         TAB_CONFIGS.add(new TabConfig(tabId, tabKey, items));
         ElementsPlus.LOGGER.debug("Registered tab: {}", tabId);
     }
+
     public static ResourceKey<CreativeModeTab> getTabKey(String tabId) {
         return ResourceKey.create(
                 BuiltInRegistries.CREATIVE_MODE_TAB.key(),
                 ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, tabId)
         );
     }
+
     public static void addItemsToTab(String tabId, Item... items) {
         ResourceKey<CreativeModeTab> tabKey = getTabKey(tabId);
         ItemGroupEvents.modifyEntriesEvent(tabKey).register(itemGroup -> {
@@ -167,6 +172,7 @@ public class ModItemGroups {
         });
         ElementsPlus.LOGGER.debug("Added {} item stack(s) to tab: {}", stacks.length, tabId);
     }
+
     private record TabConfig(String tabId, ResourceKey<CreativeModeTab> tabKey, ItemLike[] items) {
     }
 }

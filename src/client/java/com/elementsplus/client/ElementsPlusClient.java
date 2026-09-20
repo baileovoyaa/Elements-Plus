@@ -58,7 +58,7 @@ public class ElementsPlusClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(ExperimentTableScreenDataPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
-                        screen.onServerData(payload.pos(), payload.selectedChapter(), payload.selectedExperiment(), payload.unlockedChapters());
+                        screen.onServerData(payload.pos(), payload.selectedChapter(), payload.selectedExperiment(), payload.unlockedChapters(), payload.completedExperiments());
                     }
                 }));
 
