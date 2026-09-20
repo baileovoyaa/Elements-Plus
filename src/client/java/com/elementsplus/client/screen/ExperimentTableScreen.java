@@ -1,9 +1,11 @@
 package com.elementsplus.client.screen;
 
 import com.elementsplus.ElementsPlus;
+import com.elementsplus.blocks.entity.ExperimentStatus;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.core.experiment.*;
 import com.elementsplus.menu.ExperimentTableMenu;
+import com.elementsplus.network.ExperimentTableControlPayload;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
 import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -11,10 +13,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
@@ -23,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTableMenu> implements SlotPositionProvider {
@@ -46,6 +52,14 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     private final Set<String> unlockedChapters = new HashSet<>();
     private final Set<String> completedExperiments = new HashSet<>();
     private List<ChapterEntryButton> chapterButtons = new ArrayList<>();
+
+    private ExperimentStatus status = ExperimentStatus.IDLE;
+    private boolean tablePaused = false;
+    private float currentProgress = 0f;
+    private final List<Integer> currentTestResults = new ArrayList<>();
+    private final List<Component> statusTooltipLines = new ArrayList<>();
+    private String resultsExperimentName = null;
+    private final List<TestCaseWidget> testCaseWidgets = new ArrayList<>();
 
     public IconButton startExperimentButton;
     public ProgressBar progressBar;
@@ -74,6 +88,15 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
         Point point = getSlotPosition(this.menu.extraSlot);
         GuiUtil.drawSlot(guiGraphics, this.leftPos + point.x() - 1, this.topPos + point.y() - 1);
+
+        // 实验进行中：运行中显示 pause，暂停显示 play，按住 Shift 显示 stop
+        if (status == ExperimentStatus.BUSY) {
+            startExperimentButton.icon = Screen.hasShiftDown()
+                    ? ElementsPlus.id("textures/gui/stop.png")
+                    : ElementsPlus.id("textures/gui/" + (tablePaused ? "play" : "pause") + ".png");
+        } else {
+            startExperimentButton.icon = ElementsPlus.id("textures/gui/play.png");
+        }
     }
 
     @Override
@@ -169,8 +192,17 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
         // 开始实验（动态x坐标）
         this.addRenderableWidget(startExperimentButton = new IconButton(0, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/play.png"), (button) -> {
-            // TODO: 开始实验
-            // 解锁的章节包含该实验的玩家才能开始实验
+            if (tablePos == null) {
+                return;
+            }
+            if (status == ExperimentStatus.BUSY) {
+                ExperimentTableControlPayload.Action action = Screen.hasShiftDown()
+                        ? ExperimentTableControlPayload.Action.STOP
+                        : (tablePaused ? ExperimentTableControlPayload.Action.RESUME : ExperimentTableControlPayload.Action.PAUSE);
+                ClientPlayNetworking.send(new ExperimentTableControlPayload(tablePos, action, null));
+            } else if (selectedExperiment != null) {
+                ClientPlayNetworking.send(new ExperimentTableControlPayload(tablePos, ExperimentTableControlPayload.Action.START, selectedExperiment.getName()));
+            }
         }));
 
         // 进度条（动态x，宽度可变）
@@ -181,6 +213,8 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }));
 
         updateCurrentExperimentDisplay();
+        updateStatusButton();
+        updateProgressBar();
     }
 
     public static class ProgressBar extends AbstractWidget {
@@ -210,6 +244,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         public Component cornerText;
         public Component bottomText;
         public TestCase testCase;
+        public int testIndex = -1;
 
         public TestCaseWidget(int x, int y, int width, int height) {
             super(x, y, width, height, Component.empty());
@@ -244,6 +279,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         progressBar.setX(leftPos + currentExperimentWidget.getWidth() + 114 + 16 + 5);
         progressBar.setWidth(imageWidth - currentExperimentWidget.getWidth() - 162);
         testCasePanelWidget.clearChildren();
+        testCaseWidgets.clear();
         if (selectedExperiment instanceof CircuitExperiment circuitExperiment) {
             int x = 0;
             int y = 0;
@@ -251,10 +287,12 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             for (TestCase testCase : circuitExperiment.testCases) {
                 TestCaseWidget testCaseWidget = new TestCaseWidget(x, y, 50, 50);
                 testCaseWidget.color = 0xFF808080;
-                testCaseWidget.centerText = Component.literal("Waiting");
+                testCaseWidget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_waiting");
                 testCaseWidget.cornerText = Component.translatable("#%s", i);
                 testCaseWidget.testCase = testCase;
+                testCaseWidget.testIndex = i - 1;
                 testCasePanelWidget.addChild(testCaseWidget);
+                testCaseWidgets.add(testCaseWidget);
                 x += 50;
                 if (x + 50 > testCasePanelWidget.getWidth()) {
                     x = 0;
@@ -263,6 +301,12 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                 i++;
             }
         }
+        // 当前测例结果属于另一个实验时视为失效
+        if (!Objects.equals(resultsExperimentName, selectedExperiment == null ? null : selectedExperiment.getName())) {
+            currentTestResults.clear();
+            currentProgress = 0f;
+        }
+        applyTestResultsToWidgets();
     }
 
     public void setCurrentExperiment(BaseExperiment experiment) {
@@ -275,6 +319,90 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             ClientPlayNetworking.send(new ExperimentTableSelectionUpdatePayload(tablePos, null, experiment.getName()));
         }
         updateCurrentExperimentDisplay();
+    }
+
+    public void onStatusUpdate(BlockPos pos, ExperimentStatus status, boolean paused, String experimentName, float progress, List<Integer> testResults, List<String> tooltipJson) {
+        if (tablePos == null || !pos.equals(tablePos)) {
+            return;
+        }
+        this.status = status;
+        this.tablePaused = paused;
+        this.currentProgress = progress;
+        this.resultsExperimentName = experimentName;
+        this.currentTestResults.clear();
+        this.currentTestResults.addAll(testResults);
+        this.statusTooltipLines.clear();
+        for (String json : tooltipJson) {
+            statusTooltipLines.add(decodeTooltip(json));
+        }
+        if (status == ExperimentStatus.BUSY && experimentName != null) {
+            BaseExperiment running = BuiltinExperiments.byId(experimentName);
+            if (running != null && running != selectedExperiment) {
+                setCurrentExperiment(running, false);
+            }
+        }
+        updateStatusButton();
+        updateProgressBar();
+        applyTestResultsToWidgets();
+    }
+
+    private Component decodeTooltip(String json) {
+        try {
+            if (Minecraft.getInstance().getConnection() != null) {
+                return Component.Serializer.fromJson(json, Minecraft.getInstance().getConnection().registryAccess());
+            }
+        } catch (Exception e) {
+            // 忽略，回退为原始文本
+        }
+        return Component.literal(json);
+    }
+
+    private void updateStatusButton() {
+        if (statusButton == null) {
+            return;
+        }
+        statusButton.icon = switch (status) {
+            case BUSY -> ElementsPlus.id("textures/gui/experiment_table/busy.png");
+            case SUCCESS -> ElementsPlus.id("textures/gui/experiment_table/success.png");
+            case ERROR -> ElementsPlus.id("textures/gui/experiment_table/error.png");
+            case IDLE -> ElementsPlus.id("textures/gui/experiment_table/idle.png");
+        };
+        if (status == ExperimentStatus.ERROR && !statusTooltipLines.isEmpty()) {
+            MutableComponent lines = Component.literal("");
+            for (int i = 0; i < statusTooltipLines.size(); i++) {
+                if (i > 0) {
+                    lines.append("\n");
+                }
+                lines.append(statusTooltipLines.get(i).copy());
+            }
+            statusButton.setTooltip(Tooltip.create(lines));
+        } else {
+            statusButton.setTooltip(null);
+        }
+    }
+
+    private void updateProgressBar() {
+        if (progressBar == null) {
+            return;
+        }
+        progressBar.progress = Math.max(0f, Math.min(1f, currentProgress));
+        progressBar.color = status == ExperimentStatus.ERROR ? 0xFFC00000 : 0xFF00A000;
+    }
+
+    private void applyTestResultsToWidgets() {
+        for (TestCaseWidget widget : testCaseWidgets) {
+            int result = widget.testIndex >= 0 && widget.testIndex < currentTestResults.size() ? currentTestResults.get(widget.testIndex) : -1;
+            if (result > 0) {
+                widget.color = 0xFF00A000;
+                widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_correct");
+            } else if (result == 0) {
+                widget.color = 0xFFA00000;
+                widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_wrong");
+            } else {
+                widget.color = 0xFF808080;
+                widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_waiting");
+            }
+        }
     }
 
     public boolean hasCompletedExperiment(BaseExperiment experiment) {

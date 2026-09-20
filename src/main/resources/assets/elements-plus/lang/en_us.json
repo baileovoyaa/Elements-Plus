@@ -156,6 +156,23 @@
   "gui.elements-plus.toolbox.dialog.delete_message": "Delete group \"%s\"? This group and all its components will be deleted.",
 
   "gui.elements-plus.experiment_table.no_experiment": "No experiment selected",
+  "gui.elements-plus.experiment_table.test_waiting": "Waiting",
+  "gui.elements-plus.experiment_table.test_correct": "Correct",
+  "gui.elements-plus.experiment_table.test_wrong": "Wrong",
+
+  "experiment.elements-plus.precheck.header": "Pre-check failed",
+  "experiment.elements-plus.precheck.not_diagram": "- The inserted item is not a circuit diagram",
+  "experiment.elements-plus.precheck.has_equivalent": "- The circuit diagram is already compiled",
+  "experiment.elements-plus.precheck.missing_inputs": "- Missing input labels: %s",
+  "experiment.elements-plus.precheck.missing_outputs": "- Missing output labels: %s",
+  "experiment.elements-plus.precheck.duplicate_label": "- Duplicate or misused labels: %s",
+  "experiment.elements-plus.precheck.cycle": "- The circuit has a combinational cycle",
+  "experiment.elements-plus.precheck.generic": "- This experiment is not available yet",
+
+  "experiment.elements-plus.testfail.header": "Test failed",
+  "experiment.elements-plus.testfail.input": "- Input: %s",
+  "experiment.elements-plus.testfail.expected": "- Expected output: %s",
+  "experiment.elements-plus.testfail.actual": "- Actual output: %s",
 
   "item.elements-plus.gold_wire": "Gold Wire",
   "item.elements-plus.copper_wire": "Copper Wire",

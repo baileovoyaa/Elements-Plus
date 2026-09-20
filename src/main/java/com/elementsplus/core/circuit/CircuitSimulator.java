@@ -647,6 +647,9 @@ public class CircuitSimulator {
         if (cc == BuiltinCircuitComponents.OUTPUT) {
             return inPort(node, 0);
         }
+        if (cc == BuiltinCircuitComponents.AMPLIFIER) {
+            return inPort(node, 0) > 0 ? 15 : 0;
+        }
         if (cc == BuiltinCircuitComponents.AND_GATE) {
             int a = (int) inPort(node, 0);
             int b = (int) inPort(node, 1);

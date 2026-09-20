@@ -155,6 +155,23 @@
   "gui.elements-plus.toolbox.dialog.delete_message": "确定删除分组\"%s\"？该分组及其所有元件都会被删除",
 
   "gui.elements-plus.experiment_table.no_experiment": "未选择实验",
+  "gui.elements-plus.experiment_table.test_waiting": "等待",
+  "gui.elements-plus.experiment_table.test_correct": "正确",
+  "gui.elements-plus.experiment_table.test_wrong": "错误",
+
+  "experiment.elements-plus.precheck.header": "预检不通过",
+  "experiment.elements-plus.precheck.not_diagram": "- 放入的物品不是电路图",
+  "experiment.elements-plus.precheck.has_equivalent": "- 电路图已编译，无法再次实验",
+  "experiment.elements-plus.precheck.missing_inputs": "- 缺少输入标签：%s",
+  "experiment.elements-plus.precheck.missing_outputs": "- 缺少输出标签：%s",
+  "experiment.elements-plus.precheck.duplicate_label": "- 重复或错用的标签：%s",
+  "experiment.elements-plus.precheck.cycle": "- 电路存在组合环路",
+  "experiment.elements-plus.precheck.generic": "- 该实验暂时无法进行",
+
+  "experiment.elements-plus.testfail.header": "测试不通过",
+  "experiment.elements-plus.testfail.input": "- 输入：%s",
+  "experiment.elements-plus.testfail.expected": "- 预期输出：%s",
+  "experiment.elements-plus.testfail.actual": "- 实际输出：%s",
 
   "item.elements-plus.gold_wire": "金引线",
   "item.elements-plus.copper_wire": "铜引线",

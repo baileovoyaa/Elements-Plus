@@ -9,6 +9,7 @@ import com.elementsplus.client.screen.ExperimentTableScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableSelectionChangePayload;
+import com.elementsplus.network.ExperimentTableStatusPayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
 import com.elementsplus.player.PlayerToolbox;
@@ -66,6 +67,13 @@ public class ElementsPlusClient implements ClientModInitializer {
                 context.client().execute(() -> {
                     if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
                         screen.onSelectionChanged(payload.pos(), payload.chapterName(), payload.experimentName());
+                    }
+                }));
+
+        ClientPlayNetworking.registerGlobalReceiver(ExperimentTableStatusPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> {
+                    if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
+                        screen.onStatusUpdate(payload.pos(), payload.status(), payload.paused(), payload.experimentName(), payload.progress(), payload.testResults(), payload.tooltipLines());
                     }
                 }));
 

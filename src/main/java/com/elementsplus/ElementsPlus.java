@@ -11,9 +11,11 @@ import com.elementsplus.core.experiment.ExperimentChapter;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
+import com.elementsplus.network.ExperimentTableControlPayload;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableSelectionChangePayload;
 import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
+import com.elementsplus.network.ExperimentTableStatusPayload;
 import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
@@ -145,6 +147,22 @@ public class ElementsPlus implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(ExperimentTableSelectionUpdatePayload.TYPE, ExperimentTableSelectionUpdatePayload.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ExperimentTableScreenDataPayload.TYPE, ExperimentTableScreenDataPayload.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ExperimentTableSelectionChangePayload.TYPE, ExperimentTableSelectionChangePayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(ExperimentTableControlPayload.TYPE, ExperimentTableControlPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(ExperimentTableStatusPayload.TYPE, ExperimentTableStatusPayload.STREAM_CODEC);
+
+        ServerPlayNetworking.registerGlobalReceiver(ExperimentTableControlPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    if (!(player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table)) {
+                        return;
+                    }
+                    switch (payload.action()) {
+                        case START -> table.startExperiment(payload.experimentName(), player);
+                        case PAUSE -> table.pauseExperiment();
+                        case RESUME -> table.resumeExperiment();
+                        case STOP -> table.stopExperiment();
+                    }
+                }));
 
         ServerPlayNetworking.registerGlobalReceiver(ExperimentTableDataRequestPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
@@ -158,6 +176,7 @@ public class ElementsPlus implements ModInitializer {
                         unlocked.add(chapter.name);
                     }
                     ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), table.getSelectedExperiment(), unlocked, PlayerExperimentsAttachment.get(player)));
+                    ServerPlayNetworking.send(player, table.buildStatusPayload());
                 }));
 
         ServerPlayNetworking.registerGlobalReceiver(ExperimentTableSelectionUpdatePayload.TYPE, (payload, context) ->
