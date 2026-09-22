@@ -19,8 +19,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
@@ -291,6 +294,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         paused = false;
         if (success) {
             status = ExperimentStatus.SUCCESS;
+            level.playSound(null, getBlockPos(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
             progress = 1f;
             BaseExperiment experiment = activeExperiment;
             ItemStack stack = this.getItem(0);
@@ -311,6 +315,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             }
         } else {
             status = ExperimentStatus.ERROR;
+            level.playSound(null, getBlockPos(), SoundEvents.NOTE_BLOCK_HARP.value(), SoundSource.PLAYERS, 1.0F, 0.5F);
         }
         this.setChanged();
         syncStatus();

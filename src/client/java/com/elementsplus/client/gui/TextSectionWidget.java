@@ -20,14 +20,27 @@ public class TextSectionWidget extends AbstractWidget {
         this.setHeight(textHeight());
     }
 
+    public TextSectionWidget(int x, int y, List<Component> text) {
+        this(x, y, 0, text);
+    }
+
+    public TextSectionWidget(int x, int y, Component text) {
+        this(x, y, 0, List.of(text));
+    }
+
     @Override
     public void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
         int y = this.getY();
         Font font = Minecraft.getInstance().font;
         for (Component component : text) {
-            for (FormattedCharSequence line : font.split(component, this.getWidth())) {
-                guiGraphics.drawString(font, line, this.getX(), y, 0xFFFFFF, false);
+            if (this.getWidth() == 0) {
+                guiGraphics.drawString(font, component, this.getX(), y, 0xFFFFFF, false);
                 y += font.lineHeight;
+            } else {
+                for (FormattedCharSequence line : font.split(component, this.getWidth())) {
+                    guiGraphics.drawString(font, line, this.getX(), y, 0xFFFFFF, false);
+                    y += font.lineHeight;
+                }
             }
             y += 5;
         }

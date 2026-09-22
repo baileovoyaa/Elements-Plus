@@ -5,6 +5,8 @@ import com.elementsplus.core.circuit.component.SimpleComponentInstance;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.Arrays;
 import java.util.function.Supplier;
@@ -19,6 +21,7 @@ public class CircuitComponent {
     private final PinType[] pins;
     private final int[] pinBitWidths;
     private Supplier<CircuitComponentInstance> instanceFactory = () -> SimpleComponentInstance.INSTANCE;
+    private IngredientSupplier ingredientSupplier;
 
 
     public CircuitComponent(ResourceLocation id, Component name, Component description, ResourceLocation icon, int width, int height) {
@@ -32,6 +35,8 @@ public class CircuitComponent {
         this.pins = new PinType[2 * (width + height)];
         Arrays.fill(this.pins, PinType.NONE);
         this.pinBitWidths = new int[2 * (width + height)];
+
+        setSelfAsIngredientSupplier();
     }
 
     public CircuitComponent(ResourceLocation id, Component name, Component description, ResourceLocation icon) {
@@ -44,22 +49,6 @@ public class CircuitComponent {
 
     public CircuitComponent(ResourceLocation id, String name) {
         this(id, Component.nullToEmpty(name));
-    }
-
-    public CircuitComponent(Component name, Component description, ResourceLocation icon, int width, int height) {
-        this(null, name, description, icon, width, height);
-    }
-
-    public CircuitComponent(Component name, Component description, ResourceLocation icon) {
-        this(null, name, description, icon);
-    }
-
-    public CircuitComponent(Component name) {
-        this(null, name);
-    }
-
-    public CircuitComponent(String name) {
-        this(null, Component.nullToEmpty(name));
     }
 
     public ResourceLocation getId() {
@@ -125,7 +114,9 @@ public class CircuitComponent {
         pins[i] = type;
     }
 
-    /** 引脚位宽。未显式设置的引脚默认 1 位。 */
+    /**
+     * 引脚位宽。未显式设置的引脚默认 1 位。
+     */
     public int getPinBitWidth(Direction side, int offset) {
         Integer i = index(side, offset);
         if (i == null) return 1;
@@ -139,12 +130,48 @@ public class CircuitComponent {
         pinBitWidths[i] = bitWidth;
     }
 
-    public CircuitComponent setInstanceFactory(Supplier<CircuitComponentInstance> instanceFactory) {
+    public void setInstanceFactory(Supplier<CircuitComponentInstance> instanceFactory) {
         this.instanceFactory = instanceFactory;
-        return this;
     }
 
     public CircuitComponentInstance createInstance() {
         return instanceFactory.get();
+    }
+
+    public void setIngredientSupplier(Item item) {
+        setIngredientSupplier(item.getDefaultInstance());
+    }
+
+    public void setIngredientSupplier(ItemStack itemStack) {
+        setIngredientSupplier(new ItemStack[]{itemStack});
+    }
+
+    public void setIngredientSupplier(ItemStack[] itemStacks) {
+        this.ingredientSupplier = new ItemIngredientSupplier(itemStacks);
+    }
+
+    public void setIngredientSupplier(CircuitComponent component) {
+        this.ingredientSupplier = new ComponentIngredientSupplier(component);
+    }
+
+    public void setSelfAsIngredientSupplier() {
+        setIngredientSupplier(this);
+    }
+
+    public void clearIngredientSupplier() {
+        this.ingredientSupplier = null;
+    }
+
+    public IngredientSupplier getIngredientSupplier() {
+        return ingredientSupplier;
+    }
+
+    public sealed interface IngredientSupplier permits ItemIngredientSupplier, ComponentIngredientSupplier {
+    }
+
+    public record ItemIngredientSupplier(ItemStack[] itemStacks) implements IngredientSupplier {
+    }
+
+    public record ComponentIngredientSupplier(CircuitComponent component) implements IngredientSupplier {
     }
 }

@@ -264,13 +264,7 @@ public class CircuitDiagram {
         }
     }
 
-    public static final CircuitDiagram EXAMPLE = new CircuitDiagram();
-
-    static {
-        EXAMPLE.setBlock(5, 5, new Wire(null, Wire.WireMaterial.COPPER, Wire.WireMaterial.COPPER, Wire.WireMaterial.COPPER));
-        EXAMPLE.setBlock(5, 6, new Wire(Wire.WireMaterial.GOLD, Wire.WireMaterial.GOLD, null, Wire.WireMaterial.GOLD));
-        EXAMPLE.setBlock(6, 5, new Component(BuiltinCircuitComponents.AND_GATE, Direction.NORTH));
-    }
+    public static final CircuitDiagram EMPTY = new CircuitDiagram();
 
     public CircuitDiagram copy() {
         CircuitDiagram copy = new CircuitDiagram();

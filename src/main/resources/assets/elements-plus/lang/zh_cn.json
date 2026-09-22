@@ -59,6 +59,7 @@
   "container.elements-plus.lithography_machine": "光刻机",
   "gui.elements-plus.lithography_machine.design": "设计",
   "gui.elements-plus.lithography_machine.manufacture": "制造",
+  "gui.elements-plus.lithography_machine.copy_compiled": "复制编译状态",
 
   "block.elements-plus.advanced_crafting_table": "高级工作台",
   "block.elements-plus.lithography_machine": "光刻机",
@@ -117,6 +118,8 @@
   "circuit.elements-plus.component.output": "输出",
   "circuit.elements-plus.component.output.description": "向外输出信号",
 
+  "circuit.elements-plus.component.amplifier": "放大器",
+
   "circuit.elements-plus.component.bus_joiner_8": "8位总线连接器",
   "circuit.elements-plus.component.bus_joiner_8.description": "将多个导线合并成一个总线",
   "circuit.elements-plus.component.bus_splitter_8": "8位总线分流器",
@@ -155,9 +158,9 @@
   "gui.elements-plus.toolbox.dialog.delete_message": "确定删除分组\"%s\"？该分组及其所有元件都会被删除",
 
   "gui.elements-plus.experiment_table.no_experiment": "未选择实验",
-  "gui.elements-plus.experiment_table.test_waiting": "等待",
-  "gui.elements-plus.experiment_table.test_correct": "正确",
-  "gui.elements-plus.experiment_table.test_wrong": "错误",
+  "gui.elements-plus.experiment_table.test_waiting": "Waiting",
+  "gui.elements-plus.experiment_table.test_correct": "AC",
+  "gui.elements-plus.experiment_table.test_wrong": "WA",
 
   "experiment.elements-plus.precheck.header": "预检不通过",
   "experiment.elements-plus.precheck.not_diagram": "- 放入的物品不是电路图",
@@ -206,6 +209,15 @@
   "circuit_diagram.scale.large": "大",
   "circuit_diagram.scale.huge": "超大",
   "circuit_diagram.scale.infinite": "无限",
+
+  "item.elements-plus.small_empty_chip": "小晶片",
+  "item.elements-plus.medium_empty_chip": "中晶片",
+  "item.elements-plus.large_empty_chip": "大晶片",
+  "item.elements-plus.huge_empty_chip": "超大晶片",
+  "item.elements-plus.small_chip": "小芯片",
+  "item.elements-plus.medium_chip": "中芯片",
+  "item.elements-plus.large_chip": "大芯片",
+  "item.elements-plus.huge_chip": "超大芯片",
 
   "effect.elements-plus.steel_pipe_shield": "钢管护盾",
   "effect.elements-plus.rust_proof": "防锈",

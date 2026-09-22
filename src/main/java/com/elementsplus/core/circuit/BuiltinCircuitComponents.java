@@ -1,6 +1,7 @@
 package com.elementsplus.core.circuit;
 
 import com.elementsplus.ElementsPlus;
+import com.elementsplus.ModItems;
 import com.elementsplus.core.circuit.component.*;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -50,10 +51,12 @@ public class BuiltinCircuitComponents {
     public static final CircuitComponent INPUT = register(new CircuitComponent(ElementsPlus.id("input"), Component.translatable("circuit.elements-plus.component.input"), Component.translatable("circuit.elements-plus.component.input.description"), ElementsPlus.id("textures/circuit/input.png"), 1, 1) {{
         setPin(Direction.EAST, 0, PinType.OUTPUT);
         setInstanceFactory(InputComponentInstance::new);
+        clearIngredientSupplier();
     }});
     public static final CircuitComponent OUTPUT = register(new CircuitComponent(ElementsPlus.id("output"), Component.translatable("circuit.elements-plus.component.output"), Component.translatable("circuit.elements-plus.component.output.description"), ElementsPlus.id("textures/circuit/output.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setInstanceFactory(OutputComponentInstance::new);
+        clearIngredientSupplier();
     }});
     // 逻辑门
     public static final CircuitComponent AND_GATE = register(new CircuitComponent(ElementsPlus.id("and_gate"), Component.nullToEmpty("与门"), Component.nullToEmpty("与门描述"), ElementsPlus.id("textures/circuit/and_gate.png"), 1, 2) {{
@@ -75,6 +78,7 @@ public class BuiltinCircuitComponents {
         setPin(Direction.WEST, 7, PinType.INPUT); // 第0位
         setPin(Direction.EAST, 0, PinType.OUTPUT); // 8位总线
         setPinBitWidth(Direction.EAST, 0, 8);
+        clearIngredientSupplier();
     }});
     public static final CircuitComponent BUS_SPLITTER_8 = register(new CircuitComponent(ElementsPlus.id("bus_splitter"), Component.translatable("circuit.elements-plus.component.bus_splitter_8"), Component.translatable("circuit.elements-plus.component.bus_splitter_8.description"), ElementsPlus.id("textures/circuit/bus_splitter.png"), 1, 8) {{
         setPin(Direction.WEST, 7, PinType.INPUT); // 8位总线
@@ -87,6 +91,7 @@ public class BuiltinCircuitComponents {
         setPin(Direction.EAST, 6, PinType.OUTPUT); // 第6位
         setPin(Direction.EAST, 7, PinType.OUTPUT); // 第7位
         setPinBitWidth(Direction.WEST, 7, 8);
+        clearIngredientSupplier();
     }});
 
     // 高级元件
@@ -112,6 +117,15 @@ public class BuiltinCircuitComponents {
 
     public static CircuitComponent byId(ResourceLocation id) {
         return id == null ? null : BY_ID.get(id);
+    }
+
+    public static void bindIngredients() {
+        TRANSISTOR.setIngredientSupplier(ModItems.AMETHYST_TRANSISTOR);
+        DIODE.setIngredientSupplier(ModItems.AMETHYST_DIODE);
+        CAPACITOR.setIngredientSupplier(ModItems.AMETHYST_CAPACITOR);
+        RESISTOR.setIngredientSupplier(ModItems.AMETHYST_RESISTOR);
+        RESONATOR.setIngredientSupplier(ModItems.AMETHYST_RESONATOR);
+        BATTERY.setIngredientSupplier(ModItems.AMETHYST_BATTERY);
     }
 
     public static final CircuitComponentToolbox EXAMPLE_TOOLBOX = CircuitComponentToolbox.create()

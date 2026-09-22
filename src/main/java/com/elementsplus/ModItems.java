@@ -3,6 +3,7 @@ package com.elementsplus;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
+import com.elementsplus.item.ChipItem;
 import com.elementsplus.item.WrenchItem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
@@ -253,7 +254,7 @@ public class ModItems {
     public static final Item CIRCUIT_BOARD = register(new Item(new Item.Properties().stacksTo(1)), "circuit_board");
     public static final Item CIRCUIT_DIAGRAM = register(new Item(new Item.Properties()
             .stacksTo(1)
-            .component(ModDataComponents.CIRCUIT_DIAGRAM, CircuitDiagram.EXAMPLE.copy())) {
+            .component(ModDataComponents.CIRCUIT_DIAGRAM, CircuitDiagram.EMPTY.copy())) {
         @Override
         public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> list, TooltipFlag tooltipFlag) {
             ResourceLocation id = itemStack.get(ModDataComponents.EQUIVALENT_COMPONENT);
@@ -299,10 +300,10 @@ public class ModItems {
     public static final Item MEDIUM_EMPTY_CHIP = register(new Item(new Item.Properties()), "medium_empty_chip");
     public static final Item LARGE_EMPTY_CHIP = register(new Item(new Item.Properties()), "large_empty_chip");
     public static final Item HUGE_EMPTY_CHIP = register(new Item(new Item.Properties()), "huge_empty_chip");
-    public static final Item SMALL_CHIP = register(new Item(new Item.Properties().stacksTo(1)), "small_chip");
-    public static final Item MEDIUM_CHIP = register(new Item(new Item.Properties().stacksTo(1)), "medium_chip");
-    public static final Item LARGE_CHIP = register(new Item(new Item.Properties().stacksTo(1)), "large_chip");
-    public static final Item HUGE_CHIP = register(new Item(new Item.Properties().stacksTo(1)), "huge_chip");
+    public static final Item SMALL_CHIP = register(new ChipItem(new Item.Properties()), "small_chip");
+    public static final Item MEDIUM_CHIP = register(new ChipItem(new Item.Properties()), "medium_chip");
+    public static final Item LARGE_CHIP = register(new ChipItem(new Item.Properties()), "large_chip");
+    public static final Item HUGE_CHIP = register(new ChipItem(new Item.Properties()), "huge_chip");
 
     // 杂件
     public static final Item HEAT_SINK_SUBSTRATE = register(new Item(new Item.Properties()), "heat_sink_substrate");
@@ -320,5 +321,6 @@ public class ModItems {
 
     public static void initialize() {
         // 物品已在静态块中注册
+        BuiltinCircuitComponents.bindIngredients();
     }
 }

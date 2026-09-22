@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "elements-plus:metallized_wafer"
+  },
+  "result": {
+    "id": "elements-plus:medium_empty_chip",
+    "count": 16
+  }
+}

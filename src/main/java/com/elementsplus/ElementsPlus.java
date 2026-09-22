@@ -11,6 +11,7 @@ import com.elementsplus.core.experiment.ExperimentChapter;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
+import com.elementsplus.network.CopyCompiledSettingPayload;
 import com.elementsplus.network.ExperimentTableControlPayload;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableSelectionChangePayload;
@@ -29,7 +30,6 @@ import com.elementsplus.recipe.ScaleUpgradeRecipe;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.fabricmc.api.ModInitializer;
@@ -37,21 +37,17 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.registry.OxidizableBlocksRegistry;
-import net.fabricmc.fabric.api.registry.StrippableBlockRegistry;
 import net.minecraft.advancements.AdvancementHolder;
-import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.dispenser.DispenseItemBehavior;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -65,8 +61,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.Marker;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -76,7 +70,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.levelgen.GenerationStep;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +78,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -123,6 +115,14 @@ public class ElementsPlus implements ModInitializer {
                             stack.set(ModDataComponents.CIRCUIT_DIAGRAM, payload.diagram());
                             menu.onDiagramChanged();
                         }
+                    }
+                }));
+
+        PayloadTypeRegistry.playC2S().register(CopyCompiledSettingPayload.TYPE, CopyCompiledSettingPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(CopyCompiledSettingPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
+                        menu.setCopyCompiled(payload.copyCompiled());
                     }
                 }));
 
@@ -328,7 +328,7 @@ public class ElementsPlus implements ModInitializer {
 
     public static void doSomething(CommandContext<CommandSourceStack> source) {
         try {
-            source.getSource().sendSuccess(() -> Component.nullToEmpty(CircuitDiagram.CODEC.encode(CircuitDiagram.EXAMPLE, source.getSource().getServer().registryAccess().createSerializationContext(NbtOps.INSTANCE), new CompoundTag()).toString()), false);
+            source.getSource().sendSuccess(() -> Component.nullToEmpty(CircuitDiagram.CODEC.encode(CircuitDiagram.EMPTY, source.getSource().getServer().registryAccess().createSerializationContext(NbtOps.INSTANCE), new CompoundTag()).toString()), false);
         } catch (Exception e) {
             e.printStackTrace();
         }

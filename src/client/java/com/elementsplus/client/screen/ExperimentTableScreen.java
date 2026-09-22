@@ -589,4 +589,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             guiGraphics.disableScissor();
         }
     }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float f) {
+        super.render(guiGraphics, mouseX, mouseY, f);
+        this.renderTooltip(guiGraphics, mouseX, mouseY);
+    }
 }

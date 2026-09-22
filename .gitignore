@@ -40,3 +40,5 @@ replay_*.log
 *.jfr
 
 script/output/
+
+*.patch

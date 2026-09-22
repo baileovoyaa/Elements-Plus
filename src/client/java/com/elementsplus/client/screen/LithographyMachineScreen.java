@@ -6,6 +6,7 @@ import com.elementsplus.ModItems;
 import com.elementsplus.client.ElementsPlusClient;
 import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.gui.ButtonGroup;
+import com.elementsplus.core.circuit.ChipManufacture;
 import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.client.gui.TabButton;
@@ -13,12 +14,12 @@ import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
-import com.elementsplus.network.ToolboxRequestPayload;
+import com.elementsplus.network.CopyCompiledSettingPayload;
 import com.elementsplus.network.ToolboxUpdatePayload;
 import com.elementsplus.player.PlayerToolbox;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
@@ -32,7 +33,9 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -83,10 +86,21 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     public int bitWidth = 1;
 
+    private ScrollPanelWidget manufactureWidget;
+
+    private boolean copyCompiled = true;
+    private ItemStack lastRefreshDiagram;
+    private ItemStack lastRefreshManufactureInput;
+    private final List<IngredientWidget> manufactureIngredients = new ArrayList<>();
+    private final List<ChipManufacture.MaterialRequirement> manufactureRequirements = new ArrayList<>();
+    private final ItemStack[] lastRefreshInventory = new ItemStack[36];
+
     public static final ResourceLocation TEXTURE_PLAY = ElementsPlus.id("textures/gui/play.png");
     public static final ResourceLocation TEXTURE_PAUSE = ElementsPlus.id("textures/gui/pause.png");
     public static final ResourceLocation TEXTURE_LIGHT = ElementsPlus.id("textures/gui/light.png");
     public static final ResourceLocation TEXTURE_DARK = ElementsPlus.id("textures/gui/dark.png");
+
+    public Object tooltip;
 
     public CircuitDiagram getDiagram() {
         ItemStack stack = menu.slots.get(36).getItem();
@@ -108,15 +122,12 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             GuiUtil.drawSubPanel(guiGraphics, leftPos + 5, topPos + imageHeight - 188, leftPos + 5 + 79, topPos + imageHeight - 5, 0xFFA0A0A0);
         }
 
-        if (collapseButtonInventory.active) {
-            for (Slot slot : this.menu.slots) {
-                Point point = getSlotPosition(slot);
+        for (Slot slot : this.menu.slots) {
+            Point point = getSlotPosition(slot);
+            if (point != null) {
                 GuiUtil.drawSlot(guiGraphics, this.leftPos + point.x() - 1, this.topPos + point.y() - 1);
             }
         }
-
-        Point point = getSlotPosition(this.menu.diagramSlot);
-        GuiUtil.drawSlot(guiGraphics, this.leftPos + point.x() - 1, this.topPos + point.y() - 1);
     }
 
     @Override
@@ -129,7 +140,13 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         this.titleLabelX = 6;
         this.addRenderableWidget(tabButtonDesign = new TabButton(this.leftPos + this.font.width(this.title) + 10, this.topPos, 50, 22, Component.translatable("gui.elements-plus.lithography_machine.design")));
         this.addRenderableWidget(tabButtonManufacture = new TabButton(this.leftPos + this.font.width(this.title) + 60, this.topPos, 50, 22, Component.translatable("gui.elements-plus.lithography_machine.manufacture")));
-        this.buttonGroup = new ButtonGroup(tabButtonDesign, tabButtonManufacture);
+        this.buttonGroup = new ButtonGroup(tabButtonDesign, tabButtonManufacture) {
+            @Override
+            public void onButtonClick(GroupButton button) {
+                super.onButtonClick(button);
+                tabChanged();
+            }
+        };
 
         this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.leftPos + 5, inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23, 79, 18, Component.nullToEmpty("物品栏")) {
             @Override
@@ -288,6 +305,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             ClientConfig.get().save();
         }));
 
+        this.addRenderableWidget(manufactureWidget = new ScrollPanelWidget(leftPos + 89, topPos + 48, imageWidth - 94, imageHeight - 53, GuiUtil.SubPanelType.BORDERED, 0xFF2B2B2B));
+        manufactureWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
+
         initComponentList();
 
         slotPosition = new HashMap<>();
@@ -301,6 +321,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         for (int l = 0; l < 9; l++) {
             slotPosition.put(l, Point.of(11 + 3 * 18, this.imageHeight - 6 - 9 * 18 + l * 18));
         }
+
+        tabChanged();
     }
 
     private void initComponentList() {
@@ -502,15 +524,190 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         return super.charTyped(c, modifiers);
     }
 
+    private void tabChanged() {
+        boolean designTab = buttonGroup.getSelected() == tabButtonDesign;
+        boolean manufactureTab = buttonGroup.getSelected() == tabButtonManufacture;
+        attributeWidget.visible = designTab;
+        toolbarWidget.visible = designTab;
+        manufactureWidget.visible = manufactureTab;
+        if (manufactureTab) {
+            updateManufactureWidget();
+        }
+    }
+
+    public void updateManufactureWidget() {
+        manufactureWidget.clearChildren();
+        manufactureIngredients.clear();
+        manufactureRequirements.clear();
+        ItemStack diagramStack = menu.diagramSlot.getItem();
+        ItemStack inputStack = menu.manufactureInputSlot.getItem();
+        boolean showCopyCompiled = !diagramStack.isEmpty() && diagramStack.is(ModItems.CIRCUIT_DIAGRAM)
+                && diagramStack.has(ModDataComponents.EQUIVALENT_COMPONENT)
+                && !inputStack.isEmpty() && inputStack.is(ModItems.CIRCUIT_DIAGRAM)
+                && !inputStack.has(ModDataComponents.EQUIVALENT_COMPONENT);
+        int x = 0;
+        int y = 0;
+        if (showCopyCompiled) {
+            Component text = Component.translatable("gui.elements-plus.lithography_machine.copy_compiled");
+            manufactureWidget.addChild(new TextSectionWidget(5, 6, text));
+            CheckBox checkBox = new CheckBox(5 + font.width(text) + 5, 5) {
+                @Override
+                public void onClick(double d, double e) {
+                    super.onClick(d, e);
+                    copyCompiled = this.checked;
+                    ClientPlayNetworking.send(new CopyCompiledSettingPayload(copyCompiled));
+                }
+            };
+            checkBox.checked = copyCompiled;
+            manufactureWidget.addChild(checkBox);
+            y += 20;
+        }
+        CircuitDiagram diagram = null;
+        CircuitDiagram.Scale chipScale = null;
+        if (!diagramStack.isEmpty() && diagramStack.is(ModItems.CIRCUIT_DIAGRAM)
+                && diagramStack.has(ModDataComponents.CIRCUIT_DIAGRAM)
+                && diagramStack.has(ModDataComponents.EQUIVALENT_COMPONENT)
+                && !inputStack.isEmpty()) {
+            chipScale = ChipManufacture.emptyChipScale(inputStack);
+            diagram = diagramStack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+            if (chipScale == null || diagram == null || !ChipManufacture.canHoldScale(chipScale, diagram.scale)) {
+                diagram = null;
+                chipScale = null;
+            }
+        }
+        if (diagram != null && chipScale != null) {
+            List<ItemStack> inventory = menu.getPlayerInventory().items;
+            List<ChipManufacture.MaterialRequirement> requirements = ChipManufacture.computeRequirements(diagram);
+            for (ChipManufacture.MaterialRequirement requirement : requirements) {
+                Object icon;
+                if (requirement instanceof ChipManufacture.ItemRequirement itemReq) {
+                    icon = itemReq.itemStack();
+                } else if (requirement instanceof ChipManufacture.ComponentRequirement componentReq) {
+                    icon = componentReq.component();
+                } else {
+                    continue;
+                }
+                int owned = ChipManufacture.countOwned(inventory, requirement);
+                int total = requirement.count();
+                ChatFormatting color = owned >= total ? ChatFormatting.GREEN : ChatFormatting.RED;
+                Component text = Component.translatable("%s/%s",
+                        Component.literal(String.valueOf(owned)).withStyle(color),
+                        Component.literal(String.valueOf(total)));
+                IngredientWidget widget = manufactureWidget.addChild(new IngredientWidget(x, y, icon, text) {{
+                    setWidth(70);
+                }});
+                manufactureIngredients.add(widget);
+                manufactureRequirements.add(requirement);
+                x += 70;
+                if (x + 50 > manufactureWidget.getWidth()) {
+                    x = 0;
+                    y += 18;
+                }
+            }
+        }
+    }
+
+    /**
+     * 物品栏发生外部变化（丢弃/吸取）时，仅刷新已有原料的"拥有数/总数"文本。
+     */
+    private void refreshManufactureCounts() {
+        if (manufactureIngredients.isEmpty()) {
+            return;
+        }
+        List<ItemStack> inventory = menu.getPlayerInventory().items;
+        for (int i = 0; i < manufactureIngredients.size(); i++) {
+            IngredientWidget widget = manufactureIngredients.get(i);
+            ChipManufacture.MaterialRequirement requirement = manufactureRequirements.get(i);
+            int owned = ChipManufacture.countOwned(inventory, requirement);
+            int total = requirement.count();
+            ChatFormatting color = owned >= total ? ChatFormatting.GREEN : ChatFormatting.RED;
+            widget.text = Component.translatable("%s/%s",
+                    Component.literal(String.valueOf(owned)).withStyle(color),
+                    Component.literal(String.valueOf(total)));
+        }
+    }
+
+    private boolean inventoryChanged() {
+        List<ItemStack> inventory = menu.getPlayerInventory().items;
+        boolean changed = false;
+        for (int i = 0; i < 36 && i < inventory.size(); i++) {
+            ItemStack stack = inventory.get(i);
+            if (lastRefreshInventory[i] == null || !ItemStack.isSameItemSameComponents(lastRefreshInventory[i], stack) || lastRefreshInventory[i].getCount() != stack.getCount()) {
+                lastRefreshInventory[i] = stack.copy();
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+
+    public class IngredientWidget extends AbstractWidget {
+        public Object object;
+        public int color;
+        public GuiUtil.SubPanelType subPanelType;
+        public Component text;
+
+        public IngredientWidget(int x, int y, Object object, Component text) {
+            super(x, y, 18, 18, Component.empty());
+            subPanelType = GuiUtil.SubPanelType.CONVEX_THIN;
+            color = 0xFF808080;
+            this.object = object;
+            this.text = text;
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+            GuiUtil.drawSubPanel(guiGraphics, getX(), getY(), getX() + 18, getY() + 18, color, subPanelType);
+            if (object != null) {
+                if (object instanceof ItemStack itemStack) {
+                    guiGraphics.renderFakeItem(itemStack, getX() + 1, getY() + 1);
+                    if (isHovered()) {
+                        tooltip = itemStack;
+                    }
+                } else if (object instanceof CircuitComponent component) {
+                    ResourceLocation icon = component.getIcon();
+                    if (icon != null) {
+                        guiGraphics.blit(icon, getX() + 1, getY() + 1, 0, 0, 16, 16, 16, 16);
+                    }
+                    if (isHovered()) {
+                        tooltip = component;
+                    }
+                } else {
+                    throw new IllegalArgumentException("Unknown object type: " + object);
+                }
+            }
+            if (text != null) {
+                Font font = Minecraft.getInstance().font;
+                guiGraphics.drawString(font, text, getX() + 18 + 5, getY() + getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, true);
+            }
+        }
+
+        @Override
+        protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+
+        }
+    }
+
     @Override
     public void containerTick() {
         super.containerTick();
         if (toolboxDialog != null) {
             toolboxDialog.tick();
         }
+        ItemStack diagramNow = menu.diagramSlot.getItem();
+        ItemStack inputNow = menu.manufactureInputSlot.getItem();
+        boolean inventoryChanged = inventoryChanged();
+        if (inventoryChanged && buttonGroup.getSelected() == tabButtonManufacture) {
+            refreshManufactureCounts();
+        }
+        if (diagramNow != lastRefreshDiagram || inputNow != lastRefreshManufactureInput) {
+            lastRefreshDiagram = diagramNow;
+            lastRefreshManufactureInput = inputNow;
+            if (buttonGroup.getSelected() == tabButtonManufacture) {
+                updateManufactureWidget();
+            }
+        }
         boolean designTab = buttonGroup.getSelected() == tabButtonDesign;
-        attributeWidget.visible = designTab;
-        toolbarWidget.visible = designTab;
         if (!designTab) {
             return;
         }
@@ -684,6 +881,12 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 return null;
             }
         } else {
+            if (slot.getContainerSlot() == 1 || slot.getContainerSlot() == 2) {
+                if (buttonGroup.getSelected() == tabButtonManufacture) {
+                    return new Point(slot.x, slot.y);
+                }
+                return null;
+            }
             return new Point(slot.x, slot.y);
         }
     }
@@ -702,6 +905,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+        tooltip = null;
         ItemStack carried = this.menu.getCarried();
         boolean hideCarried = !carried.isEmpty() && buttonGroup.getSelected() == tabButtonDesign
                 && circuitPanel.isPlaceable(carried) && circuitPanel.contains(mouseX, mouseY)
@@ -733,6 +937,18 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             toolboxDialog.render(guiGraphics, mouseX, mouseY, delta);
         }
         this.renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderTooltip(GuiGraphics guiGraphics, int i, int j) {
+        super.renderTooltip(guiGraphics, i, j);
+        if (tooltip != null) {
+            if (tooltip instanceof ItemStack itemStack) {
+                guiGraphics.renderTooltip(this.font, itemStack, i, j);
+            } else if (tooltip instanceof CircuitComponent component) {
+                guiGraphics.renderTooltip(this.font, component.getName().copy().withColor(0xFFD700), i, j);
+            }
+        }
     }
 
     private void drawVirtualCursor(GuiGraphics guiGraphics, CircuitComponent component, int mouseX, int mouseY) {

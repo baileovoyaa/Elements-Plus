@@ -57,6 +57,7 @@
   "container.elements-plus.lithography_machine": "Lithography Machine",
   "gui.elements-plus.lithography_machine.design": "Design",
   "gui.elements-plus.lithography_machine.manufacture": "Manufacture",
+  "gui.elements-plus.lithography_machine.copy_compiled": "Copy Compilation Status",
 
   "block.elements-plus.advanced_crafting_table": "Advanced Crafting Table",
   "block.elements-plus.lithography_machine": "Lithography Machine",
@@ -118,6 +119,8 @@
   "circuit.elements-plus.component.output": "Output",
   "circuit.elements-plus.component.output.description": "Output signal externally",
 
+  "circuit.elements-plus.component.amplifier": "Amplifier",
+
   "circuit.elements-plus.component.bus_joiner_8": "8-bit Bus Joiner",
   "circuit.elements-plus.component.bus_joiner_8.description": "Join multiple wires into one bus",
   "circuit.elements-plus.component.bus_splitter_8": "8-bit Bus Splitter",
@@ -157,8 +160,8 @@
 
   "gui.elements-plus.experiment_table.no_experiment": "No experiment selected",
   "gui.elements-plus.experiment_table.test_waiting": "Waiting",
-  "gui.elements-plus.experiment_table.test_correct": "Correct",
-  "gui.elements-plus.experiment_table.test_wrong": "Wrong",
+  "gui.elements-plus.experiment_table.test_correct": "AC",
+  "gui.elements-plus.experiment_table.test_wrong": "WA",
 
   "experiment.elements-plus.precheck.header": "Pre-check failed",
   "experiment.elements-plus.precheck.not_diagram": "- The inserted item is not a circuit diagram",
@@ -207,6 +210,15 @@
   "circuit_diagram.scale.large": "Large",
   "circuit_diagram.scale.huge": "Huge",
   "circuit_diagram.scale.infinite": "Infinite",
+
+  "item.elements-plus.small_empty_chip": "Small Empty Chip",
+  "item.elements-plus.medium_empty_chip": "Medium Empty Chip",
+  "item.elements-plus.large_empty_chip": "Large Empty Chip",
+  "item.elements-plus.huge_empty_chip": "Huge Empty Chip",
+  "item.elements-plus.small_chip": "Small Chip",
+  "item.elements-plus.medium_chip": "Medium Chip",
+  "item.elements-plus.large_chip": "Large Chip",
+  "item.elements-plus.huge_chip": "Huge Chip",
 
   "effect.elements-plus.steel_pipe_shield": "Steel Pipe Shield",
   "effect.elements-plus.rust_proof": "Rust Proof",

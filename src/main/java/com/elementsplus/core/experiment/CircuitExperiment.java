@@ -171,6 +171,8 @@ public class CircuitExperiment extends BaseExperiment {
         context.reportTestResult(index, pass);
 
         if (!pass) {
+            // 将失败测例的输入写回电路图（对应输入元件修改信号值，无关输入置0），便于之后在光刻机中检查失败逻辑
+            writeBackFailedInputs(context, combinationalTestCase.getInputs());
             context.setErrorLines(buildFailureLines(combinationalTestCase, outputs));
             context.complete(false);
             return false;
@@ -190,15 +192,7 @@ public class CircuitExperiment extends BaseExperiment {
      */
     private Map<String, PinValue> evaluate(Map<String, PinValue> inputs, CircuitDiagram source) {
         CircuitDiagram diagram = source.copy();
-        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
-            for (CircuitDiagram.Component comp : chunk.components) {
-                if (comp.component == BuiltinCircuitComponents.INPUT && comp.instance instanceof InputComponentInstance in) {
-                    String label = in.getLabel();
-                    PinValue pinValue = inputs.get(label);
-                    in.setSignal(pinValue != null && pinValue.values.length > 0 ? pinValue.values[0] : 0);
-                }
-            }
-        }
+        applyInputs(diagram, inputs);
 
         CircuitSimulator simulator = new CircuitSimulator();
         simulator.setDiagram(diagram);
@@ -216,6 +210,35 @@ public class CircuitExperiment extends BaseExperiment {
             }
         }
         return outputs;
+    }
+
+    /**
+     * 将测例输入写入电路图的输入元件（无关输入置0），并写回物品上的电路图数据。
+     */
+    private void writeBackFailedInputs(Context context, Map<String, PinValue> inputs) {
+        ItemStack stack = context.getItemStack();
+        if (stack == null || stack.isEmpty()) {
+            return;
+        }
+        CircuitDiagram stored = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (stored == null) {
+            return;
+        }
+        CircuitDiagram failed = stored.copy();
+        applyInputs(failed, inputs);
+        stack.set(ModDataComponents.CIRCUIT_DIAGRAM, failed);
+    }
+
+    private static void applyInputs(CircuitDiagram diagram, Map<String, PinValue> inputs) {
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (CircuitDiagram.Component comp : chunk.components) {
+                if (comp.component == BuiltinCircuitComponents.INPUT && comp.instance instanceof InputComponentInstance in) {
+                    String label = in.getLabel();
+                    PinValue pinValue = inputs.get(label);
+                    in.setSignal(pinValue != null && pinValue.values.length > 0 ? pinValue.values[0] : 0);
+                }
+            }
+        }
     }
 
     @Override
