@@ -37,6 +37,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -74,11 +75,7 @@ import net.minecraft.world.phys.HitResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class ElementsPlus implements ModInitializer {
@@ -324,6 +321,9 @@ public class ElementsPlus implements ModInitializer {
                                     .then(Commands.argument("player", EntityArgument.player())
                                             .executes(ElementsPlus::listExperiments)))));
         });
+
+        // 修复延迟加载带来的数据回滚问题
+        ServerPlayerEvents.JOIN.register(PlayerExperimentsAttachment::get);
     }
 
     public static void doSomething(CommandContext<CommandSourceStack> source) {
