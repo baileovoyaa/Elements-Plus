@@ -247,6 +247,13 @@
   "experiment.elements-plus.group.amplifier.section0.text4": "现在，尝试利用这种特性，把实验完成吧。",
   "experiment.elements-plus.group.amplifier.section1.text0": "输入A，只要A的值非0即输出Y=15，否则输出Y=0。",
   "experiment.elements-plus.group.amplifier.section1.text1": "请在光刻机中搭建电路，完成后将电路图放入上方槽位，点击“开始实验”按钮，实验将会自动进行",
+  "experiment.elements-plus.group.amplifier.section2.text0": "你应该会看到下面“测例信息”出现多个格子，其中每个格子对应一个测例。测例上面的文字意味着：",
+  "experiment.elements-plus.group.amplifier.section2.text1": "- %s: 测试尚未开始",
+  "experiment.elements-plus.group.amplifier.section2.text1.arg0": "Waiting",
+  "experiment.elements-plus.group.amplifier.section2.text2": "- %s: 测试通过",
+  "experiment.elements-plus.group.amplifier.section2.text2.arg0": "AC(Accepted)",
+  "experiment.elements-plus.group.amplifier.section2.text3": "- %s: 测试失败",
+  "experiment.elements-plus.group.amplifier.section2.text3.arg0": "WA(Wrong Answer)",
 
   "experiment.elements-plus.group.first_gate": "第一个逻辑门",
   "experiment.elements-plus.group.basic_gate": "基础逻辑门",

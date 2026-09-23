@@ -68,7 +68,7 @@ public class CircuitExperiment extends BaseExperiment {
     public static class ConstantCombinationalTestCase implements CombinationalTestCase {
         public Map<String, PinValue> inputs;
         public Map<String, PinValue> expectedOutputs;
-        public boolean ignoreAnalog = true;
+        public boolean ignoreAnalog;
 
         public ConstantCombinationalTestCase(Map<String, PinValue> inputs, Map<String, PinValue> expectedOutputs, boolean ignoreAnalog) {
             this.inputs = inputs;
@@ -77,7 +77,7 @@ public class CircuitExperiment extends BaseExperiment {
         }
 
         public ConstantCombinationalTestCase(Map<String, PinValue> inputs, Map<String, PinValue> expectedOutputs) {
-            this(inputs, expectedOutputs, true);
+            this(inputs, expectedOutputs, false);
         }
 
         @Override
@@ -137,6 +137,10 @@ public class CircuitExperiment extends BaseExperiment {
             }
         }
         this.circuitComponent = component;
+    }
+
+    public void addTestCase(TestCase testCase) {
+        testCases.add(testCase);
     }
 
     public CircuitExperiment(List<TestCase> testCases) {

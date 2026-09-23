@@ -1,9 +1,13 @@
 package com.elementsplus;
 
+import com.elementsplus.core.circuit.BuiltinCircuitComponents;
+import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -100,15 +104,7 @@ public class ModItemGroups {
                 ModItems.NETHERITE_FRAGMENT,
                 ModItems.PHOTORESIST,
                 ModItems.LITHOGRAPHY_MASK,
-                ModItems.COMPUTER,
-                ModItems.AND_GATE,
-                ModItems.OR_GATE,
-                ModItems.NOT_GATE,
-                ModItems.ADDER,
-                ModItems.BITWISE_MOVE,
-                ModItems.MULTIPLIER,
-                ModItems.REGISTER,
-                ModItems.COUNTER
+                ModItems.COMPUTER
                 // 可以继续添加更多物品
         );
         // 无限规模电路图不能合成，仅在创造模式物品栏中提供
@@ -117,6 +113,14 @@ public class ModItemGroups {
         infinite.scale = CircuitDiagram.Scale.INFINITE;
         infiniteDiagram.set(ModDataComponents.CIRCUIT_DIAGRAM, infinite);
         addItemStacksToTab("circuit", infiniteDiagram);
+
+        // 创造模式元件
+        for (CircuitComponent component : BuiltinCircuitComponents.getAll()) {
+            if (component.getIngredientSupplier() != null && component.getIngredientSupplier() instanceof CircuitComponent.ComponentIngredientSupplier) {
+                addItemStacksToTab("circuit", new ItemStack(Holder.direct(ModItems.CREATIVE_COMPONENT), 1, DataComponentPatch.builder().set(ModDataComponents.EQUIVALENT_COMPONENT, component.getId()).build()));
+            }
+        }
+
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());
     }
 

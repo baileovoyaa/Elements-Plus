@@ -274,14 +274,17 @@ public class ModItems {
     }, "circuit_diagram");
 
     // 等效元件（可作为电路图放置源）
-    public static final Item AND_GATE = registerComponentItem(BuiltinCircuitComponents.AND_GATE);
-    public static final Item OR_GATE = registerComponentItem(BuiltinCircuitComponents.OR_GATE);
-    public static final Item NOT_GATE = registerComponentItem(BuiltinCircuitComponents.NOT_GATE);
-    public static final Item ADDER = registerComponentItem(BuiltinCircuitComponents.ADDER_8);
-    public static final Item BITWISE_MOVE = registerComponentItem(BuiltinCircuitComponents.BITWISE_MOVE);
-    public static final Item MULTIPLIER = registerComponentItem(BuiltinCircuitComponents.MULTIPLIER);
-    public static final Item REGISTER = registerComponentItem(BuiltinCircuitComponents.REGISTER);
-    public static final Item COUNTER = registerComponentItem(BuiltinCircuitComponents.COUNTER);
+    public static final Item CREATIVE_COMPONENT = register(new Item(new Item.Properties()) {
+        @Override
+        public @NotNull Component getName(ItemStack itemStack) {
+            CircuitComponent circuitComponent = BuiltinCircuitComponents.byId(itemStack.get(ModDataComponents.EQUIVALENT_COMPONENT));
+            if (circuitComponent != null) {
+                return Component.translatable("创造模式[%s]元件", circuitComponent.getName().copy().withStyle(style -> style.withColor(0xFFD700))).withStyle(ChatFormatting.LIGHT_PURPLE);
+            } else {
+                return Component.translatable("创造模式元件").withStyle(ChatFormatting.LIGHT_PURPLE);
+            }
+        }
+    }, "creative_component");
 
     private static Item registerComponentItem(CircuitComponent component) {
         ResourceLocation id = component.getId();
@@ -289,10 +292,7 @@ public class ModItems {
                 .stacksTo(1)
                 .component(ModDataComponents.EQUIVALENT_COMPONENT, id)) {
 
-            @Override
-            public @NotNull Component getName(ItemStack itemStack) {
-                return Component.translatable("创造模式[%s]元件", component.getName().copy().withStyle(style -> style.withColor(0xFFD700))).withStyle(ChatFormatting.LIGHT_PURPLE);
-            }
+
         }, id.getPath());
     }
 
