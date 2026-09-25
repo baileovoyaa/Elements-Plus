@@ -3,11 +3,90 @@ package com.elementsplus.core.experiment;
 import com.elementsplus.ElementsPlus;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.*;
+import java.util.function.Function;
+
+import static net.minecraft.ChatFormatting.*;
 
 public class BuiltinExperimentChapters {
     public static final List<ExperimentChapter> BUILTIN_EXPERIMENT_CHAPTERS = new ArrayList<>();
+
+    // ========== 通用构建入口 ==========
+    private static ExperimentChapter chapter(
+            String id,
+            ResourceLocation icon,
+            Function<SectionContext, List<ExperimentChapter.Section>> body,
+            Set<ExperimentChapter> dependencies
+    ) {
+        SectionContext ctx = new SectionContext("experiment.elements-plus.group." + id + ".");
+        return new ExperimentChapter(id, icon, body.apply(ctx), dependencies);
+    }
+
+    // ========== 章节上下文：自动派生前缀 + 自动递增 section 序号 ==========
+    public static final class SectionContext {
+        private final String prefix;
+        private int nextSection = 0;
+
+        private SectionContext(String prefix) {
+            this.prefix = prefix;
+        }
+
+        public ExperimentChapter.TextSection text(int lineCount, ArgSpec... specs) {
+            String keyPrefix = prefix + "section" + nextSection++;
+            return buildTextSection(keyPrefix, lineCount, specs);
+        }
+
+        public ExperimentChapter.ExperimentSection experiments(BaseExperiment... experiments) {
+            return new ExperimentChapter.ExperimentSection(List.of(experiments));
+        }
+    }
+
+    // ========== 行 / 参数描述 ==========
+    public record ParamSpec(List<ChatFormatting> formats) {
+        Component build(String key) {
+            MutableComponent c = Component.translatable(key);
+            for (ChatFormatting f : formats) c = c.withStyle(f);
+            return c;
+        }
+    }
+
+    public record ArgSpec(int line, List<ParamSpec> params) {
+    }
+
+    public static ParamSpec style(ChatFormatting... formats) {
+        return new ParamSpec(List.of(formats));
+    }
+
+    public static ArgSpec line(int line, ParamSpec... params) {
+        return new ArgSpec(line, List.of(params));
+    }
+
+    // ========== 实际生成 TextSection ==========
+    private static ExperimentChapter.TextSection buildTextSection(
+            String keyPrefix, int lineCount, ArgSpec... specs
+    ) {
+        Map<Integer, ArgSpec> byLine = new HashMap<>();
+        for (ArgSpec s : specs) byLine.put(s.line(), s);
+
+        List<Component> lines = new ArrayList<>(lineCount);
+        for (int i = 0; i < lineCount; i++) {
+            String key = keyPrefix + ".text" + i;
+            ArgSpec spec = byLine.get(i);
+            if (spec == null || spec.params().isEmpty()) {
+                lines.add(Component.translatable(key));
+            } else {
+                Object[] args = new Object[spec.params().size()];
+                for (int j = 0; j < args.length; j++) {
+                    args[j] = spec.params().get(j).build(key + ".arg" + j);
+                }
+                lines.add(Component.translatable(key, args));
+            }
+        }
+        return new ExperimentChapter.TextSection(lines);
+    }
 
     public static final ExperimentChapter INTRO = register(
             new ExperimentChapter("intro", null,
@@ -17,7 +96,7 @@ public class BuiltinExperimentChapters {
                                     Component.translatable("experiment.elements-plus.group.intro.section0.text0")
                             )),
                             new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.intro.section1.text0").withStyle(ChatFormatting.BOLD),
+                                    Component.translatable("experiment.elements-plus.group.intro.section1.text0").withStyle(BOLD),
                                     Component.translatable("experiment.elements-plus.group.intro.section1.text1"),
                                     Component.translatable("experiment.elements-plus.group.intro.section1.text2"),
                                     Component.translatable("experiment.elements-plus.group.intro.section1.text3"),
@@ -31,73 +110,36 @@ public class BuiltinExperimentChapters {
             )
     );
 
-    public static final ExperimentChapter AMPLIFIER = register(
-            new ExperimentChapter("amplifier", null,
-                    List.of(
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text0"),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text1"),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text2", Component.translatable("experiment.elements-plus.group.amplifier.section0.text2.arg0").withStyle(ChatFormatting.GOLD)),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text3"),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section0.text4"),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section1.text0"),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section1.text1")
-                            )),
-                            new ExperimentChapter.ExperimentSection(List.of(
-                                    BuiltinExperiments.AMPLIFIER
-                            )),
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text0"),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text1", Component.translatable("experiment.elements-plus.group.amplifier.section2.text1.arg0").withStyle(ChatFormatting.GRAY)),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text2", Component.translatable("experiment.elements-plus.group.amplifier.section2.text2.arg0").withStyle(ChatFormatting.BLUE)),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text3", Component.translatable("experiment.elements-plus.group.amplifier.section2.text3.arg0").withStyle(ChatFormatting.GREEN)),
-                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text4", Component.translatable("experiment.elements-plus.group.amplifier.section2.text4.arg0").withStyle(ChatFormatting.RED))
-
-                            ))
-                    ), Set.of(INTRO)
+    public static final ExperimentChapter AMPLIFIER = register(chapter("amplifier", null, ch -> List.of(
+            ch.text(5,
+                    line(2, style(GOLD))
+            ),
+            ch.text(2),
+            ch.experiments(BuiltinExperiments.AMPLIFIER),
+            ch.text(5,
+                    line(1, style(GRAY)),
+                    line(2, style(BLUE)),
+                    line(3, style(GREEN)),
+                    line(4, style(RED))
             )
-    );
+    ), Set.of(INTRO)));
 
-    public static final ExperimentChapter FIRST_GATE = register(
-            new ExperimentChapter("first_gate", null,
-                    List.of(
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text0"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text1"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text2"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text3"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text4"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text5", Component.translatable("experiment.elements-plus.group.first_gate.section0.text5.arg0").withStyle(ChatFormatting.BOLD)),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text6"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text7"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text8"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text9"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text10"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text11")
-                            )),
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text0"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text1"),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text2",
-                                            Component.translatable("experiment.elements-plus.group.first_gate.section1.text2.arg0").withStyle(ChatFormatting.ITALIC).withStyle(ChatFormatting.RED),
-                                            Component.translatable("experiment.elements-plus.group.first_gate.section1.text2.arg1").withStyle(ChatFormatting.ITALIC).withStyle(ChatFormatting.RED)),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text3", Component.translatable("experiment.elements-plus.group.first_gate.section1.text3.arg0").withStyle(ChatFormatting.GOLD)),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text4")
-                            )),
-                            new ExperimentChapter.ExperimentSection(List.of(
-                                    BuiltinExperiments.NOT_GATE
-                            )),
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section2.text0", Component.translatable("experiment.elements-plus.group.first_gate.section2.text0.arg0").withStyle(ChatFormatting.BLUE)),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section2.text1", Component.translatable("experiment.elements-plus.group.first_gate.section2.text1.arg0").withStyle(ChatFormatting.BLUE)),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section2.text2",
-                                            Component.translatable("experiment.elements-plus.group.first_gate.section2.text2.arg0").withStyle(ChatFormatting.ITALIC).withStyle(ChatFormatting.RED),
-                                            Component.translatable("experiment.elements-plus.group.first_gate.section2.text2.arg1").withStyle(ChatFormatting.GOLD)),
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section2.text3")
-                            ))
-                    ), Set.of(AMPLIFIER)
-            )
-    );
+    public static final ExperimentChapter FIRST_GATE = register(chapter("first_gate", null, ch -> List.of(
+            ch.text(12,
+                    line(5, style(BOLD))
+            ),
+            ch.text(5,
+                    line(2, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(3, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.NOT_GATE),
+            ch.text(4,
+                    line(0, style(BLUE)),
+                    line(1, style(BLUE)),
+                    line(2, style(ITALIC, RED), style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.ANALOG_NOT).optional()
+    ), Set.of(AMPLIFIER)));
 
     public static final ExperimentChapter BASIC_GATE = register(
             new ExperimentChapter("basic_gate", null,

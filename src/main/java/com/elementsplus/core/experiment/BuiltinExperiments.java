@@ -42,6 +42,13 @@ public class BuiltinExperiments {
                     false))
             .collect(Collectors.toList()), BuiltinCircuitComponents.NOT_GATE));
 
+    public static final CircuitExperiment ANALOG_NOT = register("analog_not", BuiltinCircuitComponents.ANALOG_NOT.getIcon(), new CircuitExperiment(IntStream.rangeClosed(0, 15)
+            .mapToObj(i -> new ConstantCombinationalTestCase(
+                    Map.of("A", new PinValue(i)),
+                    Map.of("Y", new PinValue(15 - i)),
+                    false))
+            .collect(Collectors.toList()), BuiltinCircuitComponents.ANALOG_NOT));
+
     public static final CircuitExperiment NAND_GATE = register("nand_gate", null, new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
         int a = c.get(0), b = c.get(1);
         return new ConstantCombinationalTestCase(

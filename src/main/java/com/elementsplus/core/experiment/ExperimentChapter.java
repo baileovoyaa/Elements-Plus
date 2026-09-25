@@ -33,8 +33,14 @@ public class ExperimentChapter {
             this.experiments = experiments;
         }
 
-        public void setOptional(Set<BaseExperiment> optional) {
-            this.optional = optional;
+        public ExperimentSection optional(BaseExperiment... optional) {
+            this.optional = Set.of(optional);
+            return this;
+        }
+
+        public ExperimentSection optional() {
+            this.optional = Set.copyOf(experiments);
+            return this;
         }
     }
 
