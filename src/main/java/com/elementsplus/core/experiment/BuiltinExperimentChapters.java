@@ -45,6 +45,14 @@ public class BuiltinExperimentChapters {
                             )),
                             new ExperimentChapter.ExperimentSection(List.of(
                                     BuiltinExperiments.AMPLIFIER
+                            )),
+                            new ExperimentChapter.TextSection(List.of(
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text0"),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text1", Component.translatable("experiment.elements-plus.group.amplifier.section2.text1.arg0").withStyle(ChatFormatting.GRAY)),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text2", Component.translatable("experiment.elements-plus.group.amplifier.section2.text2.arg0").withStyle(ChatFormatting.BLUE)),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text3", Component.translatable("experiment.elements-plus.group.amplifier.section2.text3.arg0").withStyle(ChatFormatting.GREEN)),
+                                    Component.translatable("experiment.elements-plus.group.amplifier.section2.text4", Component.translatable("experiment.elements-plus.group.amplifier.section2.text4.arg0").withStyle(ChatFormatting.RED))
+
                             ))
                     ), Set.of(INTRO)
             )
@@ -54,10 +62,38 @@ public class BuiltinExperimentChapters {
             new ExperimentChapter("first_gate", null,
                     List.of(
                             new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text0")
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text0"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text1"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text2"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text3"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text4"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text5", Component.translatable("experiment.elements-plus.group.first_gate.section0.text5.arg0").withStyle(ChatFormatting.BOLD)),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text6"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text7"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text8"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text9"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text10"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section0.text11")
+                            )),
+                            new ExperimentChapter.TextSection(List.of(
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text0"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text1"),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text2",
+                                            Component.translatable("experiment.elements-plus.group.first_gate.section1.text2.arg0").withStyle(ChatFormatting.ITALIC).withStyle(ChatFormatting.RED),
+                                            Component.translatable("experiment.elements-plus.group.first_gate.section1.text2.arg1").withStyle(ChatFormatting.ITALIC).withStyle(ChatFormatting.RED)),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text3", Component.translatable("experiment.elements-plus.group.first_gate.section1.text3.arg0").withStyle(ChatFormatting.GOLD)),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section1.text4")
                             )),
                             new ExperimentChapter.ExperimentSection(List.of(
                                     BuiltinExperiments.NOT_GATE
+                            )),
+                            new ExperimentChapter.TextSection(List.of(
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section2.text0", Component.translatable("experiment.elements-plus.group.first_gate.section2.text0.arg0").withStyle(ChatFormatting.BLUE)),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section2.text1", Component.translatable("experiment.elements-plus.group.first_gate.section2.text1.arg0").withStyle(ChatFormatting.BLUE)),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section2.text2",
+                                            Component.translatable("experiment.elements-plus.group.first_gate.section2.text2.arg0").withStyle(ChatFormatting.ITALIC).withStyle(ChatFormatting.RED),
+                                            Component.translatable("experiment.elements-plus.group.first_gate.section2.text2.arg1").withStyle(ChatFormatting.GOLD)),
+                                    Component.translatable("experiment.elements-plus.group.first_gate.section2.text3")
                             ))
                     ), Set.of(AMPLIFIER)
             )

@@ -64,11 +64,21 @@ public class BuiltinCircuitComponents {
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
+    public static final CircuitComponent AND_GATE_SC = register(new CircuitComponent(ElementsPlus.id("and_gate_sc"), Component.translatable("circuit.elements-plus.component.and_gate_sc"), Component.translatable("circuit.elements-plus.component.and_gate_sc.description"), ElementsPlus.id("textures/circuit/and_gate_sc.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT);
+        setPin(Direction.SOUTH, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+    }});  // 短路与
     public static final CircuitComponent OR_GATE = register(new CircuitComponent(ElementsPlus.id("or_gate"), "或门") {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
+    public static final CircuitComponent OR_GATE_SC = register(new CircuitComponent(ElementsPlus.id("or_gate_sc"), Component.translatable("circuit.elements-plus.component.or_gate_sc"), Component.translatable("circuit.elements-plus.component.or_gate_sc.description"), ElementsPlus.id("textures/circuit/or_gate_sc.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT);
+        setPin(Direction.SOUTH, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+    }});  // 短路或
     public static final CircuitComponent NOT_GATE = register(new CircuitComponent(ElementsPlus.id("not_gate"), "非门") {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
