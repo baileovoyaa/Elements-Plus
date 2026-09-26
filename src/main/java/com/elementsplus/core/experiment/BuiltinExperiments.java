@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.elementsplus.ElementsPlus;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.experiment.CircuitExperiment.ConstantCombinationalTestCase;
 import com.elementsplus.core.experiment.CircuitExperiment.PinValue;
@@ -14,7 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 public class BuiltinExperiments {
     public static final List<BaseExperiment> BUILTIN_EXPERIMENTS = new ArrayList<>();
 
-    public static final CircuitExperiment AMPLIFIER = register("amplifier", null, new CircuitExperiment(IntStream.rangeClosed(0, 15)
+    public static final CircuitExperiment AMPLIFIER = register("amplifier", BuiltinCircuitComponents.AMPLIFIER.getIcon(), new CircuitExperiment(IntStream.rangeClosed(0, 15)
             .mapToObj(i -> new ConstantCombinationalTestCase(
                     Map.of("A", new PinValue(i)),
                     Map.of("Y", new PinValue(i == 0 ? 0 : 15)),
@@ -42,6 +43,20 @@ public class BuiltinExperiments {
                     false))
             .collect(Collectors.toList()), BuiltinCircuitComponents.NOT_GATE));
 
+    public static final CircuitExperiment AND_GATE_SC = register("and_gate_sc", BuiltinCircuitComponents.AND_GATE_SC.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
+        int a = c.get(0), b = c.get(1);
+        return new ConstantCombinationalTestCase(
+                Map.of("A", new PinValue(a), "B", new PinValue(b)),
+                Map.of("Y", new PinValue(a > 0 ? b : a)));
+    }).toList(), BuiltinCircuitComponents.AND_GATE_SC));
+
+    public static final CircuitExperiment OR_GATE_SC = register("or_gate_sc", BuiltinCircuitComponents.OR_GATE_SC.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
+        int a = c.get(0), b = c.get(1);
+        return new ConstantCombinationalTestCase(
+                Map.of("A", new PinValue(a), "B", new PinValue(b)),
+                Map.of("Y", new PinValue(a == 0 ? b : a)));
+    }).toList(), BuiltinCircuitComponents.OR_GATE_SC));
+
     public static final CircuitExperiment ANALOG_NOT = register("analog_not", BuiltinCircuitComponents.ANALOG_NOT.getIcon(), new CircuitExperiment(IntStream.rangeClosed(0, 15)
             .mapToObj(i -> new ConstantCombinationalTestCase(
                     Map.of("A", new PinValue(i)),
@@ -49,42 +64,42 @@ public class BuiltinExperiments {
                     false))
             .collect(Collectors.toList()), BuiltinCircuitComponents.ANALOG_NOT));
 
-    public static final CircuitExperiment NAND_GATE = register("nand_gate", null, new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
+    public static final CircuitExperiment NAND_GATE = register("nand_gate", BuiltinCircuitComponents.NAND_GATE.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
         int a = c.get(0), b = c.get(1);
         return new ConstantCombinationalTestCase(
                 Map.of("A", new PinValue(a), "B", new PinValue(b)),
                 Map.of("Y", new PinValue((a > 0 && b > 0) ? 0 : 1)));
     }).toList(), BuiltinCircuitComponents.NAND_GATE));
 
-    public static final CircuitExperiment NOR_GATE = register("nor_gate", null, new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
+    public static final CircuitExperiment NOR_GATE = register("nor_gate", BuiltinCircuitComponents.NOR_GATE.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
         int a = c.get(0), b = c.get(1);
         return new ConstantCombinationalTestCase(
                 Map.of("A", new PinValue(a), "B", new PinValue(b)),
                 Map.of("Y", new PinValue((a > 0 || b > 0) ? 0 : 1)));
     }).toList(), BuiltinCircuitComponents.NOR_GATE));
 
-    public static final CircuitExperiment XOR_GATE = register("xor_gate", null, new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
+    public static final CircuitExperiment XOR_GATE = register("xor_gate", BuiltinCircuitComponents.XOR_GATE.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
         int a = c.get(0), b = c.get(1);
         return new ConstantCombinationalTestCase(
                 Map.of("A", new PinValue(a), "B", new PinValue(b)),
                 Map.of("Y", new PinValue((a > 0) ^ (b > 0) ? 1 : 0)));
     }).toList(), BuiltinCircuitComponents.XOR_GATE));
 
-    public static final CircuitExperiment XNOR_GATE = register("xnor_gate", null, new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
+    public static final CircuitExperiment XNOR_GATE = register("xnor_gate", BuiltinCircuitComponents.XNOR_GATE.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
         int a = c.get(0), b = c.get(1);
         return new ConstantCombinationalTestCase(
                 Map.of("A", new PinValue(a), "B", new PinValue(b)),
                 Map.of("Y", new PinValue((a > 0) ^ (b > 0) ? 0 : 1)));
     }).toList(), BuiltinCircuitComponents.XNOR_GATE));
 
-    public static final CircuitExperiment HALF_ADDER = register("half_adder", null, new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
+    public static final CircuitExperiment HALF_ADDER = register("half_adder", BuiltinCircuitComponents.HALF_ADDER.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
         int a = c.get(0), b = c.get(1);
         return new ConstantCombinationalTestCase(
                 Map.of("A", new PinValue(a), "B", new PinValue(b)),
                 Map.of("S", new PinValue((a > 0) ^ (b > 0) ? 1 : 0), "C", new PinValue((a > 0 && b > 0) ? 1 : 0)));
     }).toList(), BuiltinCircuitComponents.HALF_ADDER));
 
-    public static final CircuitExperiment FULL_ADDER = register("full_adder", null, new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
+    public static final CircuitExperiment FULL_ADDER = register("full_adder", BuiltinCircuitComponents.FULL_ADDER.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
         int a = c.get(0), b = c.get(1), cIn = c.get(2);
         return new ConstantCombinationalTestCase(
                 Map.of("A", new PinValue(a), "B", new PinValue(b), "C", new PinValue(cIn)),

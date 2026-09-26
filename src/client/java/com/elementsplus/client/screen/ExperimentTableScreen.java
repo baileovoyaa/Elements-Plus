@@ -9,6 +9,7 @@ import com.elementsplus.network.ExperimentTableControlPayload;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
 import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -437,7 +438,11 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                                 if (experiment.getIcon() != null) {
                                     guiGraphics.blit(experiment.getIcon(), 5 + this.getX(), this.getY() + 2, 0, 0, 16, 16, 16, 16);
                                 }
-                                guiGraphics.drawString(font, experiment.getDisplayName(), 5 + this.getX() + 16 + 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, false);
+                                Component displayName = experiment.getDisplayName();
+                                if (experimentSection.optional != null && experimentSection.optional.contains(experiment)) {
+                                    displayName = Component.translatable("gui.elements-plus.experiment_table.optional", displayName.copy().withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.DARK_GRAY);
+                                }
+                                guiGraphics.drawString(font, displayName, 5 + this.getX() + 16 + 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, false);
                                 if (hasCompletedExperiment(experiment)) {
                                     guiGraphics.blit(ElementsPlus.id("textures/gui/experiment_table/success.png"), 5 + this.getX() + this.getWidth() - 24, this.getY() + this.getHeight() / 2 - 8, 0, 0, 16, 16, 16, 16);
                                 }

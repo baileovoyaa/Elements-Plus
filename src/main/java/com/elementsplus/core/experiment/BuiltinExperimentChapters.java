@@ -130,21 +130,20 @@ public class BuiltinExperimentChapters {
             ch.experiments(BuiltinExperiments.ANALOG_NOT).optional()
     ), Set.of(AMPLIFIER)));
 
-    public static final ExperimentChapter BASIC_GATE = register(
-            new ExperimentChapter("basic_gate", null,
-                    List.of(
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.basic_gate.section0.text0")
-                            )),
-                            new ExperimentChapter.ExperimentSection(List.of(
-                                    BuiltinExperiments.OR_GATE,
-                                    BuiltinExperiments.NOR_GATE,
-                                    BuiltinExperiments.NAND_GATE,
-                                    BuiltinExperiments.AND_GATE
-                            ))
-                    ), Set.of(FIRST_GATE)
-            )
-    );
+    public static final ExperimentChapter BASIC_GATE = register(chapter("basic_gate", null, ch -> List.of(
+            ch.text(6),
+            ch.experiments(
+                    BuiltinExperiments.OR_GATE,
+                    BuiltinExperiments.NOR_GATE,
+                    BuiltinExperiments.NAND_GATE,
+                    BuiltinExperiments.AND_GATE),
+            ch.text(2),
+            ch.text(3),
+            ch.experiments(
+                    BuiltinExperiments.AND_GATE_SC,
+                    BuiltinExperiments.OR_GATE_SC
+            ).optional()
+    ), Set.of(FIRST_GATE)));
 
     public static final ExperimentChapter ADVANCED_GATE = register(
             new ExperimentChapter("advanced_gate", null,
