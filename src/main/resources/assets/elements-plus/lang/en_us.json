@@ -231,7 +231,8 @@
 
   "experiment.elements-plus.group.intro": "Introduction",
   "experiment.elements-plus.group.intro.section0.text0": "Welcome to the ElementsPlus Experiment Table!",
-  "experiment.elements-plus.group.intro.section1.text0": "Circuit Experiment",
+  "experiment.elements-plus.group.intro.section1.text0": "%s",
+  "experiment.elements-plus.group.intro.section1.text0.arg0": "Circuit Experiment",
   "experiment.elements-plus.group.intro.section1.text1": "Here you can test your own circuits and gradually unlock various advanced components.",
   "experiment.elements-plus.group.intro.section1.text2": "Insert your circuit diagram into the slot above and click the \"Start Experiment\" button, and the experiment will be automatically performed.",
   "experiment.elements-plus.group.intro.section1.text3": "After the experiment is successful, you will obtain a compiled circuit diagram, which is associated with a component. It can be used directly as a component in the lithography machine, or used in the \"Manufacture\" tab of the lithography machine to manufacture chips.",

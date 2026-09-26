@@ -230,7 +230,8 @@
 
   "experiment.elements-plus.group.intro": "介绍",
   "experiment.elements-plus.group.intro.section0.text0": "欢迎来到 ElementsPlus 实验桌！",
-  "experiment.elements-plus.group.intro.section1.text0": "电路实验",
+  "experiment.elements-plus.group.intro.section1.text0": "%s",
+  "experiment.elements-plus.group.intro.section1.text0.arg0": "电路实验",
   "experiment.elements-plus.group.intro.section1.text1": "在这里你可以对你自制的电路进行测试，并逐步解锁各个高级元件",
   "experiment.elements-plus.group.intro.section1.text2": "将你的电路图放入上方槽位，然后点击“开始实验”按钮，实验将会自动进行",
   "experiment.elements-plus.group.intro.section1.text3": "实验成功后，你将获得一份编译过的电路图，它会关联一个元件，可以直接作为元件在光刻机中使用，也可以用于在光刻机“制造”标签页中制作芯片",

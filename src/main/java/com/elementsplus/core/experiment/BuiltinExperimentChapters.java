@@ -42,6 +42,10 @@ public class BuiltinExperimentChapters {
         public ExperimentChapter.ExperimentSection experiments(BaseExperiment... experiments) {
             return new ExperimentChapter.ExperimentSection(List.of(experiments));
         }
+
+        public ExperimentChapter.ImageSection image(ResourceLocation image, int width, int height) {
+            return new ExperimentChapter.ImageSection(image, width, height);
+        }
     }
 
     // ========== 行 / 参数描述 ==========
@@ -88,27 +92,12 @@ public class BuiltinExperimentChapters {
         return new ExperimentChapter.TextSection(lines);
     }
 
-    public static final ExperimentChapter INTRO = register(
-            new ExperimentChapter("intro", null,
-                    List.of(
-                            new ExperimentChapter.ImageSection(ElementsPlus.id("textures/gui/experiment_table/chapters/intro/intro.png"), 3167, 1061),
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.intro.section0.text0")
-                            )),
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.intro.section1.text0").withStyle(BOLD),
-                                    Component.translatable("experiment.elements-plus.group.intro.section1.text1"),
-                                    Component.translatable("experiment.elements-plus.group.intro.section1.text2"),
-                                    Component.translatable("experiment.elements-plus.group.intro.section1.text3"),
-                                    Component.translatable("experiment.elements-plus.group.intro.section1.text4"),
-                                    Component.translatable("experiment.elements-plus.group.intro.section1.text5")
-                            )),
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.intro.section2.text0")
-                            ))
-                    ), Set.of()
-            )
-    );
+    public static final ExperimentChapter INTRO = register(chapter("intro", null, ch -> List.of(
+            ch.image(ElementsPlus.id("textures/gui/experiment_table/chapters/intro/intro.png"), 3167, 1061),
+            ch.text(1),
+            ch.text(6, line(0, style(BOLD))),
+            ch.text(1)
+    ), Set.of()));
 
     public static final ExperimentChapter AMPLIFIER = register(chapter("amplifier", null, ch -> List.of(
             ch.text(5,

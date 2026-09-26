@@ -43,7 +43,7 @@ public class BuiltinCircuitComponents {
         setPin(Direction.NORTH, 0, PinType.OUTPUT);
     }});
     // 模拟
-    public static final CircuitComponent AMPLIFIER = register(new CircuitComponent(ElementsPlus.id("amplifier"), Component.translatable("circuit.elements-plus.component.amplifier"), Component.translatable("circuit.elements-plus.component.amplifier.description"), null) {{
+    public static final CircuitComponent AMPLIFIER = register(new CircuitComponent(ElementsPlus.id("amplifier"), Component.translatable("circuit.elements-plus.component.amplifier"), Component.translatable("circuit.elements-plus.component.amplifier.description"), ElementsPlus.id("textures/circuit/amplifier.png")) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
@@ -59,7 +59,7 @@ public class BuiltinCircuitComponents {
         clearIngredientSupplier();
     }});
     // 逻辑门
-    public static final CircuitComponent AND_GATE = register(new CircuitComponent(ElementsPlus.id("and_gate"), Component.nullToEmpty("与门"), Component.nullToEmpty("与门描述"), ElementsPlus.id("textures/circuit/and_gate.png")) {{
+    public static final CircuitComponent AND_GATE = register(new CircuitComponent(ElementsPlus.id("and_gate"), Component.translatable("circuit.elements-plus.component.and_gate"), Component.translatable("circuit.elements-plus.component.and_gate.description"), ElementsPlus.id("textures/circuit/and_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
@@ -69,76 +69,76 @@ public class BuiltinCircuitComponents {
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});  // 短路与
-    public static final CircuitComponent OR_GATE = register(new CircuitComponent(ElementsPlus.id("or_gate"), "或门") {{
+    public static final CircuitComponent OR_GATE = register(new CircuitComponent(ElementsPlus.id("or_gate"), Component.translatable("circuit.elements-plus.component.or_gate"), null, ElementsPlus.id("textures/circuit/or_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent OR_GATE_SC = register(new CircuitComponent(ElementsPlus.id("or_gate_sc"), Component.translatable("circuit.elements-plus.component.or_gate_sc"), Component.translatable("circuit.elements-plus.component.or_gate_sc.description"), ElementsPlus.id("textures/circuit/or_gate_sc.png")) {{
+    public static final CircuitComponent OR_GATE_SC = register(new CircuitComponent(ElementsPlus.id("or_gate_sc"), Component.translatable("circuit.elements-plus.component.or_gate_sc"), null, ElementsPlus.id("textures/circuit/or_gate_sc.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});  // 短路或
-    public static final CircuitComponent NOT_GATE = register(new CircuitComponent(ElementsPlus.id("not_gate"), "非门") {{
+    public static final CircuitComponent NOT_GATE = register(new CircuitComponent(ElementsPlus.id("not_gate"), Component.translatable("circuit.elements-plus.component.not_gate"), null, ElementsPlus.id("textures/circuit/not_gate.png")) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent ANALOG_NOT = register(new CircuitComponent(ElementsPlus.id("analog_not"), "非门") {{
+    public static final CircuitComponent ANALOG_NOT = register(new CircuitComponent(ElementsPlus.id("analog_not"), Component.translatable("circuit.elements-plus.component.analog_not"), null, ElementsPlus.id("textures/circuit/analog_not.png")) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent NAND_GATE = register(new CircuitComponent(ElementsPlus.id("nand_gate"), Component.translatable("circuit.elements-plus.component.nand_gate"), Component.translatable("circuit.elements-plus.component.nand_gate.description"), ElementsPlus.id("textures/circuit/nand_gate.png")) {{
+    public static final CircuitComponent NAND_GATE = register(new CircuitComponent(ElementsPlus.id("nand_gate"), Component.translatable("circuit.elements-plus.component.nand_gate"), null, ElementsPlus.id("textures/circuit/nand_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent NOR_GATE = register(new CircuitComponent(ElementsPlus.id("nor_gate"), Component.translatable("circuit.elements-plus.component.nor_gate"), Component.translatable("circuit.elements-plus.component.nor_gate.description"), ElementsPlus.id("textures/circuit/nor_gate.png")) {{
+    public static final CircuitComponent NOR_GATE = register(new CircuitComponent(ElementsPlus.id("nor_gate"), Component.translatable("circuit.elements-plus.component.nor_gate"), null, ElementsPlus.id("textures/circuit/nor_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent XOR_GATE = register(new CircuitComponent(ElementsPlus.id("xor_gate"), Component.translatable("circuit.elements-plus.component.xor_gate"), Component.translatable("circuit.elements-plus.component.xor_gate.description"), ElementsPlus.id("textures/circuit/xor_gate.png")) {{
+    public static final CircuitComponent XOR_GATE = register(new CircuitComponent(ElementsPlus.id("xor_gate"), Component.translatable("circuit.elements-plus.component.xor_gate"), null, ElementsPlus.id("textures/circuit/xor_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent XNOR_GATE = register(new CircuitComponent(ElementsPlus.id("xnor_gate"), Component.translatable("circuit.elements-plus.component.xnor_gate"), Component.translatable("circuit.elements-plus.component.xnor_gate.description"), ElementsPlus.id("textures/circuit/xnor_gate.png")) {{
+    public static final CircuitComponent XNOR_GATE = register(new CircuitComponent(ElementsPlus.id("xnor_gate"), Component.translatable("circuit.elements-plus.component.xnor_gate"), null, ElementsPlus.id("textures/circuit/xnor_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent AND_GATE_3 = register(new CircuitComponent(ElementsPlus.id("and_gate_3"), Component.translatable("circuit.elements-plus.component.and_gate_3"), Component.translatable("circuit.elements-plus.component.and_gate_3.description"), ElementsPlus.id("textures/circuit/and_gate_3.png")) {{
-        setPin(Direction.NORTH, 0, PinType.INPUT);
-        setPin(Direction.WEST, 0, PinType.INPUT);
-        setPin(Direction.SOUTH, 0, PinType.INPUT);
-        setPin(Direction.EAST, 0, PinType.OUTPUT);
-    }});
-    public static final CircuitComponent OR_GATE_3 = register(new CircuitComponent(ElementsPlus.id("or_gate_3"), Component.translatable("circuit.elements-plus.component.or_gate_3"), Component.translatable("circuit.elements-plus.component.or_gate_3.description"), ElementsPlus.id("textures/circuit/or_gate_3.png")) {{
+    public static final CircuitComponent AND_GATE_3 = register(new CircuitComponent(ElementsPlus.id("and_gate_3"), Component.translatable("circuit.elements-plus.component.and_gate_3"), null, ElementsPlus.id("textures/circuit/and_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent XOR_GATE_3 = register(new CircuitComponent(ElementsPlus.id("xor_gate_3"), Component.translatable("circuit.elements-plus.component.xor_gate_3"), Component.translatable("circuit.elements-plus.component.xor_gate_3.description"), ElementsPlus.id("textures/circuit/xor_gate_3.png")) {{
+    public static final CircuitComponent OR_GATE_3 = register(new CircuitComponent(ElementsPlus.id("or_gate_3"), Component.translatable("circuit.elements-plus.component.or_gate_3"), null, ElementsPlus.id("textures/circuit/or_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent XNOR_GATE_3 = register(new CircuitComponent(ElementsPlus.id("xnor_gate_3"), Component.translatable("circuit.elements-plus.component.xnor_gate_3"), Component.translatable("circuit.elements-plus.component.xnor_gate_3.description"), ElementsPlus.id("textures/circuit/xnor_gate_3.png")) {{
+    public static final CircuitComponent XOR_GATE_3 = register(new CircuitComponent(ElementsPlus.id("xor_gate_3"), Component.translatable("circuit.elements-plus.component.xor_gate_3"), null, ElementsPlus.id("textures/circuit/xor_gate.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT);
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.SOUTH, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+    }});
+    public static final CircuitComponent XNOR_GATE_3 = register(new CircuitComponent(ElementsPlus.id("xnor_gate_3"), Component.translatable("circuit.elements-plus.component.xnor_gate_3"), null, ElementsPlus.id("textures/circuit/xnor_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
     // MUX
-    public static final CircuitComponent MUX = register(new CircuitComponent(ElementsPlus.id("mux"), Component.translatable("circuit.elements-plus.component.mux"), Component.translatable("circuit.elements-plus.component.mux.description"), ElementsPlus.id("textures/circuit/mux.png")) {{
+    public static final CircuitComponent MUX = register(new CircuitComponent(ElementsPlus.id("mux"), Component.translatable("circuit.elements-plus.component.mux"), null, ElementsPlus.id("textures/circuit/mux.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent MUX_8 = register(new CircuitComponent(ElementsPlus.id("mux_8"), Component.translatable("circuit.elements-plus.component.mux_8"), Component.translatable("circuit.elements-plus.component.mux_8.description"), ElementsPlus.id("textures/circuit/mux_8.png")) {{
+    public static final CircuitComponent MUX_8 = register(new CircuitComponent(ElementsPlus.id("mux_8"), Component.translatable("circuit.elements-plus.component.mux_8"), null, ElementsPlus.id("textures/circuit/mux_8.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
@@ -148,14 +148,14 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
     // 编码器和译码器
-    public static final CircuitComponent ENCODER = register(new CircuitComponent(ElementsPlus.id("encoder"), Component.translatable("circuit.elements-plus.component.encoder"), Component.translatable("circuit.elements-plus.component.encoder.description"), ElementsPlus.id("textures/circuit/encoder.png")) {{
+    public static final CircuitComponent ENCODER_8_3 = register(new CircuitComponent(ElementsPlus.id("encoder_8_3"), Component.translatable("circuit.elements-plus.component.encoder_8_3"), null, ElementsPlus.id("textures/circuit/encoder_8_3.png")) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.NORTH, 0, PinType.OUTPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
         setPin(Direction.SOUTH, 0, PinType.OUTPUT);
         setPinBitWidth(Direction.WEST, 0, 8);
     }});
-    public static final CircuitComponent DECODER = register(new CircuitComponent(ElementsPlus.id("decoder"), Component.translatable("circuit.elements-plus.component.decoder"), Component.translatable("circuit.elements-plus.component.decoder.description"), ElementsPlus.id("textures/circuit/decoder.png")) {{
+    public static final CircuitComponent DECODER_3_8 = register(new CircuitComponent(ElementsPlus.id("decoder_3_8"), Component.translatable("circuit.elements-plus.component.decoder_3_8"), null, ElementsPlus.id("textures/circuit/decoder_3_8.png")) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.INPUT);
@@ -163,20 +163,20 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
     // 加法器
-    public static final CircuitComponent HALF_ADDER = register(new CircuitComponent(ElementsPlus.id("half_adder"), Component.translatable("circuit.elements-plus.component.half_adder"), Component.translatable("circuit.elements-plus.component.half_adder.description"), ElementsPlus.id("textures/circuit/half_adder.png"), 1, 2) {{
+    public static final CircuitComponent HALF_ADDER = register(new CircuitComponent(ElementsPlus.id("half_adder"), Component.translatable("circuit.elements-plus.component.half_adder"), null, ElementsPlus.id("textures/circuit/adder.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
         setPin(Direction.SOUTH, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent FULL_ADDER = register(new CircuitComponent(ElementsPlus.id("full_adder"), Component.translatable("circuit.elements-plus.component.full_adder"), Component.translatable("circuit.elements-plus.component.full_adder.description"), ElementsPlus.id("textures/circuit/full_adder.png"), 1, 2) {{
+    public static final CircuitComponent FULL_ADDER = register(new CircuitComponent(ElementsPlus.id("full_adder"), Component.translatable("circuit.elements-plus.component.full_adder"), null, ElementsPlus.id("textures/circuit/adder.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
         setPin(Direction.SOUTH, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent ADDER_8 = register(new CircuitComponent(ElementsPlus.id("adder_8"), Component.translatable("circuit.elements-plus.component.adder_8"), Component.translatable("circuit.elements-plus.component.adder_8.description"), ElementsPlus.id("textures/circuit/adder.png"), 1, 2) {{
+    public static final CircuitComponent ADDER_8 = register(new CircuitComponent(ElementsPlus.id("adder_8"), Component.translatable("circuit.elements-plus.component.adder_8"), null, ElementsPlus.id("textures/circuit/adder_8.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT);  // 加数1（8位）
         setPin(Direction.WEST, 1, PinType.INPUT);  // 加数2（8位）
         setPin(Direction.NORTH, 0, PinType.INPUT); // 进位输入（1位）
@@ -187,7 +187,7 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
     // 总线
-    public static final CircuitComponent BUS_JOINER_8 = register(new CircuitComponent(ElementsPlus.id("bus_joiner"), Component.translatable("circuit.elements-plus.component.bus_joiner_8"), Component.translatable("circuit.elements-plus.component.bus_joiner_8.description"), ElementsPlus.id("textures/circuit/bus_joiner.png"), 1, 8) {{
+    public static final CircuitComponent BUS_JOINER_8 = register(new CircuitComponent(ElementsPlus.id("bus_joiner"), Component.translatable("circuit.elements-plus.component.bus_joiner_8"), Component.translatable("circuit.elements-plus.component.bus_joiner_8.description"), ElementsPlus.id("textures/circuit/bus_joiner_8.png"), 1, 8) {{
         setPin(Direction.WEST, 0, PinType.INPUT); // 第7位
         setPin(Direction.WEST, 1, PinType.INPUT); // 第6位
         setPin(Direction.WEST, 2, PinType.INPUT); // 第5位
@@ -200,7 +200,7 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.EAST, 0, 8);
         clearIngredientSupplier();
     }});
-    public static final CircuitComponent BUS_SPLITTER_8 = register(new CircuitComponent(ElementsPlus.id("bus_splitter"), Component.translatable("circuit.elements-plus.component.bus_splitter_8"), Component.translatable("circuit.elements-plus.component.bus_splitter_8.description"), ElementsPlus.id("textures/circuit/bus_splitter.png"), 1, 8) {{
+    public static final CircuitComponent BUS_SPLITTER_8 = register(new CircuitComponent(ElementsPlus.id("bus_splitter"), Component.translatable("circuit.elements-plus.component.bus_splitter_8"), Component.translatable("circuit.elements-plus.component.bus_splitter_8.description"), ElementsPlus.id("textures/circuit/bus_splitter_8.png"), 1, 8) {{
         setPin(Direction.WEST, 7, PinType.INPUT); // 8位总线
         setPin(Direction.EAST, 0, PinType.OUTPUT); // 第0位
         setPin(Direction.EAST, 1, PinType.OUTPUT); // 第1位
@@ -214,14 +214,14 @@ public class BuiltinCircuitComponents {
         clearIngredientSupplier();
     }});
     // 模数转换
-    public static final CircuitComponent DAC = register(new CircuitComponent(ElementsPlus.id("dac"), Component.translatable("circuit.elements-plus.component.dac"), Component.translatable("circuit.elements-plus.component.dac.description"), ElementsPlus.id("textures/circuit/dac.png"), 1, 4) {{
+    public static final CircuitComponent DAC = register(new CircuitComponent(ElementsPlus.id("dac"), Component.translatable("circuit.elements-plus.component.dac"), null, ElementsPlus.id("textures/circuit/dac.png"), 1, 4) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
         setPin(Direction.WEST, 2, PinType.INPUT);
         setPin(Direction.WEST, 3, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent ADC = register(new CircuitComponent(ElementsPlus.id("adc"), Component.translatable("circuit.elements-plus.component.adc"), Component.translatable("circuit.elements-plus.component.adc.description"), ElementsPlus.id("textures/circuit/adc.png"), 1, 4) {{
+    public static final CircuitComponent ADC = register(new CircuitComponent(ElementsPlus.id("adc"), Component.translatable("circuit.elements-plus.component.adc"), null, ElementsPlus.id("textures/circuit/adc.png"), 1, 4) {{
         setPin(Direction.EAST, 0, PinType.INPUT);
         setPin(Direction.EAST, 1, PinType.INPUT);
         setPin(Direction.EAST, 2, PinType.INPUT);
@@ -229,7 +229,7 @@ public class BuiltinCircuitComponents {
         setPin(Direction.WEST, 3, PinType.OUTPUT);
     }});
     // 位运算器
-    public static final CircuitComponent BITWISE_AND = register(new CircuitComponent(ElementsPlus.id("bitwise_and"), Component.translatable("circuit.elements-plus.component.bitwise_and"), Component.translatable("circuit.elements-plus.component.bitwise_and.description"), ElementsPlus.id("textures/circuit/bitwise_and.png"), 1, 2) {{
+    public static final CircuitComponent BITWISE_AND = register(new CircuitComponent(ElementsPlus.id("bitwise_and"), Component.translatable("circuit.elements-plus.component.bitwise_and"), null, ElementsPlus.id("textures/circuit/bitwise_and.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
@@ -237,7 +237,7 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.WEST, 1, 8);
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
-    public static final CircuitComponent BITWISE_OR = register(new CircuitComponent(ElementsPlus.id("bitwise_or"), Component.translatable("circuit.elements-plus.component.bitwise_or"), Component.translatable("circuit.elements-plus.component.bitwise_or.description"), ElementsPlus.id("textures/circuit/bitwise_or.png"), 1, 2) {{
+    public static final CircuitComponent BITWISE_OR = register(new CircuitComponent(ElementsPlus.id("bitwise_or"), Component.translatable("circuit.elements-plus.component.bitwise_or"), null, ElementsPlus.id("textures/circuit/bitwise_or.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
@@ -245,7 +245,7 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.WEST, 1, 8);
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
-    public static final CircuitComponent BITWISE_XOR = register(new CircuitComponent(ElementsPlus.id("bitwise_xor"), Component.translatable("circuit.elements-plus.component.bitwise_xor"), Component.translatable("circuit.elements-plus.component.bitwise_xor.description"), ElementsPlus.id("textures/circuit/bitwise_xor.png"), 1, 2) {{
+    public static final CircuitComponent BITWISE_XOR = register(new CircuitComponent(ElementsPlus.id("bitwise_xor"), Component.translatable("circuit.elements-plus.component.bitwise_xor"), null, ElementsPlus.id("textures/circuit/bitwise_xor.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
@@ -253,19 +253,19 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.WEST, 1, 8);
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
-    public static final CircuitComponent BITWISE_NOT = register(new CircuitComponent(ElementsPlus.id("bitwise_not"), Component.translatable("circuit.elements-plus.component.bitwise_not"), Component.translatable("circuit.elements-plus.component.bitwise_not.description"), ElementsPlus.id("textures/circuit/bitwise_not.png"), 1, 1) {{
+    public static final CircuitComponent BITWISE_NOT = register(new CircuitComponent(ElementsPlus.id("bitwise_not"), Component.translatable("circuit.elements-plus.component.bitwise_not"), null, ElementsPlus.id("textures/circuit/bitwise_not.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
         setPinBitWidth(Direction.WEST, 0, 8);
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
-    public static final CircuitComponent NEG = register(new CircuitComponent(ElementsPlus.id("neg"), Component.translatable("circuit.elements-plus.component.neg"), Component.translatable("circuit.elements-plus.component.neg.description"), ElementsPlus.id("textures/circuit/neg.png"), 1, 1) {{
+    public static final CircuitComponent NEG = register(new CircuitComponent(ElementsPlus.id("neg"), Component.translatable("circuit.elements-plus.component.neg"), null, ElementsPlus.id("textures/circuit/neg.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
         setPinBitWidth(Direction.WEST, 0, 8);
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
-    public static final CircuitComponent BITWISE_MOVE = register(new CircuitComponent(ElementsPlus.id("bitwise_move"), Component.translatable("circuit.elements-plus.component.bitwise_move"), Component.translatable("circuit.elements-plus.component.bitwise_move.description"), ElementsPlus.id("textures/circuit/bitwise_move.png"), 1, 2) {{
+    public static final CircuitComponent BITWISE_MOVE = register(new CircuitComponent(ElementsPlus.id("bitwise_move"), Component.translatable("circuit.elements-plus.component.bitwise_move"), null, ElementsPlus.id("textures/circuit/bitwise_move.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
@@ -274,7 +274,7 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
     // 高级元件
-    public static final CircuitComponent ALU = register(new CircuitComponent(ElementsPlus.id("alu"), Component.translatable("circuit.elements-plus.component.alu"), Component.translatable("circuit.elements-plus.component.alu.description"), ElementsPlus.id("textures/circuit/alu.png"), 1, 3) {{
+    public static final CircuitComponent ALU = register(new CircuitComponent(ElementsPlus.id("alu"), Component.translatable("circuit.elements-plus.component.alu"), null, ElementsPlus.id("textures/circuit/alu.png"), 1, 3) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
@@ -286,7 +286,7 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.WEST, 2, 8);
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
-    public static final CircuitComponent ALU_ADVANCED = register(new CircuitComponent(ElementsPlus.id("alu_advanced"), Component.translatable("circuit.elements-plus.component.alu_advanced"), Component.translatable("circuit.elements-plus.component.alu_advanced.description"), ElementsPlus.id("textures/circuit/alu.png"), 1, 3) {{
+    public static final CircuitComponent ALU_ADVANCED = register(new CircuitComponent(ElementsPlus.id("alu_advanced"), Component.translatable("circuit.elements-plus.component.alu_advanced"), null, ElementsPlus.id("textures/circuit/alu_advanced.png"), 1, 3) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.WEST, 1, PinType.INPUT);
@@ -298,19 +298,19 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.WEST, 2, 8);
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
-    public static final CircuitComponent TFF = register(new CircuitComponent(ElementsPlus.id("tff"), Component.translatable("circuit.elements-plus.component.tff"), Component.translatable("circuit.elements-plus.component.tff.description"), ElementsPlus.id("textures/circuit/tff.png"), 1, 1) {{
+    public static final CircuitComponent TFF = register(new CircuitComponent(ElementsPlus.id("tff"), Component.translatable("circuit.elements-plus.component.tff"), null, ElementsPlus.id("textures/circuit/tff.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
         setPinBitWidth(Direction.WEST, 0, 1);
         setPinBitWidth(Direction.EAST, 0, 1);
     }});
-    public static final CircuitComponent REGISTER = register(new CircuitComponent(ElementsPlus.id("register"), "寄存器") {{
+    public static final CircuitComponent REGISTER = register(new CircuitComponent(ElementsPlus.id("register"), Component.translatable("circuit.elements-plus.component.register"), null, ElementsPlus.id("textures/circuit/register.png"), 1, 1) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
         setPin(Direction.EAST, 0, PinType.OUTPUT);
     }});
-    public static final CircuitComponent REGISTER_8 = register(new CircuitComponent(ElementsPlus.id("register_8"), "8位寄存器") {{
+    public static final CircuitComponent REGISTER_8 = register(new CircuitComponent(ElementsPlus.id("register_8"), Component.translatable("circuit.elements-plus.component.register_8"), null, ElementsPlus.id("textures/circuit/register_8.png"), 1, 1) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
@@ -328,10 +328,10 @@ public class BuiltinCircuitComponents {
         setPinBitWidth(Direction.WEST, 1, 8);
         setPinBitWidth(Direction.EAST, 0, 8);
     }});
-    public static final CircuitComponent MULTIPLIER = register(new CircuitComponent(ElementsPlus.id("multiplier"), "乘法器"));
-    public static final CircuitComponent DIVIDER = register(new CircuitComponent(ElementsPlus.id("divider"), "除法器"));
-    public static final CircuitComponent ANALOG_COUNTER = register(new CircuitComponent(ElementsPlus.id("analog_counter"), "模拟计数器"));
-    public static final CircuitComponent COUNTER_8 = register(new CircuitComponent(ElementsPlus.id("counter_8"), "8位计数器"));
+    public static final CircuitComponent MULTIPLIER = register(new CircuitComponent(ElementsPlus.id("multiplier"), Component.translatable("circuit.elements-plus.component.multiplier"), null, ElementsPlus.id("textures/circuit/multiplier.png")));
+    public static final CircuitComponent DIVIDER = register(new CircuitComponent(ElementsPlus.id("divider"), Component.translatable("circuit.elements-plus.component.divider"), null, ElementsPlus.id("textures/circuit/divider.png")));
+    public static final CircuitComponent ANALOG_COUNTER = register(new CircuitComponent(ElementsPlus.id("analog_counter"), Component.translatable("circuit.elements-plus.component.analog_counter"), null, ElementsPlus.id("textures/circuit/analog_counter.png")));
+    public static final CircuitComponent COUNTER_8 = register(new CircuitComponent(ElementsPlus.id("counter_8"), Component.translatable("circuit.elements-plus.component.counter_8"), null, ElementsPlus.id("textures/circuit/counter_8.png")));
 
     public static CircuitComponent register(CircuitComponent circuitComponent) {
         BY_ID.put(circuitComponent.getId(), circuitComponent);
