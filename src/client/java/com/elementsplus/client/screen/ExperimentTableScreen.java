@@ -479,7 +479,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         completedExperiments.clear();
         completedExperiments.addAll(completed);
         for (ChapterEntryButton button : chapterButtons) {
-            button.locked = !unlockedChapters.contains(button.chapter.name);
+            boolean locked = !unlockedChapters.contains(button.chapter.name);
+            button.locked = locked;
+            button.setTooltip(locked ? Tooltip.create(buildLockedChapterTooltip(button.chapter)) : null);
         }
         ChapterEntryButton target = null;
         if (selectedName != null) {
@@ -505,6 +507,29 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         } else {
             setCurrentExperiment(null, false);
         }
+    }
+
+    /** 章节的全部（非可选）实验是否都已通过；与服务端解锁判定一致。 */
+    private boolean isChapterComplete(ExperimentChapter chapter) {
+        for (BaseExperiment experiment : chapter.getExperiments()) {
+            if (!completedExperiments.contains(experiment.getName())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 未解锁章节的悬停提示：列出尚未完成的前置章节。 */
+    private Component buildLockedChapterTooltip(ExperimentChapter chapter) {
+        MutableComponent tooltip = Component.translatable("gui.elements-plus.experiment_table.unfinished_prerequisites");
+        boolean any = false;
+        for (ExperimentChapter dependency : chapter.dependencies) {
+            if (!isChapterComplete(dependency)) {
+                tooltip.append(Component.literal("\n").append(dependency.getDisplayName().copy().withStyle(ChatFormatting.GRAY)));
+                any = true;
+            }
+        }
+        return !any ? Component.translatable("gui.elements-plus.experiment_table.unfinished_prerequisites") : tooltip;
     }
 
     public void onSelectionChanged(BlockPos pos, String chapterName, String experimentName) {
