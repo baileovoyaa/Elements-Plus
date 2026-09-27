@@ -21,26 +21,26 @@ import java.util.Set;
 
 /**
  * 纯客户端电路模拟器。
- *
+ * <p>
  * 思路（参考 docs/参考算法描述.md）：
  * 1. 并查集把同材料、同位宽的导线四连通合并为"网络"节点：
- *    1 位网络携带单个 0~15 值；8 位总线网络携带 8 元组（每位仍为 0~15，
- *    信号强度得到保留），按位独立承载 8 路信号；
+ * 1 位网络携带单个 0~15 值；8 位总线网络携带 8 元组（每位仍为 0~15，
+ * 信号强度得到保留），按位独立承载 8 路信号；
  * 2. 建依赖图：网络/组合元件/时序元件（电容 D 输入不建边，仅采样，切断时序环）；
  * 3. Kahn 拓扑排序；
  * 4. Tarjan SCC 把环内的网络标记为坏网；
  * 5. 按拓扑序传播求值：1 位网络取所有驱动源的最大值；
- *    总线网络有多个驱动源时按位取最大值（如 (12,11,10,...) | (10,11,12,...) = (12,11,12,...)）；
+ * 总线网络有多个驱动源时按位取最大值（如 (12,11,10,...) | (10,11,12,...) = (12,11,12,...)）；
  * 6. 时钟步进：求值 -> 采样电容 D -> 统一更新状态 -> 重新求值；
  * 7. 复位：清空时序状态（电容 = 0，谐振器 = 初相）。
- *
+ * <p>
  * 位宽语义：
  * - 元件结点值按输出引脚布局拆成若干位段：1 位引脚占 4 位（0~15 模拟值），
- *   8 位引脚占 32 位（8 个 4 位通道，每个通道保存该位 0~15 的信号强度）；
+ * 8 位引脚占 32 位（8 个 4 位通道，每个通道保存该位 0~15 的信号强度）；
  * - 不同位宽的线/引脚之间不传信号，并在连接处记录"位宽不匹配"告警；
  * - 加法器先从输入端读取 8 元组，按“位=非零”转成整数做二进制加法，
- *   再把结果按位转成 8 元组输出（高=15，低=0）。
- *
+ * 再把结果按位转成 8 元组输出（高=15，低=0）。
+ * <p>
  * 状态不持久化、不发送到服务端，仅用于屏幕内的模拟与渲染。
  */
 public class CircuitSimulator {
@@ -53,17 +53,25 @@ public class CircuitSimulator {
     }
 
     private enum DepKind {
-        /** 读取源结点值中的一个 4 位通道（0~15）。通道起点由 Dep.bit 指定。 */
+        /**
+         * 读取源结点值中的一个 4 位通道（0~15）。通道起点由 Dep.bit 指定。
+         */
         WHOLE,
-        /** 读取源结点值中的一个 32 位（8×4 位）通道，即整个 8 元组。起点由 Dep.bit 指定。 */
+        /**
+         * 读取源结点值中的一个 32 位（8×4 位）通道，即整个 8 元组。起点由 Dep.bit 指定。
+         */
         TUPLE
     }
 
-    /** 一条入边依赖：源结点、取值方式、通道偏移。 */
+    /**
+     * 一条入边依赖：源结点、取值方式、通道偏移。
+     */
     private record Dep(int node, DepKind kind, int bit) {
     }
 
-    /** 一个输入引脚的若干通道依赖；引脚位宽 width 为 1 或 8。 */
+    /**
+     * 一个输入引脚的若干通道依赖；引脚位宽 width 为 1 或 8。
+     */
     private record InputPort(int width, Dep[] lanes) {
     }
 
@@ -142,7 +150,9 @@ public class CircuitSimulator {
         return v == null ? 0 : v;
     }
 
-    /** 8 位总线打包值：bit b = 第 b 位（4 位通道）是否非零。 */
+    /**
+     * 8 位总线打包值：bit b = 第 b 位（4 位通道）是否非零。
+     */
     public int getWireBusValue(int x, int y, WireMaterial material) {
         Integer net = wireNet.get(new WirePoint(x, y, material));
         if (net == null) return 0;
@@ -154,7 +164,9 @@ public class CircuitSimulator {
         return bits;
     }
 
-    /** 该格上 material 对应的导线网络是否为 8 位总线。 */
+    /**
+     * 该格上 material 对应的导线网络是否为 8 位总线。
+     */
     public boolean isWireBus(int x, int y, WireMaterial material) {
         Integer net = wireNet.get(new WirePoint(x, y, material));
         return net != null && net < netWidth.length && netWidth[net] == 8;
@@ -424,7 +436,9 @@ public class CircuitSimulator {
         return block instanceof Component component ? component : null;
     }
 
-    /** other 组件上、朝向 me 组件所在区域（旋转后包围盒）的某类型引脚。 */
+    /**
+     * other 组件上、朝向 me 组件所在区域（旋转后包围盒）的某类型引脚。
+     */
     private static PinInfo otherPinAt(Component other, Component me, PinType type) {
         Direction rot = me.direction;
         boolean ns = rot == Direction.NORTH || rot == Direction.SOUTH;
@@ -445,7 +459,9 @@ public class CircuitSimulator {
         return null;
     }
 
-    /** 元件输出引脚在节点值中的位段布局：1 位引脚占 4 位，8 位引脚占 32 位。 */
+    /**
+     * 元件输出引脚在节点值中的位段布局：1 位引脚占 4 位，8 位引脚占 32 位。
+     */
     private record OutSlot(int bitStart, int width) {
     }
 
@@ -575,7 +591,9 @@ public class CircuitSimulator {
         };
     }
 
-    /** 两个 8 元组（8×4 位通道）按位取最大值。 */
+    /**
+     * 两个 8 元组（8×4 位通道）按位取最大值。
+     */
     private static long maxTuple(long a, long b) {
         if (a == 0L) return b;
         if (b == 0L) return a;
@@ -588,7 +606,9 @@ public class CircuitSimulator {
         return r;
     }
 
-    /** 8 元组按“位非零即真”转成 8 位整数。 */
+    /**
+     * 8 元组按“位非零即真”转成 8 位整数。
+     */
     private static int tupleToInt(long tuple) {
         int v = 0;
         for (int b = 0; b < 8; b++) {
@@ -597,7 +617,9 @@ public class CircuitSimulator {
         return v;
     }
 
-    /** 8 位整数转 8 元组：置位通道输出 15，其余 0。 */
+    /**
+     * 8 位整数转 8 元组：置位通道输出 15，其余 0。
+     */
     private static long intToTuple(int bits) {
         long t = 0L;
         for (int b = 0; b < 8; b++) {
@@ -606,7 +628,9 @@ public class CircuitSimulator {
         return t;
     }
 
-    /** 读取元件第 k 个输入引脚：1 位返回 0~15，8 位返回 8 元组。 */
+    /**
+     * 读取元件第 k 个输入引脚：1 位返回 0~15，8 位返回 8 元组。
+     */
     private long inPort(int node, int k) {
         InputPort[] ports = inputPorts[node];
         if (ports == null || k >= ports.length) return 0L;
@@ -630,47 +654,89 @@ public class CircuitSimulator {
             int west = (int) inPort(node, 0);
             int south = (int) inPort(node, 1);
             return Math.min((int) Math.floor(2.0 * west * (1.0 - south / 15.0)), 15);
-        }
-        if (cc == BuiltinCircuitComponents.DIODE) {
+        } else if (cc == BuiltinCircuitComponents.DIODE) {
             return inPort(node, 0);
-        }
-        if (cc == BuiltinCircuitComponents.RESISTOR) {
+        } else if (cc == BuiltinCircuitComponents.RESISTOR) {
             int decay = ((ResistorComponentInstance) component.instance).getDecay();
             return Math.max(inPort(node, 0) - decay, 0);
-        }
-        if (cc == BuiltinCircuitComponents.BATTERY) {
+        } else if (cc == BuiltinCircuitComponents.BATTERY) {
             return 15;
-        }
-        if (cc == BuiltinCircuitComponents.INPUT) {
+        } else if (cc == BuiltinCircuitComponents.INPUT) {
             return ((InputComponentInstance) component.instance).getSignal();
-        }
-        if (cc == BuiltinCircuitComponents.OUTPUT) {
+        } else if (cc == BuiltinCircuitComponents.OUTPUT) {
             return inPort(node, 0);
-        }
-        if (cc == BuiltinCircuitComponents.AMPLIFIER) {
+        } else if (cc == BuiltinCircuitComponents.AMPLIFIER) {
             return inPort(node, 0) > 0 ? 15 : 0;
-        }
-        if (cc == BuiltinCircuitComponents.AND_GATE) {
+        } else if (cc == BuiltinCircuitComponents.AND_GATE) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            return a != 0 && b != 0 ? 15 : 0;
+        } else if (cc == BuiltinCircuitComponents.AND_GATE_SC) {
             int a = (int) inPort(node, 0);
             int b = (int) inPort(node, 1);
             return a != 0 ? b : 0;
-        }
-        if (cc == BuiltinCircuitComponents.BUS_JOINER_8) {
+        } else if (cc == BuiltinCircuitComponents.OR_GATE) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            return a != 0 || b != 0 ? 15 : 0;
+        } else if (cc == BuiltinCircuitComponents.OR_GATE_SC) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            return a != 0 ? a : b;
+        } else if (cc == BuiltinCircuitComponents.NOT_GATE) {
+            return inPort(node, 0) == 0 ? 15 : 0;
+        } else if (cc == BuiltinCircuitComponents.ANALOG_NOT) {
+            return 15 - inPort(node, 0);
+        } else if (cc == BuiltinCircuitComponents.NAND_GATE) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            return a != 0 && b != 0 ? 0 : 15;
+        } else if (cc == BuiltinCircuitComponents.NOR_GATE) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            return a != 0 || b != 0 ? 0 : 15;
+        } else if (cc == BuiltinCircuitComponents.XOR_GATE) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            return (a != 0) ^ (b != 0) ? 15 : 0;
+        } else if (cc == BuiltinCircuitComponents.XNOR_GATE) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            return (a != 0) ^ (b != 0) ? 0 : 15;
+        } else if (cc == BuiltinCircuitComponents.AND_GATE_3) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            int c = (int) inPort(node, 2);
+            return a != 0 && b != 0 && c != 0 ? 15 : 0;
+        } else if (cc == BuiltinCircuitComponents.OR_GATE_3) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            int c = (int) inPort(node, 2);
+            return a != 0 || b != 0 || c != 0 ? 15 : 0;
+        } else if (cc == BuiltinCircuitComponents.XOR_GATE_3) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            int c = (int) inPort(node, 2);
+            return (a != 0) ^ (b != 0) ^ (c != 0) ? 15 : 0;
+        } else if (cc == BuiltinCircuitComponents.XNOR_GATE_3) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            int c = (int) inPort(node, 2);
+            return (a != 0) ^ (b != 0) ^ (c != 0) ? 0 : 15;
+        } else if (cc == BuiltinCircuitComponents.BUS_JOINER_8) {
             long tuple = 0L;
             for (int b = 0; b < 8; b++) {
                 tuple |= (inPort(node, 7 - b) & 0xF) << (4 * b);
             }
             return tuple << outputSlot(cc, Direction.EAST, 0).bitStart();
-        }
-        if (cc == BuiltinCircuitComponents.BUS_SPLITTER_8) {
+        } else if (cc == BuiltinCircuitComponents.BUS_SPLITTER_8) {
             long tuple = inPort(node, 0);
             long v = 0L;
             for (int b = 0; b < 8; b++) {
                 v |= ((tuple >> (4 * b)) & 0xF) << outputSlot(cc, Direction.EAST, b).bitStart();
             }
             return v;
-        }
-        if (cc == BuiltinCircuitComponents.ADDER_8) {
+        } else if (cc == BuiltinCircuitComponents.ADDER_8) {
             int a = tupleToInt(inPort(node, 0));
             int b = tupleToInt(inPort(node, 1));
             int cin = inPort(node, 2) != 0 ? 1 : 0;
@@ -863,10 +929,26 @@ public class CircuitSimulator {
         int x0, y0;
         boolean vertical;
         switch (facing) {
-            case NORTH -> { x0 = ex; y0 = ey + 1; vertical = false; }
-            case SOUTH -> { x0 = ex; y0 = ey; vertical = false; }
-            case WEST -> { x0 = ex + 1; y0 = ey; vertical = true; }
-            default -> { x0 = ex; y0 = ey; vertical = true; }
+            case NORTH -> {
+                x0 = ex;
+                y0 = ey + 1;
+                vertical = false;
+            }
+            case SOUTH -> {
+                x0 = ex;
+                y0 = ey;
+                vertical = false;
+            }
+            case WEST -> {
+                x0 = ex + 1;
+                y0 = ey;
+                vertical = true;
+            }
+            default -> {
+                x0 = ex;
+                y0 = ey;
+                vertical = true;
+            }
         }
         return ((long) x0 << 33) | ((y0 & 0xFFFFFFFFL) << 1) | (vertical ? 1 : 0);
     }

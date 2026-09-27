@@ -131,33 +131,57 @@ public class BuiltinExperimentChapters {
     ), Set.of(AMPLIFIER)));
 
     public static final ExperimentChapter BASIC_GATE = register(chapter("basic_gate", null, ch -> List.of(
-            ch.text(6),
+            ch.text(6,
+                    line(2, style(GOLD)),
+                    line(3, style(GOLD)),
+                    line(4, style(GOLD)),
+                    line(5, style(GOLD))
+            ),
             ch.experiments(
                     BuiltinExperiments.OR_GATE,
                     BuiltinExperiments.NOR_GATE,
                     BuiltinExperiments.NAND_GATE,
                     BuiltinExperiments.AND_GATE),
             ch.text(2),
-            ch.text(3),
+            ch.text(3,
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD))
+            ),
             ch.experiments(
                     BuiltinExperiments.AND_GATE_SC,
                     BuiltinExperiments.OR_GATE_SC
             ).optional()
     ), Set.of(FIRST_GATE)));
 
-    public static final ExperimentChapter ADVANCED_GATE = register(
-            new ExperimentChapter("advanced_gate", null,
-                    List.of(
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.advanced_gate.section0.text0")
-                            )),
-                            new ExperimentChapter.ExperimentSection(List.of(
-                                    BuiltinExperiments.XOR_GATE,
-                                    BuiltinExperiments.XNOR_GATE
-                            ))
-                    ), Set.of(BASIC_GATE)
+    public static final ExperimentChapter ADVANCED_GATE = register(chapter("advanced_gate", null, ch -> List.of(
+            ch.text(3),
+            ch.text(4,
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.XOR_GATE, BuiltinExperiments.XNOR_GATE),
+            ch.text(4,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD)),
+                    line(3, style(GOLD))
             )
-    );
+    ), Set.of(BASIC_GATE)));
+
+    public static final ExperimentChapter THREE_WAY_LOGIC_GATE = register(chapter("three_way_logic_gate", null, ch -> List.of(
+            ch.text(7,
+                    line(2, style(GOLD)),
+                    line(3, style(GOLD)),
+                    line(4, style(GOLD)),
+                    line(5, style(GOLD))
+            ),
+            ch.experiments(
+                    BuiltinExperiments.OR_GATE_3,
+                    BuiltinExperiments.AND_GATE_3,
+                    BuiltinExperiments.XOR_GATE_3,
+                    BuiltinExperiments.XNOR_GATE_3
+            )
+    ), Set.of(ADVANCED_GATE)));
 
     public static final ExperimentChapter ONE_BIT_ADDER = register(
             new ExperimentChapter("one_bit_adder", null,

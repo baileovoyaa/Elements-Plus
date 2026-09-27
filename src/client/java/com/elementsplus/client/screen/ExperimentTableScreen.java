@@ -270,11 +270,12 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     public void updateCurrentExperimentDisplay() {
+        final int CURRENT_EXPERIMENT_MAX_WIDTH = 100;
         if (selectedExperiment == null) {
             Component text = Component.translatable("gui.elements-plus.experiment_table.no_experiment");
-            currentExperimentWidget.setWidth(10 + font.width(text));
+            currentExperimentWidget.setWidth(Math.min(10 + font.width(text), CURRENT_EXPERIMENT_MAX_WIDTH));
         } else {
-            currentExperimentWidget.setWidth(12 + (selectedExperiment.getIcon() != null ? 16 : 0) + font.width(selectedExperiment.getDisplayName()));
+            currentExperimentWidget.setWidth(Math.min(12 + (selectedExperiment.getIcon() != null ? 16 : 0) + font.width(selectedExperiment.getDisplayName()), CURRENT_EXPERIMENT_MAX_WIDTH));
         }
         startExperimentButton.setX(leftPos + currentExperimentWidget.getWidth() + 114);
         progressBar.setX(leftPos + currentExperimentWidget.getWidth() + 114 + 16 + 5);
@@ -509,7 +510,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }
     }
 
-    /** 章节的全部（非可选）实验是否都已通过；与服务端解锁判定一致。 */
+    /**
+     * 章节的全部（非可选）实验是否都已通过；与服务端解锁判定一致。
+     */
     private boolean isChapterComplete(ExperimentChapter chapter) {
         for (BaseExperiment experiment : chapter.getExperiments()) {
             if (!completedExperiments.contains(experiment.getName())) {
@@ -519,7 +522,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         return true;
     }
 
-    /** 未解锁章节的悬停提示：列出尚未完成的前置章节。 */
+    /**
+     * 未解锁章节的悬停提示：列出尚未完成的前置章节。
+     */
     private Component buildLockedChapterTooltip(ExperimentChapter chapter) {
         MutableComponent tooltip = Component.translatable("gui.elements-plus.experiment_table.unfinished_prerequisites");
         boolean any = false;
