@@ -4,10 +4,13 @@ import com.elementsplus.ModDataComponents;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.CircuitSimulator;
+import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
+import com.elementsplus.core.circuit.component.Output8ComponentInstance;
 import com.elementsplus.core.circuit.component.OutputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -24,8 +27,8 @@ public class CircuitExperiment extends BaseExperiment {
         public int bitWidth;
         public byte[] values;
 
-        public PinValue(int bitWidth, byte[] values) {
-            this.bitWidth = bitWidth;
+        public PinValue(byte[] values) {
+            this.bitWidth = values.length;
             this.values = values;
         }
 
@@ -111,12 +114,55 @@ public class CircuitExperiment extends BaseExperiment {
         }
     }
 
+    /**
+     * 随机测例：每次运行时，对 8 位输入的每个"非 0 通道"随机赋一个 1~15 的信号强度。
+     * 输入/预期输出的二进制值在构造时确定；随机化只在测例运行时进行，
+     * 不会在静态初始化阶段生成随机数。
+     */
+    public static class RandomizedCombinationalTestCase implements CombinationalTestCase {
+        public Map<String, PinValue> inputs;
+        public Map<String, PinValue> expectedOutputs;
+
+        public RandomizedCombinationalTestCase(Map<String, PinValue> inputs, Map<String, PinValue> expectedOutputs) {
+            this.inputs = inputs;
+            this.expectedOutputs = expectedOutputs;
+        }
+
+        @Override
+        public Map<String, PinValue> getInputs() {
+            return inputs;
+        }
+
+        @Override
+        public boolean judgeOutputs(Map<String, PinValue> outputs) {
+            return expectedOutputs.equals(outputs);
+        }
+
+        /**
+         * 生成本次运行的输入：输入的每个非 0 通道随机为 1~15，0 通道保持 0。
+         */
+        public Map<String, PinValue> randomize(RandomSource random) {
+            Map<String, PinValue> result = new LinkedHashMap<>();
+            for (Map.Entry<String, PinValue> entry : inputs.entrySet()) {
+                PinValue pinValue = entry.getValue();
+                byte[] lanes = new byte[pinValue.values.length];
+                for (int b = 0; b < pinValue.values.length; b++) {
+                    int lane = pinValue.values[b] & 0xFF;
+                    lanes[b] = (byte) (lane == 0 ? 0 : 1 + random.nextInt(15));
+                }
+                result.put(entry.getKey(), new PinValue(lanes));
+            }
+            return result;
+        }
+    }
+
     public List<TestCase> testCases;
     public Map<String, Integer> bitWidthsPrecheck;
     public CircuitComponent circuitComponent;
 
     private final Set<String> neededInputLabels = new LinkedHashSet<>();
     private final Set<String> neededOutputLabels = new LinkedHashSet<>();
+    private final Map<String, Integer> neededOutputWidths = new LinkedHashMap<>();
 
     public CircuitExperiment(List<TestCase> testCases, CircuitComponent component) {
         this.testCases = testCases;
@@ -131,12 +177,30 @@ public class CircuitExperiment extends BaseExperiment {
                     bitWidthsPrecheck.put(pinName, bitWidth);
                     neededInputLabels.add(pinName);
                 });
-                if (combinationalTestCase instanceof ConstantCombinationalTestCase constant) {
-                    neededOutputLabels.addAll(constant.expectedOutputs.keySet());
+                Map<String, PinValue> expectedOutputs = testExpectedOutputs(combinationalTestCase);
+                if (expectedOutputs != null) {
+                    expectedOutputs.forEach((pinName, pinValue) -> {
+                        neededOutputLabels.add(pinName);
+                        int bitWidth = pinValue.bitWidth;
+                        if (neededOutputWidths.containsKey(pinName) && neededOutputWidths.get(pinName) != bitWidth) {
+                            throw new IllegalStateException("Bit width ambiguous for output pin " + pinName);
+                        }
+                        neededOutputWidths.put(pinName, bitWidth);
+                    });
                 }
             }
         }
         this.circuitComponent = component;
+    }
+
+    private static Map<String, PinValue> testExpectedOutputs(CombinationalTestCase testCase) {
+        if (testCase instanceof ConstantCombinationalTestCase constant) {
+            return constant.expectedOutputs;
+        }
+        if (testCase instanceof RandomizedCombinationalTestCase randomized) {
+            return randomized.expectedOutputs;
+        }
+        return null;
     }
 
     public void addTestCase(TestCase testCase) {
@@ -170,14 +234,15 @@ public class CircuitExperiment extends BaseExperiment {
             return false;
         }
 
-        Map<String, PinValue> outputs = evaluate(combinationalTestCase.getInputs(), diagram);
+        Map<String, PinValue> inputs = buildRuntimeInputs(context, combinationalTestCase);
+        Map<String, PinValue> outputs = evaluate(inputs, diagram);
         boolean pass = combinationalTestCase.judgeOutputs(outputs);
         context.reportTestResult(index, pass);
 
         if (!pass) {
             // 将失败测例的输入写回电路图（对应输入元件修改信号值，无关输入置0），便于之后在光刻机中检查失败逻辑
-            writeBackFailedInputs(context, combinationalTestCase.getInputs());
-            context.setErrorLines(buildFailureLines(combinationalTestCase, outputs));
+            writeBackFailedInputs(context, inputs);
+            context.setErrorLines(buildFailureLines(combinationalTestCase, inputs, outputs));
             context.complete(false);
             return false;
         }
@@ -189,6 +254,23 @@ public class CircuitExperiment extends BaseExperiment {
 
         context.testIndex = index + 1;
         return true;
+    }
+
+    /**
+     * 随机测例在运行时对输入做随机化（服务端随机源）；恒定测例直接返回固定输入。
+     */
+    private Map<String, PinValue> buildRuntimeInputs(Context context, CombinationalTestCase testCase) {
+        if (testCase instanceof RandomizedCombinationalTestCase randomized) {
+            RandomSource random = RandomSource.create();
+            if (context.blockEntity != null) {
+                var level = context.blockEntity.getLevel();
+                if (level != null) {
+                    random = level.getRandom();
+                }
+            }
+            return randomized.randomize(random);
+        }
+        return testCase.getInputs();
     }
 
     /**
@@ -209,6 +291,16 @@ public class CircuitExperiment extends BaseExperiment {
                     if (label != null && !label.isBlank()) {
                         int v = simulator.getComponentValue(comp.x, comp.y);
                         outputs.put(label, new PinValue(v));
+                    }
+                } else if (comp.component == BuiltinCircuitComponents.OUTPUT_8 && comp.instance instanceof Output8ComponentInstance out8) {
+                    String label = out8.getLabel();
+                    if (label != null && !label.isBlank()) {
+                        int raw = simulator.getComponentValue(comp.x, comp.y);
+                        byte[] lanes = new byte[8];
+                        for (int b = 0; b < 8; b++) {
+                            lanes[b] = (byte) ((raw >> (4 * b)) & 0xF);
+                        }
+                        outputs.put(label, new PinValue(lanes));
                     }
                 }
             }
@@ -238,8 +330,23 @@ public class CircuitExperiment extends BaseExperiment {
             for (CircuitDiagram.Component comp : chunk.components) {
                 if (comp.component == BuiltinCircuitComponents.INPUT && comp.instance instanceof InputComponentInstance in) {
                     String label = in.getLabel();
+                    if ("VCC".equals(label)) {
+                        in.setSignal(15);
+                        continue;
+                    }
                     PinValue pinValue = inputs.get(label);
                     in.setSignal(pinValue != null && pinValue.values.length > 0 ? pinValue.values[0] : 0);
+                } else if (comp.component == BuiltinCircuitComponents.INPUT_8 && comp.instance instanceof Input8ComponentInstance in8) {
+                    PinValue pinValue = inputs.get(in8.getLabel());
+                    if (pinValue != null && pinValue.values.length == 8) {
+                        for (int b = 0; b < 8; b++) {
+                            in8.setBit(b, pinValue.values[b] & 0xFF);
+                        }
+                    } else {
+                        for (int b = 0; b < 8; b++) {
+                            in8.setBit(b, 0);
+                        }
+                    }
                 }
             }
         }
@@ -272,6 +379,12 @@ public class CircuitExperiment extends BaseExperiment {
                     if (label != null && !label.isBlank()) inputLabels.merge(label, 1, Integer::sum);
                 } else if (comp.component == BuiltinCircuitComponents.OUTPUT && comp.instance instanceof OutputComponentInstance out) {
                     String label = out.getLabel();
+                    if (label != null && !label.isBlank()) outputLabels.merge(label, 1, Integer::sum);
+                } else if (comp.component == BuiltinCircuitComponents.INPUT_8 && comp.instance instanceof Input8ComponentInstance in8) {
+                    String label = in8.getLabel();
+                    if (label != null && !label.isBlank()) inputLabels.merge(label, 1, Integer::sum);
+                } else if (comp.component == BuiltinCircuitComponents.OUTPUT_8 && comp.instance instanceof Output8ComponentInstance out8) {
+                    String label = out8.getLabel();
                     if (label != null && !label.isBlank()) outputLabels.merge(label, 1, Integer::sum);
                 }
             }
@@ -307,6 +420,40 @@ public class CircuitExperiment extends BaseExperiment {
             reasons.add(Component.translatable("experiment.elements-plus.precheck.duplicate_label", String.join(" ", duplicates)));
         }
 
+        // 必要元件标签的位宽必须与测例要求一致（如 8 位总线标签只能用 INPUT_8/OUTPUT_8 承载）
+        Set<String> widthMismatches = new LinkedHashSet<>();
+        Map<String, Integer> inputWidths = new HashMap<>();
+        Map<String, Integer> outputWidths = new HashMap<>();
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (CircuitDiagram.Component comp : chunk.components) {
+                if (comp.component == BuiltinCircuitComponents.INPUT_8 && comp.instance instanceof Input8ComponentInstance in8) {
+                    if (!in8.getLabel().isBlank()) inputWidths.put(in8.getLabel(), 8);
+                } else if (comp.component == BuiltinCircuitComponents.OUTPUT_8 && comp.instance instanceof Output8ComponentInstance out8) {
+                    if (!out8.getLabel().isBlank()) outputWidths.put(out8.getLabel(), 8);
+                } else if (comp.component == BuiltinCircuitComponents.INPUT && comp.instance instanceof InputComponentInstance in) {
+                    if (!in.getLabel().isBlank()) inputWidths.put(in.getLabel(), 1);
+                } else if (comp.component == BuiltinCircuitComponents.OUTPUT && comp.instance instanceof OutputComponentInstance out) {
+                    if (!out.getLabel().isBlank()) outputWidths.put(out.getLabel(), 1);
+                }
+            }
+        }
+        for (String label : neededInputLabels) {
+            Integer needed = bitWidthsPrecheck.get(label);
+            Integer present = inputWidths.get(label);
+            if (needed != null && present != null && needed.intValue() != present.intValue()) {
+                widthMismatches.add(label);
+            }
+        }
+        for (Map.Entry<String, Integer> entry : neededOutputWidths.entrySet()) {
+            Integer present = outputWidths.get(entry.getKey());
+            if (present != null && entry.getValue().intValue() != present.intValue()) {
+                widthMismatches.add(entry.getKey());
+            }
+        }
+        if (!widthMismatches.isEmpty()) {
+            reasons.add(Component.translatable("experiment.elements-plus.precheck.width_mismatch", String.join(" ", widthMismatches)));
+        }
+
         // 不存在组合环路
         CircuitSimulator simulator = new CircuitSimulator();
         simulator.setDiagram(diagram.copy());
@@ -317,12 +464,15 @@ public class CircuitExperiment extends BaseExperiment {
         return reasons;
     }
 
-    private List<Component> buildFailureLines(CombinationalTestCase testCase, Map<String, PinValue> outputs) {
+    private List<Component> buildFailureLines(CombinationalTestCase testCase, Map<String, PinValue> inputs, Map<String, PinValue> outputs) {
         List<Component> lines = new ArrayList<>();
         lines.add(Component.translatable("experiment.elements-plus.testfail.header"));
         if (testCase instanceof ConstantCombinationalTestCase constant) {
             lines.add(Component.translatable("experiment.elements-plus.testfail.input", formatPins(constant.inputs)));
             lines.add(Component.translatable("experiment.elements-plus.testfail.expected", formatPins(constant.expectedOutputs)));
+        } else if (testCase instanceof RandomizedCombinationalTestCase randomized) {
+            lines.add(Component.translatable("experiment.elements-plus.testfail.input", formatPins(inputs)));
+            lines.add(Component.translatable("experiment.elements-plus.testfail.expected", formatPins(randomized.expectedOutputs)));
         }
         lines.add(Component.translatable("experiment.elements-plus.testfail.actual", formatPins(outputs)));
         return lines;

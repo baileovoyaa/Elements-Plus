@@ -2,6 +2,7 @@ package com.elementsplus.core.circuit;
 
 import com.elementsplus.core.circuit.CircuitComponent.PinType;
 import com.elementsplus.core.circuit.component.CapacitorComponentInstance;
+import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.component.ResistorComponentInstance;
 import com.elementsplus.core.circuit.component.ResonatorComponentInstance;
@@ -180,6 +181,15 @@ public class CircuitSimulator {
     public int getComponentValue(int x, int y) {
         Integer v = compValues.get(key(x, y));
         return v == null ? 0 : v;
+    }
+
+    /**
+     * 8 位总线元件（INPUT_8 / OUTPUT_8）当前值：将 8 个 4 位通道打包的
+     * 32 位值解码为 0~255 的整数（通道非 0 即该位为 1）。
+     */
+    public int getComponentBusValue(int x, int y) {
+        Integer v = compValues.get(key(x, y));
+        return v == null ? 0 : tupleToInt(v.intValue() & 0xFFFFFFFFL);
     }
 
     /* ============================================================
@@ -665,6 +675,15 @@ public class CircuitSimulator {
             return ((InputComponentInstance) component.instance).getSignal();
         } else if (cc == BuiltinCircuitComponents.OUTPUT) {
             return inPort(node, 0);
+        } else if (cc == BuiltinCircuitComponents.INPUT_8) {
+            long tuple = 0L;
+            Input8ComponentInstance in8 = (Input8ComponentInstance) component.instance;
+            for (int b = 0; b < 8; b++) {
+                tuple |= ((long) in8.getBit(b) & 0xF) << (4 * b);
+            }
+            return tuple;
+        } else if (cc == BuiltinCircuitComponents.OUTPUT_8) {
+            return inPort(node, 0);
         } else if (cc == BuiltinCircuitComponents.AMPLIFIER) {
             return inPort(node, 0) > 0 ? 15 : 0;
         } else if (cc == BuiltinCircuitComponents.AND_GATE) {
@@ -723,6 +742,21 @@ public class CircuitSimulator {
             int b = (int) inPort(node, 1);
             int c = (int) inPort(node, 2);
             return (a != 0) ^ (b != 0) ^ (c != 0) ? 0 : 15;
+        } else if (cc == BuiltinCircuitComponents.HALF_ADDER) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            long v = 0L;
+            v |= (long) ((a != 0) ^ (b != 0) ? 15 : 0) << outputSlot(cc, Direction.EAST, 0).bitStart();
+            v |= (long) (a != 0 && b != 0 ? 15 : 0) << outputSlot(cc, Direction.SOUTH, 0).bitStart();
+            return v;
+        } else if (cc == BuiltinCircuitComponents.FULL_ADDER) {
+            int a = (int) inPort(node, 0);
+            int b = (int) inPort(node, 1);
+            int cin = inPort(node, 2) != 0 ? 1 : 0;
+            long v = 0L;
+            v |= (long) ((a != 0) ^ (b != 0) ^ (cin != 0) ? 15 : 0) << outputSlot(cc, Direction.EAST, 0).bitStart();
+            v |= (long) ((a != 0 && b != 0) || (b != 0 && cin != 0) || (cin != 0 && a != 0) ? 15 : 0) << outputSlot(cc, Direction.SOUTH, 0).bitStart();
+            return v;
         } else if (cc == BuiltinCircuitComponents.BUS_JOINER_8) {
             long tuple = 0L;
             for (int b = 0; b < 8; b++) {

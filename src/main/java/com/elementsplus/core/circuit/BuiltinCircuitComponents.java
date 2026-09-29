@@ -58,6 +58,18 @@ public class BuiltinCircuitComponents {
         setInstanceFactory(OutputComponentInstance::new);
         clearIngredientSupplier();
     }});
+    public static final CircuitComponent INPUT_8 = register(new CircuitComponent(ElementsPlus.id("input_8"), Component.translatable("circuit.elements-plus.component.input_8"), Component.translatable("circuit.elements-plus.component.input_8.description"), ElementsPlus.id("textures/circuit/input_8.png")) {{
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+        setPinBitWidth(Direction.EAST, 0, 8);
+        setInstanceFactory(Input8ComponentInstance::new);
+        clearIngredientSupplier();
+    }});
+    public static final CircuitComponent OUTPUT_8 = register(new CircuitComponent(ElementsPlus.id("output_8"), Component.translatable("circuit.elements-plus.component.output_8"), Component.translatable("circuit.elements-plus.component.output_8.description"), ElementsPlus.id("textures/circuit/output_8.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPinBitWidth(Direction.WEST, 0, 8);
+        setInstanceFactory(Output8ComponentInstance::new);
+        clearIngredientSupplier();
+    }});
     // 逻辑门
     public static final CircuitComponent AND_GATE = register(new CircuitComponent(ElementsPlus.id("and_gate"), Component.translatable("circuit.elements-plus.component.and_gate"), Component.translatable("circuit.elements-plus.component.and_gate.description"), ElementsPlus.id("textures/circuit/and_gate.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);

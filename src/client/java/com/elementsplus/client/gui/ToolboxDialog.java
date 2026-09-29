@@ -15,7 +15,7 @@ import java.util.List;
  * 模态对话框：全屏半透明遮罩 + 主面板窗体。由 Screen 直接渲染与分发输入。
  */
 public class ToolboxDialog {
-    public enum Mode {RENAME, DELETE_CONFIRM}
+    public enum Mode {RENAME, DELETE_CONFIRM, NUMBER}
 
     public interface Callback {
         void onOk(ToolboxDialog dialog);
@@ -48,7 +48,7 @@ public class ToolboxDialog {
         this.message = message;
         this.callback = callback;
         this.winW = 220;
-        this.winH = mode == Mode.RENAME ? 96 : 88;
+        this.winH = (mode == Mode.RENAME || mode == Mode.NUMBER) ? 96 : 88;
         this.winX = (screenWidth - winW) / 2;
         this.winY = (screenHeight - winH) / 2;
         int by = winY + winH - BTN_H - 8;
@@ -63,11 +63,29 @@ public class ToolboxDialog {
             this.editBox.setValue(value);
             this.editBox.setCursorPosition(value.length());
             this.editBox.setFocused(true);
+        } else if (mode == Mode.NUMBER) {
+            this.editBox = new EditBox(font, winX + 20, winY + 40, winW - 40, 16, Component.empty());
+            this.editBox.setMaxLength(3);
+            this.editBox.setFilter(s -> s.chars().allMatch(c -> c >= '0' && c <= '9'));
+            String value = initialValue == null ? "" : initialValue;
+            this.editBox.setValue(value);
+            this.editBox.setCursorPosition(value.length());
+            this.editBox.setFocused(true);
         }
     }
 
     public String getText() {
         return editBox != null ? editBox.getValue() : "";
+    }
+
+    /** NUMBER 模式：文本非空且为 0~255 的整数。 */
+    public boolean isNumberValid() {
+        try {
+            int v = Integer.parseInt(getText().trim());
+            return v >= 0 && v <= 255;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     public void tick() {
@@ -81,8 +99,8 @@ public class ToolboxDialog {
         GuiUtil.drawMainPanel(g, winX, winY, winX + winW, winY + winH);
         g.drawCenteredString(font, title, winX + winW / 2, winY + 10, 0xFFFFFFFF);
 
-        if (mode == Mode.RENAME) {
-            if (editBox != null) editBox.render(g, mouseX, mouseY, partialTick);
+        if (editBox != null) {
+            editBox.render(g, mouseX, mouseY, partialTick);
         } else if (mode == Mode.DELETE_CONFIRM) {
             List<net.minecraft.util.FormattedCharSequence> lines = font.split(message, winW - 20);
             int ly = winY + 32;
@@ -123,6 +141,10 @@ public class ToolboxDialog {
                 if (!getText().trim().isEmpty()) {
                     callback.onOk(this);
                 }
+            } else if (mode == Mode.NUMBER) {
+                if (isNumberValid()) {
+                    callback.onOk(this);
+                }
             } else {
                 callback.onOk(this);
             }
@@ -135,8 +157,14 @@ public class ToolboxDialog {
         if (editBox != null) {
             if (editBox.keyPressed(keyCode, scanCode, modifiers)) return true;
             if (keyCode == GLFW.GLFW_KEY_ENTER) {
-                if (!getText().trim().isEmpty()) {
-                    callback.onOk(this);
+                if (mode == Mode.RENAME) {
+                    if (!getText().trim().isEmpty()) {
+                        callback.onOk(this);
+                    }
+                } else if (mode == Mode.NUMBER) {
+                    if (isNumberValid()) {
+                        callback.onOk(this);
+                    }
                 }
                 return true;
             }

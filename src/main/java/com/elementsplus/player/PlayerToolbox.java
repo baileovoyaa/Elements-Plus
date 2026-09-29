@@ -67,7 +67,9 @@ public final class PlayerToolbox {
         PlayerToolbox t = new PlayerToolbox(new ArrayList<>());
         t.addBuiltin(GROUP_INPUT_OUTPUT,
                 BuiltinCircuitComponents.INPUT.getId(),
-                BuiltinCircuitComponents.OUTPUT.getId());
+                BuiltinCircuitComponents.OUTPUT.getId(),
+                BuiltinCircuitComponents.INPUT_8.getId(),
+                BuiltinCircuitComponents.OUTPUT_8.getId());
         t.addBuiltin(GROUP_BUS,
                 BuiltinCircuitComponents.BUS_JOINER_8.getId(),
                 BuiltinCircuitComponents.BUS_SPLITTER_8.getId());
@@ -153,6 +155,8 @@ public final class PlayerToolbox {
                     case GROUP_INPUT_OUTPUT -> {
                         g.components.add(BuiltinCircuitComponents.INPUT.getId());
                         g.components.add(BuiltinCircuitComponents.OUTPUT.getId());
+                        g.components.add(BuiltinCircuitComponents.INPUT_8.getId());
+                        g.components.add(BuiltinCircuitComponents.OUTPUT_8.getId());
                     }
                     case GROUP_BUS -> {
                         g.components.add(BuiltinCircuitComponents.BUS_JOINER_8.getId());

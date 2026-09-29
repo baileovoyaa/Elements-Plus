@@ -7,11 +7,14 @@ import com.elementsplus.client.ElementsPlusClient;
 import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.gui.ButtonGroup;
 import com.elementsplus.core.circuit.ChipManufacture;
+import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.client.gui.TabButton;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
+import com.elementsplus.core.circuit.component.Input8ComponentInstance;
+import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.CopyCompiledSettingPayload;
@@ -102,11 +105,6 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     public Object tooltip;
 
-    public CircuitDiagram getDiagram() {
-        ItemStack stack = menu.slots.get(36).getItem();
-        return stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
-    }
-
     public LithographyMachineScreen(LithographyMachineMenu abstractContainerMenu, Inventory inventory, Component component) {
         super(abstractContainerMenu, inventory, component);
         ClientConfig cfg = ClientConfig.get();
@@ -168,6 +166,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 leftPos + 10 + 80, topPos + 49,
                 Math.max(1, imageWidth - 180), Math.max(1, imageHeight - 55)));
         circuitPanel.setSimulator(simulator);
+        circuitPanel.setOnInput8DoubleClick(this::openInput8ValueDialog);
 
         // 属性面板
         this.addRenderableWidget(attributeWidget = new ScrollPanelWidget(leftPos + imageWidth - 5 - 79, topPos + 25, 79, imageHeight - 30, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
@@ -411,6 +410,30 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                     public void onOk(ToolboxDialog dialog) {
                         playerToolboxWidget.renameGroup(groupIndex, dialog.getText().trim());
                         toolboxDialog = null;
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        toolboxDialog = null;
+                    }
+                });
+    }
+
+    private void openInput8ValueDialog(CircuitDiagram.Component component) {
+        int initial = circuitPanel.getInput8Value(component);
+        toolboxDialog = new ToolboxDialog(ToolboxDialog.Mode.NUMBER,
+                Component.translatable("gui.elements-plus.lithography_machine.input_8_value_title"),
+                null, String.valueOf(initial), this.font, this.width, this.height,
+                new ToolboxDialog.Callback() {
+                    @Override
+                    public void onOk(ToolboxDialog dialog) {
+                        try {
+                            int value = Integer.parseInt(dialog.getText().trim());
+                            circuitPanel.applyInput8Value(component, value);
+                        } catch (NumberFormatException ignored) {
+                        } finally {
+                            toolboxDialog = null;
+                        }
                     }
 
                     @Override
@@ -735,7 +758,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
 
         // 电路模拟生命周期：图引用变化 -> 重建依赖图；运行则按速度滑块推进时序，否则仅做组合求值
-        CircuitDiagram diagram = getDiagram();
+        CircuitDiagram diagram = circuitPanel.getDisplayDiagram();
         boolean simDirty = circuitPanel.consumeSimulationDirty();
         if (lastSimDiagram != diagram || simDirty) {
             lastSimDiagram = diagram;
@@ -795,14 +818,23 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             return;
         }
         boolean readOnly = circuitPanel.isReadOnly();
+        // 编译后（只读）仅允许预览修改「输入」元件（含 8 位输入）的信号值：所有读写都作用于客户端预览副本。
+        boolean previewSignalEditable = false;
+        CircuitDiagram.Component previewSelected = null;
+        if (readOnly && (selected.component == BuiltinCircuitComponents.INPUT || selected.component == BuiltinCircuitComponents.INPUT_8)) {
+            circuitPanel.ensurePreview();
+            previewSelected = circuitPanel.getSelectedComponent();
+            previewSignalEditable = previewSelected != null;
+        }
+        final CircuitDiagram.Component attrComponent = previewSelected != null ? previewSelected : selected;
         attributeWidget.addChild(new AbstractWidget(0, 1, attributeWidget.getWidth(), 20, Component.empty()) {
             @Override
             protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-                ResourceLocation icon = selected.component.getIcon();
+                ResourceLocation icon = attrComponent.component.getIcon();
                 if (icon != null) {
                     guiGraphics.blit(icon, this.getX() + 5, this.getY() + 1, 0, 0, 16, 16, 16, 16);
                 }
-                guiGraphics.drawString(font, selected.component.getName(), this.getX() + 22, this.getY() + 4, 0xFFFFFFFF, false);
+                guiGraphics.drawString(font, attrComponent.component.getName(), this.getX() + 22, this.getY() + 4, 0xFFFFFFFF, false);
             }
 
             @Override
@@ -817,7 +849,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         });
         int y = 22;
         attributeEditBox = null;
-        for (CircuitComponentInstance.Config config : selected.instance.getConfigs()) {
+        for (CircuitComponentInstance.Config config : attrComponent.instance.getConfigs()) {
             if (config instanceof CircuitComponentInstance.StringConfig stringConfig) {
                 attributeWidget.addChild(new AbstractWidget(4, y, attributeWidget.getWidth() - 4, 9, Component.empty()) {
                     @Override
@@ -834,29 +866,58 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                         return false;
                     }
                 });
-                LabelAttributeEditBox editBox = new LabelAttributeEditBox(font, 2, y + 9,
-                        attributeWidget.getWidth() - 4, 18, Component.empty(),
-                        config.key,
-                        () -> {
-                            CircuitDiagram.Component component = circuitPanel.getSelectedComponent();
-                            return component != null ? component.instance : null;
-                        },
-                        this::commitAttributes);
-                editBox.setMaxLength(stringConfig.maxLength);
-                editBox.setValue(selected.instance.getString(config.key));
-                attributeWidget.addChild(editBox);
-                attributeEditBox = editBox;
-                y += 9 + 18 + 2;
+                if (!readOnly) {
+                    LabelAttributeEditBox editBox = new LabelAttributeEditBox(font, 2, y + 9,
+                            attributeWidget.getWidth() - 4, 18, Component.empty(),
+                            config.key,
+                            () -> {
+                                CircuitDiagram.Component component = circuitPanel.getSelectedComponent();
+                                return component != null ? component.instance : null;
+                            },
+                            this::commitAttributes);
+                    editBox.setMaxLength(stringConfig.maxLength);
+                    editBox.setValue(attrComponent.instance.getString(config.key));
+                    attributeWidget.addChild(editBox);
+                    attributeEditBox = editBox;
+                    y += 9 + 18 + 2;
+                } else {
+                    attributeWidget.addChild(new AbstractWidget(4, y, attributeWidget.getWidth() - 4, 9, Component.empty()) {
+                        @Override
+                        protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                            String value = attrComponent.instance.getString(config.key);
+                            Component text = value.isEmpty() ? Component.translatable("gui.elements-plus.lithography_machine.empty_label") : Component.literal(value);
+                            MutableComponent line = Component.literal("").append(text);
+                            guiGraphics.drawString(font, line, this.getX() + this.getWidth() - 4 - font.width(line), this.getY(), 0xFFFFE066, false);
+                        }
+
+                        @Override
+                        protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+                        }
+
+                        @Override
+                        public boolean mouseDragged(double d, double e, int i, double f, double g) {
+                            return false;
+                        }
+                    });
+                    y += 9 + 9 + 2;
+                }
                 continue;
             }
+            boolean interactive = !readOnly || (previewSignalEditable
+                    && (InputComponentInstance.KEY_SIGNAL.equals(config.key) || Input8ComponentInstance.isBitKey(config.key)));
             ComponentConfigWidget widget = attributeWidget.addChild(
                     new ComponentConfigWidget(2, y, attributeWidget.getWidth() - 4, 22,
-                            selected.instance, config, !readOnly, this::commitAttributes));
+                            attrComponent.instance, config, interactive, this::commitAttributes));
             y += widget.getHeight() + 2;
         }
     }
 
     private void commitAttributes() {
+        if (circuitPanel.isReadOnly() && circuitPanel.hasDiagram()) {
+            // 编译后的预览修改：只刷新客户端模拟，不写回电路图。
+            circuitPanel.requestPreviewResimulate();
+            return;
+        }
         circuitPanel.commitDiagram();
     }
 

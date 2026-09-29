@@ -7,6 +7,7 @@ import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.CircuitComponent.PinType;
+import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 public class CircuitDiagramPanel extends AbstractWidget {
 
@@ -81,6 +83,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private CircuitSimulator simulator;
     private boolean simulationDirty;
 
+    /** 编译后（只读）模式下对「输入」元件信号值的客户端预览副本；绝不写回物品数据。 */
+    private CircuitDiagram previewDiagram;
+    private CircuitDiagram previewSource;
+
     private double offsetX = -6;
     private double offsetY = -6;
     private double zoom = DEFAULT_ZOOM;
@@ -110,6 +116,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private long lastInputClickTime = 0;
     private CircuitDiagram.Component lastInputClicked;
+
+    private Consumer<CircuitDiagram.Component> onInput8DoubleClick = component -> {
+    };
+
+    /** 双击「8位输入」元件时的回调（由宿主 Screen 弹数值对话框）。 */
+    public void setOnInput8DoubleClick(Consumer<CircuitDiagram.Component> consumer) {
+        this.onInput8DoubleClick = consumer;
+    }
 
     private enum DragMode {
         NONE, MOVE, COPY, BOX_SELECT
@@ -230,9 +244,44 @@ public class CircuitDiagramPanel extends AbstractWidget {
         guiGraphics.disableScissor();
     }
 
-    private CircuitDiagram getDiagram() {
+    private CircuitDiagram storedDiagram() {
         ItemStack stack = menu.slots.get(36).getItem();
         return stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+    }
+
+    /**
+     * 界面当前展示的电路图：只读模式下存在预览副本时优先返回预览，否则返回物品上存储的电路图。
+     */
+    private CircuitDiagram getDiagram() {
+        CircuitDiagram stored = storedDiagram();
+        if (previewDiagram != null && previewSource != stored) {
+            previewDiagram = null;
+            previewSource = null;
+        }
+        return previewDiagram != null ? previewDiagram : stored;
+    }
+
+    /** 供外部（如模拟器绑定）获取与界面展示一致的电路图。 */
+    public CircuitDiagram getDisplayDiagram() {
+        return getDiagram();
+    }
+
+    /**
+     * 确保存在基于当前存储电路图的预览副本（编译后修改输入信号时调用）。
+     * 副本与存储图是独立对象，后续修改只会影响显示与模拟，不会写回物品。
+     */
+    public void ensurePreview() {
+        CircuitDiagram stored = storedDiagram();
+        if (previewDiagram == null || previewSource != stored) {
+            previewDiagram = stored == null ? null : stored.copy();
+            previewSource = stored;
+            simulationDirty = true;
+        }
+    }
+
+    /** 预览内容已就地修改，要求下一帧重新绑定模拟器。 */
+    public void requestPreviewResimulate() {
+        simulationDirty = true;
     }
 
     private CircuitDiagram.Scale diagramScale() {
@@ -458,10 +507,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
         CircuitDiagram.Block block = diagram.getBlock(gx, gy);
         if (block instanceof CircuitDiagram.Component component) {
             setSelectionSingle(component.x, component.y);
-            if (component.component == BuiltinCircuitComponents.INPUT) {
+            if (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.INPUT_8) {
                 long now = Util.getMillis();
                 if (lastInputClicked == component && now - lastInputClickTime <= 300) {
-                    toggleInputSignal(component);
+                    if (component.component == BuiltinCircuitComponents.INPUT) {
+                        toggleInputSignal(component);
+                    } else {
+                        onInput8DoubleClick.accept(component);
+                    }
                     lastInputClicked = null;
                     lastInputClickTime = 0;
                     return;
@@ -483,6 +536,20 @@ public class CircuitDiagramPanel extends AbstractWidget {
      * 双击「输入」元件：在 0 和 15 之间快速切换信号强度。
      */
     private void toggleInputSignal(CircuitDiagram.Component component) {
+        if (isReadOnly()) {
+            ensurePreview();
+            CircuitDiagram diagram = getDiagram();
+            if (diagram == null) {
+                return;
+            }
+            CircuitDiagram.Block b = diagram.getBlock(component.x, component.y);
+            if (b instanceof CircuitDiagram.Component ec && ec.instance instanceof InputComponentInstance in) {
+                in.setSignal(in.getSignal() == 0 ? 15 : 0);
+            }
+            setSelectionSingle(component.x, component.y);
+            simulationDirty = true;
+            return;
+        }
         ItemStack stack = menu.slots.get(36).getItem();
         CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
         if (diagram == null) {
@@ -501,6 +568,49 @@ public class CircuitDiagramPanel extends AbstractWidget {
     public boolean contains(double mouseX, double mouseY) {
         return mouseX >= getX() && mouseX < getX() + getWidth()
                 && mouseY >= getY() && mouseY < getY() + getHeight();
+    }
+
+    /** 界面当前展示的电路图中「8位输入」元件的 0~255 值。 */
+    public int getInput8Value(CircuitDiagram.Component component) {
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return 0;
+        }
+        CircuitDiagram.Block b = diagram.getBlock(component.x, component.y);
+        if (b instanceof CircuitDiagram.Component ec && ec.instance instanceof Input8ComponentInstance in8) {
+            return in8.getValue();
+        }
+        return 0;
+    }
+
+    /** 把 0~255 值写入「8位输入」元件：只读模式仅改预览副本，编辑模式写回物品并提交。 */
+    public void applyInput8Value(CircuitDiagram.Component component, int value) {
+        if (isReadOnly()) {
+            ensurePreview();
+            CircuitDiagram diagram = getDiagram();
+            if (diagram == null) {
+                return;
+            }
+            CircuitDiagram.Block b = diagram.getBlock(component.x, component.y);
+            if (b instanceof CircuitDiagram.Component ec && ec.instance instanceof Input8ComponentInstance in8) {
+                in8.setValue(value);
+            }
+            setSelectionSingle(component.x, component.y);
+            simulationDirty = true;
+            return;
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return;
+        }
+        CircuitDiagram editor = diagram.copy();
+        CircuitDiagram.Block b = editor.getBlock(component.x, component.y);
+        if (b instanceof CircuitDiagram.Component ec && ec.instance instanceof Input8ComponentInstance in8) {
+            in8.setValue(value);
+        }
+        setSelectionSingle(component.x, component.y);
+        commitDiagram(stack, editor);
     }
 
     public boolean isPlaceable(ItemStack stack) {
@@ -883,13 +993,22 @@ public class CircuitDiagramPanel extends AbstractWidget {
         drawPins(guiGraphics, component.component, component.direction, left, top, 1.0F);
         drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, 1.0F);
         var font = Minecraft.getInstance().font;
-        if (dx == 0 && dy == 0 && (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.OUTPUT)) {
-            int value = simulator != null ? simulator.getComponentValue(component.x, component.y) : 0;
-            String text = String.valueOf(value);
-            guiGraphics.drawString(font, Component.nullToEmpty(text),
-                    (int) Math.round((left + right) / 2.0 - font.width(text) / 2.0),
-                    (int) Math.round((top + bottom) / 2.0 - 4),
-                    0xFFFFFFFF);
+        if (dx == 0 && dy == 0) {
+            if (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.OUTPUT) {
+                int value = simulator != null ? simulator.getComponentValue(component.x, component.y) : 0;
+                String text = String.valueOf(value);
+                guiGraphics.drawString(font, Component.nullToEmpty(text),
+                        (int) Math.round((left + right) / 2.0 - font.width(text) / 2.0),
+                        (int) Math.round((top + bottom) / 2.0 - 4),
+                        0xFFFFFFFF);
+            } else if (component.component == BuiltinCircuitComponents.INPUT_8 || component.component == BuiltinCircuitComponents.OUTPUT_8) {
+                int value = simulator != null ? simulator.getComponentBusValue(component.x, component.y) : 0;
+                String text = String.valueOf(value);
+                guiGraphics.drawString(font, Component.nullToEmpty(text),
+                        (int) Math.round((left + right) / 2.0 - font.width(text) / 2.0),
+                        (int) Math.round((top + bottom) / 2.0 - 4),
+                        COLOR_BUS_8);
+            }
         }
         if (isSelected(component.x, component.y)) {
             guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_SELECTION);

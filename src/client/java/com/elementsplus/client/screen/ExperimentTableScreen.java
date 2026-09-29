@@ -623,6 +623,14 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             guiGraphics.drawString(font, this.getMessage(), left, this.getY() + (this.getHeight() - 9) / 2, color);
             guiGraphics.disableScissor();
         }
+
+        @Override
+        protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+            super.renderWidget(guiGraphics, i, j, f);
+            if (unlockedChapters.contains(chapter.name) && isChapterComplete(chapter)) {
+                guiGraphics.blit(ElementsPlus.id("textures/gui/experiment_table/success.png"), this.getX() + this.getWidth() - 18, this.getY() + this.getHeight() / 2 - 8, 0, 0, 16, 16, 16, 16);
+            }
+        }
     }
 
     @Override

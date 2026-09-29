@@ -1,10 +1,12 @@
 package com.elementsplus.core.experiment;
 
 import com.elementsplus.ElementsPlus;
+import com.elementsplus.ModItems;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
 import java.util.function.Function;
@@ -12,7 +14,7 @@ import java.util.function.Function;
 import static net.minecraft.ChatFormatting.*;
 
 public class BuiltinExperimentChapters {
-    public static final List<ExperimentChapter> BUILTIN_EXPERIMENT_CHAPTERS = new ArrayList<>();
+    public static final Set<ExperimentChapter> BUILTIN_EXPERIMENT_CHAPTERS = new LinkedHashSet<>();
 
     // ========== 通用构建入口 ==========
     private static ExperimentChapter chapter(
@@ -49,19 +51,43 @@ public class BuiltinExperimentChapters {
     }
 
     // ========== 行 / 参数描述 ==========
-    public record ParamSpec(List<ChatFormatting> formats) {
+
+    /**
+     * 一个文本参数：要么是一组样式（会生成 key.argN 翻译键来自动着色），
+     * 要么是一个直接嵌入的 Component 字面量（如物品显示名，不生成翻译键）。
+     */
+    public record ParamSpec(List<ChatFormatting> formats, Component literal) {
+
+        public ParamSpec(List<ChatFormatting> formats) {
+            this(formats, null);
+        }
+
+        public ParamSpec(Component literal) {
+            this(List.of(), literal);
+        }
+
         Component build(String key) {
+            if (literal != null) {
+                return literal;
+            }
             MutableComponent c = Component.translatable(key);
             for (ChatFormatting f : formats) c = c.withStyle(f);
             return c;
         }
     }
 
-    public record ArgSpec(int line, List<ParamSpec> params) {
+    public record ArgSpec(int line, List<ParamSpec> params, ChatFormatting... formats) {
+        public ArgSpec withStyle(ChatFormatting... formats) {
+            return new ArgSpec(line, params, formats);
+        }
     }
 
     public static ParamSpec style(ChatFormatting... formats) {
         return new ParamSpec(List.of(formats));
+    }
+
+    public static ParamSpec component(Component component) {
+        return new ParamSpec(component);
     }
 
     public static ArgSpec line(int line, ParamSpec... params) {
@@ -86,7 +112,7 @@ public class BuiltinExperimentChapters {
                 for (int j = 0; j < args.length; j++) {
                     args[j] = spec.params().get(j).build(key + ".arg" + j);
                 }
-                lines.add(Component.translatable(key, args));
+                lines.add(Component.translatable(key, args).withStyle(spec.formats()));
             }
         }
         return new ExperimentChapter.TextSection(lines);
@@ -101,6 +127,7 @@ public class BuiltinExperimentChapters {
 
     public static final ExperimentChapter AMPLIFIER = register(chapter("amplifier", null, ch -> List.of(
             ch.text(5,
+                    line(1, style(GOLD)),
                     line(2, style(GOLD))
             ),
             ch.text(2),
@@ -115,7 +142,8 @@ public class BuiltinExperimentChapters {
 
     public static final ExperimentChapter FIRST_GATE = register(chapter("first_gate", null, ch -> List.of(
             ch.text(12,
-                    line(5, style(BOLD))
+                    line(5, style(BOLD)),
+                    line(9, component(ModItems.COPPER_WIRE.getDefaultInstance().getDisplayName()), component(ModItems.GOLD_WIRE.getDefaultInstance().getDisplayName()))
             ),
             ch.text(5,
                     line(2, style(ITALIC, RED), style(ITALIC, RED)),
@@ -183,19 +211,43 @@ public class BuiltinExperimentChapters {
             )
     ), Set.of(ADVANCED_GATE)));
 
-    public static final ExperimentChapter ONE_BIT_ADDER = register(
-            new ExperimentChapter("one_bit_adder", null,
-                    List.of(
-                            new ExperimentChapter.TextSection(List.of(
-                                    Component.translatable("experiment.elements-plus.group.one_bit_adder.section0.text0")
-                            )),
-                            new ExperimentChapter.ExperimentSection(List.of(
-                                    BuiltinExperiments.HALF_ADDER,
-                                    BuiltinExperiments.FULL_ADDER
-                            ))
-                    ), Set.of(ADVANCED_GATE)
-            )
-    );
+//    public static final ExperimentChapter MULTIPLEXER = register(chapter("multiplexer", null, ch -> List.of(
+//            ch.text(4,
+//                    line(0, style(GOLD)),
+//                    line(1, style(BLUE)).withStyle(RED),
+//                    line(2, style(GOLD)),
+//                    line(3, style(BLUE))
+//            )
+//    ), Set.of(ADVANCED_GATE)));
+
+    public static final ExperimentChapter ONE_BIT_ADDER = register(chapter("one_bit_adder", null, ch -> List.of(
+            ch.text(4,
+                    line(2, style(BLUE)),
+                    line(3, style(BLUE))
+            ),
+            ch.text(7,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.HALF_ADDER),
+            ch.text(11,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.FULL_ADDER)
+    ), Set.of(ADVANCED_GATE)));
+
+    public static final ExperimentChapter MULTI_BIT_ADDER = register(chapter("multi_bit_adder", null, ch -> List.of(
+            ch.text(5,
+                    line(1, style(BLUE)),
+                    line(3, style(GOLD), style(GOLD), style(GOLD), style(GOLD))
+            ),
+            ch.text(3,
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.ADDER_8)
+    ), Set.of(ONE_BIT_ADDER)));
 
     public static ExperimentChapter register(ExperimentChapter experimentChapter) {
         BUILTIN_EXPERIMENT_CHAPTERS.add(experimentChapter);
