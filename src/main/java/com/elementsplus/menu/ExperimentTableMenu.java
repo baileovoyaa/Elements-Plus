@@ -73,11 +73,11 @@ public class ExperimentTableMenu extends AbstractContainerMenu {
         if (slot != null && slot.hasItem()) {
             ItemStack itemStack2 = slot.getItem();
             itemStack = itemStack2.copy();
-            if (i < 36) {
-                if (!this.moveItemStackTo(itemStack2, 36, 37, false)) {
+            if (i == 0) {
+                if (!this.moveItemStackTo(itemStack2, 1, 37, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(itemStack2, 0, 36, false)) {
+            } else if (!this.moveItemStackTo(itemStack2, 0, 1, false)) {
                 return ItemStack.EMPTY;
             }
             if (itemStack2.isEmpty()) {

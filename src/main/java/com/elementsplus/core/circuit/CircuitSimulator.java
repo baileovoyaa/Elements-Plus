@@ -628,6 +628,33 @@ public class CircuitSimulator {
     }
 
     /**
+     * 8 元组放大：每个 4 位通道“非 0 即 15”。数字多路选择器/三态缓冲器的输出语义。
+     */
+    private static long amplifyTuple(long tuple) {
+        long t = 0L;
+        for (int b = 0; b < 8; b++) {
+            if (((tuple >> (4 * b)) & 0xF) != 0) t |= 15L << (4 * b);
+        }
+        return t;
+    }
+
+    /**
+     * 4 选 1（数字/模拟，1 位/8 位同布局）被选中数据通道的值：
+     * 输入 A1、A0 选择 D0~D3，即 index = A1*2 + A0 对应 D0..D3。
+     */
+    private long mux4Select(int node) {
+        int a1 = (int) inPort(node, 4);
+        int a0 = (int) inPort(node, 5);
+        int index = (a1 != 0 ? 1 : 0) * 2 + (a0 != 0 ? 1 : 0);
+        return switch (index) {
+            case 0 -> inPort(node, 3);
+            case 1 -> inPort(node, 2);
+            case 2 -> inPort(node, 1);
+            default -> inPort(node, 0);
+        };
+    }
+
+    /**
      * 8 位整数转 8 元组：置位通道输出 15，其余 0。
      */
     private static long intToTuple(int bits) {
@@ -742,6 +769,34 @@ public class CircuitSimulator {
             int b = (int) inPort(node, 1);
             int c = (int) inPort(node, 2);
             return (a != 0) ^ (b != 0) ^ (c != 0) ? 0 : 15;
+        } else if (cc == BuiltinCircuitComponents.MUX_2) {
+            int a = (int) inPort(node, 0);
+            long d1 = inPort(node, 1);
+            long d0 = inPort(node, 2);
+            return (a != 0 ? d1 : d0) != 0 ? 15 : 0;
+        } else if (cc == BuiltinCircuitComponents.MUX_2_8) {
+            int a = (int) inPort(node, 0);
+            long d1 = inPort(node, 1);
+            long d0 = inPort(node, 2);
+            return amplifyTuple(a != 0 ? d1 : d0);
+        } else if (cc == BuiltinCircuitComponents.MUX_ANALOG_2 || cc == BuiltinCircuitComponents.MUX_ANALOG_2_8) {
+            int a = (int) inPort(node, 0);
+            long d1 = inPort(node, 1);
+            long d0 = inPort(node, 2);
+            return a != 0 ? d1 : d0;
+        } else if (cc == BuiltinCircuitComponents.MUX_4 || cc == BuiltinCircuitComponents.MUX_4_8) {
+            long sel = mux4Select(node);
+            return cc == BuiltinCircuitComponents.MUX_4_8 ? amplifyTuple(sel) : (sel != 0 ? 15 : 0);
+        } else if (cc == BuiltinCircuitComponents.MUX_ANALOG_4 || cc == BuiltinCircuitComponents.MUX_ANALOG_4_8) {
+            return mux4Select(node);
+        } else if (cc == BuiltinCircuitComponents.TRI_STATE_BUFFER_8) {
+            long d = inPort(node, 0);
+            int a = (int) inPort(node, 1);
+            return a != 0 ? amplifyTuple(d) : 0L;
+        } else if (cc == BuiltinCircuitComponents.TRI_STATE_BUFFER_ANALOG_8) {
+            long d = inPort(node, 0);
+            int a = (int) inPort(node, 1);
+            return a != 0 ? d : 0L;
         } else if (cc == BuiltinCircuitComponents.HALF_ADDER) {
             int a = (int) inPort(node, 0);
             int b = (int) inPort(node, 1);

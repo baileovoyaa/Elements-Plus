@@ -150,7 +150,7 @@ public class BuiltinCircuitComponents {
         setPin(Direction.SOUTH, 0, PinType.INPUT);  // D1
         setPin(Direction.EAST, 0, PinType.OUTPUT);  // Y
     }});
-    public static final CircuitComponent MUX_8 = register(new CircuitComponent(ElementsPlus.id("mux_8"), Component.translatable("circuit.elements-plus.component.mux_2_8"), null, ElementsPlus.id("textures/circuit/mux_8.png")) {{
+    public static final CircuitComponent MUX_2_8 = register(new CircuitComponent(ElementsPlus.id("mux_8"), Component.translatable("circuit.elements-plus.component.mux_2_8"), null, ElementsPlus.id("textures/circuit/mux_8.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT);
         setPin(Direction.WEST, 0, PinType.INPUT);
         setPin(Direction.SOUTH, 0, PinType.INPUT);
@@ -176,11 +176,63 @@ public class BuiltinCircuitComponents {
         setPin(Direction.WEST, 2, PinType.INPUT);  // D1
         setPin(Direction.WEST, 3, PinType.INPUT);  // D0
         setPin(Direction.EAST, 0, PinType.OUTPUT);  // Y
+        setPinBitWidth(Direction.EAST, 0, 8);
+        setPinBitWidth(Direction.WEST, 0, 8);
+        setPinBitWidth(Direction.WEST, 1, 8);
+        setPinBitWidth(Direction.WEST, 2, 8);
+        setPinBitWidth(Direction.WEST, 3, 8);
+    }});
+    public static final CircuitComponent MUX_ANALOG_2 = register(new CircuitComponent(ElementsPlus.id("mux_analog_2"), Component.translatable("circuit.elements-plus.component.mux_analog_2"), null, ElementsPlus.id("textures/circuit/mux_analog.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT);  // D0
+        setPin(Direction.WEST, 0, PinType.INPUT);  // A
+        setPin(Direction.SOUTH, 0, PinType.INPUT);  // D1
+        setPin(Direction.EAST, 0, PinType.OUTPUT);  // Y
+    }});
+    public static final CircuitComponent MUX_ANALOG_2_8 = register(new CircuitComponent(ElementsPlus.id("mux_analog_2_8"), Component.translatable("circuit.elements-plus.component.mux_analog_2_8"), null, ElementsPlus.id("textures/circuit/mux_analog_8.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT);
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.SOUTH, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+        setPinBitWidth(Direction.NORTH, 0, 8);
+        setPinBitWidth(Direction.SOUTH, 0, 8);
+        setPinBitWidth(Direction.EAST, 0, 8);
+    }});
+    public static final CircuitComponent MUX_ANALOG_4 = register(new CircuitComponent(ElementsPlus.id("mux_analog_4"), Component.translatable("circuit.elements-plus.component.mux_analog_4"), null, ElementsPlus.id("textures/circuit/mux_analog.png"), 2, 4) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT);  // A1
+        setPin(Direction.NORTH, 1, PinType.INPUT);  // A0
+        setPin(Direction.WEST, 0, PinType.INPUT);  // D3
+        setPin(Direction.WEST, 1, PinType.INPUT);  // D2
+        setPin(Direction.WEST, 2, PinType.INPUT);  // D1
+        setPin(Direction.WEST, 3, PinType.INPUT);  // D0
+        setPin(Direction.EAST, 0, PinType.OUTPUT);  // Y
+    }});
+    public static final CircuitComponent MUX_ANALOG_4_8 = register(new CircuitComponent(ElementsPlus.id("mux_analog_4_8"), Component.translatable("circuit.elements-plus.component.mux_analog_4_8"), null, ElementsPlus.id("textures/circuit/mux_analog_8.png"), 2, 4) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT);  // A1
+        setPin(Direction.NORTH, 1, PinType.INPUT);  // A0
+        setPin(Direction.WEST, 0, PinType.INPUT);  // D3
+        setPin(Direction.WEST, 1, PinType.INPUT);  // D2
+        setPin(Direction.WEST, 2, PinType.INPUT);  // D1
+        setPin(Direction.WEST, 3, PinType.INPUT);  // D0
+        setPin(Direction.EAST, 0, PinType.OUTPUT);  // Y
+        setPinBitWidth(Direction.EAST, 0, 8);
+        setPinBitWidth(Direction.WEST, 0, 8);
+        setPinBitWidth(Direction.WEST, 1, 8);
+        setPinBitWidth(Direction.WEST, 2, 8);
+        setPinBitWidth(Direction.WEST, 3, 8);
+    }});
+    public static final CircuitComponent TRI_STATE_BUFFER_8 = register(new CircuitComponent(ElementsPlus.id("tri_state_buffer_8"), Component.translatable("circuit.elements-plus.component.tri_state_buffer_8"), null, ElementsPlus.id("textures/circuit/tri_state_buffer_8.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.NORTH, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
         setPinBitWidth(Direction.WEST, 0, 8);
         setPinBitWidth(Direction.EAST, 0, 8);
-        setPinBitWidth(Direction.EAST, 1, 8);
-        setPinBitWidth(Direction.EAST, 2, 8);
-        setPinBitWidth(Direction.EAST, 3, 8);
+    }});
+    public static final CircuitComponent TRI_STATE_BUFFER_ANALOG_8 = register(new CircuitComponent(ElementsPlus.id("tri_state_buffer_analog_8"), Component.translatable("circuit.elements-plus.component.tri_state_buffer_analog_8"), null, ElementsPlus.id("textures/circuit/tri_state_buffer_analog_8.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT);
+        setPin(Direction.NORTH, 0, PinType.INPUT);
+        setPin(Direction.EAST, 0, PinType.OUTPUT);
+        setPinBitWidth(Direction.WEST, 0, 8);
+        setPinBitWidth(Direction.EAST, 0, 8);
     }});
     // 编码器和译码器
     public static final CircuitComponent ENCODER_8_3 = register(new CircuitComponent(ElementsPlus.id("encoder_8_3"), Component.translatable("circuit.elements-plus.component.encoder_8_3"), null, ElementsPlus.id("textures/circuit/encoder_8_3.png")) {{

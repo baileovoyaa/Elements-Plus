@@ -227,6 +227,149 @@ public class BuiltinExperiments {
         return tests;
     }
 
+    public static final CircuitExperiment MUX_2 = register("mux_2", BuiltinCircuitComponents.MUX_2.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(inputs -> {
+        int d0 = inputs.get(0), d1 = inputs.get(1), a = inputs.get(2);
+        return new ConstantCombinationalTestCase(
+                Map.of("D0", new PinValue(d0), "D1", new PinValue(d1), "A", new PinValue(a)),
+                Map.of("Y", new PinValue(a > 0 ? amplified(d1) : amplified(d0))));
+    }).toList(), BuiltinCircuitComponents.MUX_2));
+
+    private static int amplified(int input) {
+        return input > 0 ? 15 : 0;
+    }
+
+    /** 8 通道总线放大：每通道非 0 即 15。 */
+    private static byte[] ampLanes(byte[] lanes) {
+        byte[] out = new byte[lanes.length];
+        for (int i = 0; i < lanes.length; i++) {
+            out[i] = (byte) amplified(lanes[i] & 0xFF);
+        }
+        return out;
+    }
+
+    // 数字多路选择器数据总线样本：每通道 15/0（非 0 即放大）。
+    private static final byte[] B8_ZERO = {0, 0, 0, 0, 0, 0, 0, 0};
+    private static final byte[] B8_WEAK = {1, 0, 0, 0, 0, 0, 0, 0};
+    private static final byte[] B8_NIBBLE_HI = {15, 15, 15, 15, 0, 0, 0, 0};
+    private static final byte[] B8_NIBBLE_LO = {0, 0, 0, 0, 15, 15, 15, 15};
+    private static final byte[] B8_FULL = {15, 15, 15, 15, 15, 15, 15, 15};
+    private static final byte[][] DIGITAL_BUS_SAMPLES = {B8_ZERO, B8_WEAK, B8_NIBBLE_HI, B8_NIBBLE_LO, B8_FULL};
+
+    // 模拟多路选择器数据总线样本：保留任意通道强度。
+    private static final byte[] A8_ZERO = {0, 0, 0, 0, 0, 0, 0, 0};
+    private static final byte[] A8_LOW = {1, 2, 3, 4, 5, 6, 7, 8};
+    private static final byte[] A8_MID = {8, 8, 8, 8, 0, 0, 0, 0};
+    private static final byte[] A8_HIGH = {15, 14, 13, 12, 11, 10, 9, 8};
+    private static final byte[] A8_ALT = {1, 0, 1, 0, 15, 0, 15, 0};
+    private static final byte[][] ANALOG_BUS_SAMPLES = {A8_ZERO, A8_LOW, A8_MID, A8_HIGH, A8_ALT};
+
+    public static final CircuitExperiment MUX_4 = register("mux_4", BuiltinCircuitComponents.MUX_4.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15), List.of(0, 15), List.of(0, 15), List.of(0, 15), List.of(0, 15))).stream().<TestCase>map(inputs -> {
+        int a1 = inputs.get(0), a0 = inputs.get(1);
+        int d0 = inputs.get(2), d1 = inputs.get(3), d2 = inputs.get(4), d3 = inputs.get(5);
+        int data = switch ((a1 != 0 ? 1 : 0) * 2 + (a0 != 0 ? 1 : 0)) {
+            case 0 -> d0;
+            case 1 -> d1;
+            case 2 -> d2;
+            default -> d3;
+        };
+        return new ConstantCombinationalTestCase(
+                Map.of("A0", new PinValue(a0), "A1", new PinValue(a1),
+                        "D0", new PinValue(d0), "D1", new PinValue(d1), "D2", new PinValue(d2), "D3", new PinValue(d3)),
+                Map.of("Y", new PinValue(amplified(data))));
+    }).toList(), BuiltinCircuitComponents.MUX_4));
+
+    public static final CircuitExperiment MUX_2_8 = register("mux_2_8", BuiltinCircuitComponents.MUX_2_8.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 2, 3, 4), List.of(0, 1, 2, 3, 4))).stream().<TestCase>map(inputs -> {
+        int a = inputs.get(0);
+        byte[] d0 = DIGITAL_BUS_SAMPLES[inputs.get(1)];
+        byte[] d1 = DIGITAL_BUS_SAMPLES[inputs.get(2)];
+        return new ConstantCombinationalTestCase(
+                Map.of("A", new PinValue(a), "D0", new PinValue(d0), "D1", new PinValue(d1)),
+                Map.of("Y", new PinValue(ampLanes(a != 0 ? d1 : d0))));
+    }).toList(), BuiltinCircuitComponents.MUX_2_8));
+
+    public static final CircuitExperiment MUX_4_8 = register("mux_4_8", BuiltinCircuitComponents.MUX_4_8.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 15), List.of(0, 15), List.of(0, 1, 2), List.of(0, 1, 2), List.of(0, 1, 2), List.of(0, 1, 2))).stream().<TestCase>map(inputs -> {
+        int a1 = inputs.get(0), a0 = inputs.get(1);
+        byte[] d0 = DIGITAL_BUS_SAMPLES[inputs.get(2)];
+        byte[] d1 = DIGITAL_BUS_SAMPLES[inputs.get(3)];
+        byte[] d2 = DIGITAL_BUS_SAMPLES[inputs.get(4)];
+        byte[] d3 = DIGITAL_BUS_SAMPLES[inputs.get(5)];
+        byte[] data = switch ((a1 != 0 ? 1 : 0) * 2 + (a0 != 0 ? 1 : 0)) {
+            case 0 -> d0;
+            case 1 -> d1;
+            case 2 -> d2;
+            default -> d3;
+        };
+        return new ConstantCombinationalTestCase(
+                Map.of("A0", new PinValue(a0), "A1", new PinValue(a1),
+                        "D0", new PinValue(d0), "D1", new PinValue(d1), "D2", new PinValue(d2), "D3", new PinValue(d3)),
+                Map.of("Y", new PinValue(ampLanes(data))));
+    }).toList(), BuiltinCircuitComponents.MUX_4_8));
+
+    public static final CircuitExperiment TRI_STATE_BUFFER_8 = register("tri_state_buffer_8", BuiltinCircuitComponents.TRI_STATE_BUFFER_8.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 2, 3, 4))).stream().<TestCase>map(inputs -> {
+        int a = inputs.get(0);
+        byte[] d = DIGITAL_BUS_SAMPLES[inputs.get(1)];
+        return new ConstantCombinationalTestCase(
+                Map.of("A", new PinValue(a), "D", new PinValue(d)),
+                Map.of("Y", new PinValue(a != 0 ? ampLanes(d) : B8_ZERO)));
+    }).toList(), BuiltinCircuitComponents.TRI_STATE_BUFFER_8));
+
+    public static final CircuitExperiment MUX_ANALOG_2 = register("mux_analog_2", BuiltinCircuitComponents.MUX_ANALOG_2.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 5, 8, 15), List.of(0, 1, 5, 8, 15))).stream().<TestCase>map(inputs -> {
+        int a = inputs.get(0), d0 = inputs.get(1), d1 = inputs.get(2);
+        return new ConstantCombinationalTestCase(
+                Map.of("A", new PinValue(a), "D0", new PinValue(d0), "D1", new PinValue(d1)),
+                Map.of("Y", new PinValue(a != 0 ? d1 : d0)));
+    }).toList(), BuiltinCircuitComponents.MUX_ANALOG_2));
+
+    public static final CircuitExperiment MUX_ANALOG_4 = register("mux_analog_4", BuiltinCircuitComponents.MUX_ANALOG_4.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 15), List.of(0, 15), List.of(0, 1, 8, 15), List.of(0, 1, 8, 15), List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(inputs -> {
+        int a1 = inputs.get(0), a0 = inputs.get(1);
+        int d0 = inputs.get(2), d1 = inputs.get(3), d2 = inputs.get(4), d3 = inputs.get(5);
+        int data = switch ((a1 != 0 ? 1 : 0) * 2 + (a0 != 0 ? 1 : 0)) {
+            case 0 -> d0;
+            case 1 -> d1;
+            case 2 -> d2;
+            default -> d3;
+        };
+        return new ConstantCombinationalTestCase(
+                Map.of("A0", new PinValue(a0), "A1", new PinValue(a1),
+                        "D0", new PinValue(d0), "D1", new PinValue(d1), "D2", new PinValue(d2), "D3", new PinValue(d3)),
+                Map.of("Y", new PinValue(data)));
+    }).toList(), BuiltinCircuitComponents.MUX_ANALOG_4));
+
+    public static final CircuitExperiment MUX_ANALOG_2_8 = register("mux_analog_2_8", BuiltinCircuitComponents.MUX_ANALOG_2_8.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 2, 3, 4), List.of(0, 1, 2, 3, 4))).stream().<TestCase>map(inputs -> {
+        int a = inputs.get(0);
+        byte[] d0 = ANALOG_BUS_SAMPLES[inputs.get(1)];
+        byte[] d1 = ANALOG_BUS_SAMPLES[inputs.get(2)];
+        return new ConstantCombinationalTestCase(
+                Map.of("A", new PinValue(a), "D0", new PinValue(d0), "D1", new PinValue(d1)),
+                Map.of("Y", new PinValue(a != 0 ? d1 : d0)));
+    }).toList(), BuiltinCircuitComponents.MUX_ANALOG_2_8));
+
+    public static final CircuitExperiment MUX_ANALOG_4_8 = register("mux_analog_4_8", BuiltinCircuitComponents.MUX_ANALOG_4_8.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 15), List.of(0, 15), List.of(0, 1, 2, 3), List.of(0, 1, 2, 3), List.of(0, 1, 2, 3), List.of(0, 1, 2, 3))).stream().<TestCase>map(inputs -> {
+        int a1 = inputs.get(0), a0 = inputs.get(1);
+        byte[] d0 = ANALOG_BUS_SAMPLES[inputs.get(2)];
+        byte[] d1 = ANALOG_BUS_SAMPLES[inputs.get(3)];
+        byte[] d2 = ANALOG_BUS_SAMPLES[inputs.get(4)];
+        byte[] d3 = ANALOG_BUS_SAMPLES[inputs.get(5)];
+        byte[] data = switch ((a1 != 0 ? 1 : 0) * 2 + (a0 != 0 ? 1 : 0)) {
+            case 0 -> d0;
+            case 1 -> d1;
+            case 2 -> d2;
+            default -> d3;
+        };
+        return new ConstantCombinationalTestCase(
+                Map.of("A0", new PinValue(a0), "A1", new PinValue(a1),
+                        "D0", new PinValue(d0), "D1", new PinValue(d1), "D2", new PinValue(d2), "D3", new PinValue(d3)),
+                Map.of("Y", new PinValue(data)));
+    }).toList(), BuiltinCircuitComponents.MUX_ANALOG_4_8));
+
+    public static final CircuitExperiment TRI_STATE_BUFFER_ANALOG_8 = register("tri_state_buffer_analog_8", BuiltinCircuitComponents.TRI_STATE_BUFFER_ANALOG_8.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 2, 3, 4))).stream().<TestCase>map(inputs -> {
+        int a = inputs.get(0);
+        byte[] d = ANALOG_BUS_SAMPLES[inputs.get(1)];
+        return new ConstantCombinationalTestCase(
+                Map.of("A", new PinValue(a), "D", new PinValue(d)),
+                Map.of("Y", new PinValue(a != 0 ? d : A8_ZERO)));
+    }).toList(), BuiltinCircuitComponents.TRI_STATE_BUFFER_ANALOG_8));
+
     public static <T extends BaseExperiment> T register(String name, ResourceLocation icon, T experiment) {
         experiment.setName(name);
         experiment.setIcon(icon);

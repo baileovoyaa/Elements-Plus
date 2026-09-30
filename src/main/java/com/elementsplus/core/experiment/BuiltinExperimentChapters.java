@@ -211,14 +211,36 @@ public class BuiltinExperimentChapters {
             )
     ), Set.of(ADVANCED_GATE)));
 
-//    public static final ExperimentChapter MULTIPLEXER = register(chapter("multiplexer", null, ch -> List.of(
-//            ch.text(4,
-//                    line(0, style(GOLD)),
-//                    line(1, style(BLUE)).withStyle(RED),
-//                    line(2, style(GOLD)),
-//                    line(3, style(BLUE))
-//            )
-//    ), Set.of(ADVANCED_GATE)));
+    public static final ExperimentChapter MULTIPLEXER = register(chapter("multiplexer", null, ch -> List.of(
+            ch.text(4,
+                    line(0, style(GOLD)),
+                    line(1, style(BLUE)).withStyle(RED),
+                    line(2, style(GOLD)),
+                    line(3, style(BLUE))
+            ),
+            ch.experiments(BuiltinExperiments.MUX_2),
+            ch.text(7, line(0, style(GOLD))),
+            ch.experiments(BuiltinExperiments.MUX_4),
+            ch.text(3,
+                    line(0, style(GOLD), style(BLUE)),
+                    line(1, style(BLUE), style(GOLD)).withStyle(DARK_PURPLE),
+                    line(2, style(BLUE))
+            ),
+            ch.experiments(BuiltinExperiments.MUX_2_8, BuiltinExperiments.MUX_4_8),
+            ch.text(2,
+                    line(0, style(GOLD)),
+                    line(1, style(BLUE))
+            ),
+            ch.experiments(BuiltinExperiments.TRI_STATE_BUFFER_8),
+            ch.text(1, line(0, style(GOLD), style(BLUE), style(GOLD), style(GOLD))),
+            ch.experiments(
+                    BuiltinExperiments.MUX_ANALOG_2,
+                    BuiltinExperiments.MUX_ANALOG_4,
+                    BuiltinExperiments.MUX_ANALOG_2_8,
+                    BuiltinExperiments.MUX_ANALOG_4_8,
+                    BuiltinExperiments.TRI_STATE_BUFFER_ANALOG_8
+            ).optional()
+    ), Set.of(ADVANCED_GATE)));
 
     public static final ExperimentChapter ONE_BIT_ADDER = register(chapter("one_bit_adder", null, ch -> List.of(
             ch.text(4,
