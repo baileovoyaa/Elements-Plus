@@ -469,7 +469,7 @@
   "experiment.elements-plus.group.one_bit_adder.section1.text6": "• A≠0, B≠0 → C=15, S=0",
   "experiment.elements-plus.group.one_bit_adder.section2.text0": "只处理两个一位二进制数的加法还不够，因为如果要想进行多位二进制数的加法，还需要处理进位的问题。为此我们至少需要处理三位二进制数的加法，这就是“%s”。",
   "experiment.elements-plus.group.one_bit_adder.section2.text0.arg0": "全加器",
-  "experiment.elements-plus.group.one_bit_adder.section2.text1": "• %s：输入A、B和CI，将A和B作为二进制数（非0对应1，0对应0）进行相加，输出加和S与进位CO（1对应15，0对应0）。",
+  "experiment.elements-plus.group.one_bit_adder.section2.text1": "• %s：输入A、B和CI，将A、B和CI作为二进制数（非0对应1，0对应0）进行相加，输出加和S与进位CO（1对应15，0对应0）。",
   "experiment.elements-plus.group.one_bit_adder.section2.text1.arg0": "全加器",
   "experiment.elements-plus.group.one_bit_adder.section2.text2": "同样，下面将全加器所有情况列出来：",
   "experiment.elements-plus.group.one_bit_adder.section2.text3": "• A=0, B=0, CI=0 → CO=0, S=0",
