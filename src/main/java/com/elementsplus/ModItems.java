@@ -45,12 +45,6 @@ public class ModItems {
                     )
             ) {
                 @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe")
-                            .withStyle(style -> style.withColor(0xFFD700))); // 金色
-                }
-
-                @Override
                 public @NotNull ItemStack finishUsingItem(ItemStack stack, Level level, net.minecraft.world.entity.LivingEntity entity) {
                     ItemStack result = super.finishUsingItem(stack, level, entity);
                     if (!level.isClientSide() && entity instanceof net.minecraft.world.entity.player.Player player) {
@@ -98,12 +92,6 @@ public class ModItems {
                     .stacksTo(16)
             ) {
                 @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.syringe")
-                            .withStyle(style -> style.withColor(0xFFD700))); // 金色
-                }
-
-                @Override
                 public @NotNull ItemStack finishUsingItem(ItemStack stack, Level level, net.minecraft.world.entity.LivingEntity entity) {
                     ItemStack result = super.finishUsingItem(stack, level, entity);
                     if (!level.isClientSide() && entity instanceof net.minecraft.world.entity.player.Player player) {
@@ -121,13 +109,7 @@ public class ModItems {
             new WrenchItem(new Item.Properties()
                     .stacksTo(1)
                     .component(DataComponents.DEBUG_STICK_STATE, DebugStickState.EMPTY)
-            ) {
-                @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.wrench")
-                            .withStyle(style -> style.withColor(0xFFD700))); // 金色
-                }
-            },
+            ),
             "wrench"
     );
 
@@ -135,13 +117,7 @@ public class ModItems {
             new Item(new Item.Properties()
                     .stacksTo(64)
                     .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.TRANSISTOR.getId())
-            ) {
-                @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_transistor")
-                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
-                }
-            },
+            ),
             "amethyst_transistor"
     );
 
@@ -149,13 +125,7 @@ public class ModItems {
             new Item(new Item.Properties()
                     .stacksTo(64)
                     .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.DIODE.getId())
-            ) {
-                @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_diode")
-                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
-                }
-            },
+            ),
             "amethyst_diode"
     );
 
@@ -163,13 +133,7 @@ public class ModItems {
             new Item(new Item.Properties()
                     .stacksTo(64)
                     .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.CAPACITOR.getId())
-            ) {
-                @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_capacitor")
-                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
-                }
-            },
+            ),
             "amethyst_capacitor"
     );
 
@@ -177,13 +141,7 @@ public class ModItems {
             new Item(new Item.Properties()
                     .stacksTo(64)
                     .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.RESISTOR.getId())
-            ) {
-                @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_resistor")
-                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
-                }
-            },
+            ),
             "amethyst_resistor"
     );
 
@@ -191,13 +149,7 @@ public class ModItems {
             new Item(new Item.Properties()
                     .stacksTo(64)
                     .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.RESONATOR.getId())
-            ) {
-                @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_resonator")
-                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
-                }
-            },
+            ),
             "amethyst_resonator"
     );
 
@@ -205,26 +157,14 @@ public class ModItems {
             new Item(new Item.Properties()
                     .stacksTo(64)
                     .component(ModDataComponents.EQUIVALENT_COMPONENT, BuiltinCircuitComponents.BATTERY.getId())
-            ) {
-                @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.amethyst_battery")
-                            .withStyle(style -> style.withColor(0xAAAAAA))); // 灰色
-                }
-            },
+            ),
             "amethyst_battery"
     );
 
     public static final Item SILVER_INGOT = register(
             new Item(new Item.Properties()
                     .stacksTo(64)
-            ) {
-                @Override
-                public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                    tooltip.add(Component.translatable("tooltip.elements-plus.silver_ingot")
-                            .withStyle(style -> style.withColor(0xFFD700))); // 金色
-                }
-            },
+            ),
             "silver_ingot"
     );
 

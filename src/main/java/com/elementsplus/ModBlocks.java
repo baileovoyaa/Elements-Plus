@@ -276,195 +276,30 @@ public class ModBlocks {
     );
 
     public static void initialize() {
-        // ===== 铁管 BlockItem =====
-        Items.registerBlock(new BlockItem(STEEL_PIPE_L, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe_l")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(STEEL_PIPE_I, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe_i")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(STEEL_PIPE_T, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe_t")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(STEEL_PIPE_X, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.steel_pipe_x")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 涂蜡钢管 BlockItem =====
-        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_L, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.waxed_steel_pipe_l")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_I, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.waxed_steel_pipe_i")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_T, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.waxed_steel_pipe_t")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_X, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.waxed_steel_pipe_x")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 锈管 BlockItem =====
-        Items.registerBlock(new BlockItem(RUST_STEEL_PIPE_L, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.rust_steel_pipe_l")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(RUST_STEEL_PIPE_I, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.rust_steel_pipe_i")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(RUST_STEEL_PIPE_T, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.rust_steel_pipe_t")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(RUST_STEEL_PIPE_X, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.rust_steel_pipe_x")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(SILVER_PIPE_I, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.silver_pipe_i")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(SILVER_PIPE_L, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.silver_pipe_l")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(SILVER_PIPE_T, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.silver_pipe_t")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-        Items.registerBlock(new BlockItem(SILVER_PIPE_X, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.silver_pipe_x")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 结晶器 BlockItem =====
-        Items.registerBlock(new BlockItem(CRYSTALLIZER, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.crystallizer")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 高级工作台 BlockItem =====
-        Items.registerBlock(new BlockItem(ADVANCED_CRAFTING_TABLE, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.advanced_crafting_table")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 金属催化器 BlockItem =====
-        Items.registerBlock(new BlockItem(METAL_CATALYST, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.metal_catalyst")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 光刻机 BlockItem =====
-        Items.registerBlock(new BlockItem(LITHOGRAPHY_MACHINE, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.lithography_machine")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 实验桌 BlockItem =====
-        Items.registerBlock(new BlockItem(EXPERIMENT_TABLE, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.experiment_table")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 充能避雷针 BlockItem =====
-        Items.registerBlock(new BlockItem(CHARGED_LIGHTNING_ROD, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.charged_lightning_rod")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 银矿石 BlockItem =====
-        Items.registerBlock(new BlockItem(SILVER_ORE, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.silver_ore")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
-
-        // ===== 银块 BlockItem =====
-        Items.registerBlock(new BlockItem(SILVER_BLOCK, new Item.Properties()) {
-            @Override
-            public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-                tooltip.add(Component.translatable("tooltip.elements-plus.silver_block")
-                        .withStyle(style -> style.withColor(0xAAAAAA)));
-            }
-        });
+        Items.registerBlock(new BlockItem(STEEL_PIPE_L, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(STEEL_PIPE_I, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(STEEL_PIPE_T, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(STEEL_PIPE_X, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_L, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_I, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_T, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(WAXED_STEEL_PIPE_X, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(RUST_STEEL_PIPE_L, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(RUST_STEEL_PIPE_I, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(RUST_STEEL_PIPE_T, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(RUST_STEEL_PIPE_X, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(SILVER_PIPE_I, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(SILVER_PIPE_L, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(SILVER_PIPE_T, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(SILVER_PIPE_X, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(CRYSTALLIZER, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(ADVANCED_CRAFTING_TABLE, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(METAL_CATALYST, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(LITHOGRAPHY_MACHINE, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(EXPERIMENT_TABLE, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(CHARGED_LIGHTNING_ROD, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(SILVER_ORE, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(SILVER_BLOCK, new Item.Properties()) );
 
         ElementsPlus.LOGGER.info("Registered blocks");
     }
