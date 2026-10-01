@@ -1,56 +1,35 @@
 {
   "item.elements-plus.steel_pipe": "Steel Pipe",
-  "tooltip.elements-plus.steel_pipe": "A Magical Steel Pipe, maybe edible with some §lside effects§r.",
 
   "item.elements-plus.syringe": "Syringe",
-  "tooltip.elements-plus.syringe": "A Syringe",
 
   "item.elements-plus.wrench": "Wrench",
-  "tooltip.elements-plus.wrench": "A wrench that can turn pipes",
 
   "block.elements-plus.steel_pipe_l": "Steel Pipe L",
   "block.elements-plus.steel_pipe_i": "Steel Pipe I",
   "block.elements-plus.steel_pipe_t": "Steel Pipe T",
   "block.elements-plus.steel_pipe_x": "Steel Pipe X",
-  "tooltip.elements-plus.steel_pipe_l": "A Steel Pipe with a shape of a L, it can carry redstone signal",
-  "tooltip.elements-plus.steel_pipe_i": "A Steel Pipe with a shape of a I, it can carry redstone signal",
-  "tooltip.elements-plus.steel_pipe_t": "A Steel Pipe with a shape of a T, it can carry redstone signal",
-  "tooltip.elements-plus.steel_pipe_x": "A Steel Pipe with a shape of a X, it can carry redstone signal",
 
 
   "block.elements-plus.waxed_steel_pipe_l": "Waxed Steel Pipe L",
   "block.elements-plus.waxed_steel_pipe_i": "Waxed Steel Pipe I",
   "block.elements-plus.waxed_steel_pipe_t": "Waxed Steel Pipe T",
   "block.elements-plus.waxed_steel_pipe_x": "Waxed Steel Pipe X",
-  "tooltip.elements-plus.waxed_steel_pipe_l": "A Waxed Steel Pipe with a shape of a L, it can carry redstone signal, and won't rust",
-  "tooltip.elements-plus.waxed_steel_pipe_i": "A Waxed Steel Pipe with a shape of a I, it can carry redstone signal, and won't rust",
-  "tooltip.elements-plus.waxed_steel_pipe_t": "A Waxed Steel Pipe with a shape of a T, it can carry redstone signal, and won't rust",
-  "tooltip.elements-plus.waxed_steel_pipe_x": "A Waxed Steel Pipe with a shape of a X, it can carry redstone signal, and won't rust",
 
   "block.elements-plus.rust_steel_pipe_l": "Rust Steel Pipe L",
   "block.elements-plus.rust_steel_pipe_i": "Rust Steel Pipe I",
   "block.elements-plus.rust_steel_pipe_t": "Rust Steel Pipe T",
   "block.elements-plus.rust_steel_pipe_x": "Rust Steel Pipe X",
-  "tooltip.elements-plus.rust_steel_pipe_l": "A Rust Steel Pipe with a shape of a L, it can carry redstone signal",
-  "tooltip.elements-plus.rust_steel_pipe_i": "A Rust Steel Pipe with a shape of a I, it can carry redstone signal",
-  "tooltip.elements-plus.rust_steel_pipe_t": "A Rust Steel Pipe with a shape of a T, it can carry redstone signal",
-  "tooltip.elements-plus.rust_steel_pipe_x": "A Rust Steel Pipe with a shape of a X, it can carry redstone signal",
 
   "block.elements-plus.silver_pipe_l": "Silver Pipe L",
   "block.elements-plus.silver_pipe_i": "Silver Pipe I",
   "block.elements-plus.silver_pipe_t": "Silver Pipe T",
   "block.elements-plus.silver_pipe_x": "Silver Pipe X",
-  "tooltip.elements-plus.silver_pipe_l": "A Silver Pipe with a shape of a L, it can carry redstone signal",
-  "tooltip.elements-plus.silver_pipe_i": "A Silver Pipe with a shape of a I, it can carry redstone signal",
-  "tooltip.elements-plus.silver_pipe_t": "A Silver Pipe with a shape of a T, it can carry redstone signal",
-  "tooltip.elements-plus.silver_pipe_x": "A Silver Pipe with a shape of a X, it can carry redstone signal",
 
   "block.elements-plus.crystallizer": "Crystallizer",
-  "tooltip.elements-plus.crystallizer": "A Crystallizer",
   "container.elements-plus.crystallizer": "Crystallizer",
 
   "block.elements-plus.metal_catalyst": "Metal Catalyst",
-  "tooltip.elements-plus.metal_catalyst": "A Metal Catalyst",
   "container.elements-plus.metal_catalyst": "Metal Catalyst",
   "gui.elements-plus.metal_catalyst.clear_waste": "Clear Waste",
 
@@ -107,7 +86,6 @@
   "command.elements-plus.experiments.list_empty": "%s has not completed any experiments",
 
   "item.elements-plus.silver_ingot": "Silver Ingot",
-  "tooltip.elements-plus.silver_ingot": "A Silver Ingot",
 
   "item.elements-plus.amethyst_transistor": "Amethyst Transistor",
   "item.elements-plus.amethyst_diode": "Amethyst Diode",
@@ -115,12 +93,6 @@
   "item.elements-plus.amethyst_resistor": "Amethyst Resistor",
   "item.elements-plus.amethyst_resonator": "Amethyst Resonator",
   "item.elements-plus.amethyst_battery": "Amethyst Battery",
-  "tooltip.elements-plus.amethyst_transistor": "A transistor made of amethyst, it can amplify the redstone signal",
-  "tooltip.elements-plus.amethyst_diode": "A diode made of amethyst, it can only allow the redstone signal to pass in one direction",
-  "tooltip.elements-plus.amethyst_capacitor": "A capacitor made of amethyst, it can store the redstone signal",
-  "tooltip.elements-plus.amethyst_resistor": "A resistor made of amethyst, it can reduce the redstone signal",
-  "tooltip.elements-plus.amethyst_resonator": "A resonator made of amethyst, it can resonate the redstone signal",
-  "tooltip.elements-plus.amethyst_battery": "A battery made of amethyst, it can provide the redstone signal",
 
   "circuit.elements-plus.component.transistor": "Transistor",
   "circuit.elements-plus.component.diode": "Diode",
