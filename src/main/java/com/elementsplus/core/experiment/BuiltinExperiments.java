@@ -5,6 +5,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.IntBinaryOperator;
+import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -227,6 +229,177 @@ public class BuiltinExperiments {
         return tests;
     }
 
+    // ================= 位运算器 =================
+
+    /** 8 位按位逻辑运算测例：输入 A、B 的二进制值确定，通道强度随机化，输出按位运算结果。 */
+    private static RandomizedCombinationalTestCase bitwise8Case(int a, int b, IntBinaryOperator op) {
+        return new RandomizedCombinationalTestCase(
+                Map.of("A", new PinValue(pin8(a)), "B", new PinValue(pin8(b))),
+                Map.of("Y", new PinValue(pin8(op.applyAsInt(a, b) & 0xFF))));
+    }
+
+    private static List<TestCase> buildBitwise8Tests(IntBinaryOperator op) {
+        List<TestCase> tests = new ArrayList<>();
+        int[][] pairs = {
+                {0x00, 0x00}, {0xFF, 0x00}, {0x00, 0xFF}, {0xFF, 0xFF},
+                {0xAA, 0x55}, {0x55, 0xAA}, {0xF0, 0x0F}, {0x0F, 0xF0},
+                {0x01, 0x01}, {0x80, 0x80}, {0x7F, 0x80}, {0x80, 0x7F},
+                {0x00, 0x01}, {0x01, 0x00}, {0x96, 0x69}, {0x3C, 0xC3},
+        };
+        for (int[] pair : pairs) tests.add(bitwise8Case(pair[0], pair[1], op));
+        for (int i = 0; i < 240; i++) {
+            tests.add(bitwise8Case((i * 73 + 29) & 0xFF, (i * 151 + 91) & 0xFF, op));
+        }
+        return tests;
+    }
+
+    /** 8 位按位非测例：穷举 256 种输入。 */
+    private static List<TestCase> buildBitwiseNotTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int i = 0; i < 256; i++) {
+            tests.add(new RandomizedCombinationalTestCase(
+                    Map.of("A", new PinValue(pin8(i))),
+                    Map.of("Y", new PinValue(pin8((~i) & 0xFF)))));
+        }
+        return tests;
+    }
+
+    /** 8 位取反器测例：输出 A 的相反数的补码，穷举 256 种输入。 */
+    private static List<TestCase> buildNegTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int i = 0; i < 256; i++) {
+            tests.add(new RandomizedCombinationalTestCase(
+                    Map.of("A", new PinValue(pin8(i))),
+                    Map.of("Y", new PinValue(pin8((~i + 1) & 0xFF)))));
+        }
+        return tests;
+    }
+
+    /** 8 路逻辑门测例：对 8 位输入 A 的 8 个通道做逻辑运算，输出 1 位 Y，穷举 256 种输入。 */
+    private static List<TestCase> buildGate8Tests(IntPredicate op) {
+        List<TestCase> tests = new ArrayList<>();
+        for (int i = 0; i < 256; i++) {
+            tests.add(new RandomizedCombinationalTestCase(
+                    Map.of("A", new PinValue(pin8(i))),
+                    Map.of("Y", new PinValue(op.test(i) ? 15 : 0))));
+        }
+        return tests;
+    }
+
+    // ================= 位移器 =================
+
+    /** 有符号 8 位整数的通道表示（补码）：第 b 通道对应 bit b。 */
+    private static byte[] signedLanes(int value) {
+        return pin8(value & 0xFF);
+    }
+
+    /**
+     * 位移器期望输出：目标通道 i 取源通道 i-shift（循环位移取模 8），越界补 0。
+     * analog 为 false 时按数字语义将非 0 通道放大为 15。
+     */
+    private static byte[] shiftLanes(byte[] data, int shift, boolean rotate, boolean analog) {
+        byte[] out = new byte[8];
+        for (int i = 0; i < 8; i++) {
+            int src = rotate ? (((i - shift) % 8) + 8) % 8 : i - shift;
+            if (src < 0 || src >= 8) {
+                out[i] = 0;
+                continue;
+            }
+            int lane = data[src] & 0xFF;
+            out[i] = (byte) (analog ? lane : (lane != 0 ? 15 : 0));
+        }
+        return out;
+    }
+
+    private static final int[] SHIFT_AMOUNTS = {0, 1, 2, 3, 4, 5, 6, 7, -1, -2, -3, -4, -5, -6, -7, -8};
+
+    private static final int[] SHIFT_DIGITAL_SAMPLES = {
+            0x00, 0xFF, 0x01, 0x80, 0xAA, 0x55, 0x0F, 0xF0,
+            0x96, 0x69, 0x3C, 0xC3, 0x81, 0x18, 0x7E, 0xE7,
+    };
+
+    private static final byte[][] SHIFT_ANALOG_SAMPLES = {
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {1, 2, 3, 4, 5, 6, 7, 8},
+            {15, 14, 13, 12, 11, 10, 9, 8},
+            {1, 0, 15, 0, 8, 0, 3, 0},
+            {15, 15, 15, 15, 15, 15, 15, 15},
+            {1, 1, 1, 1, 1, 1, 1, 1},
+            {0, 15, 0, 15, 0, 15, 0, 15},
+            {7, 7, 7, 7, 7, 7, 7, 7},
+    };
+
+    private static List<TestCase> buildShifterTests(boolean rotate, boolean analog) {
+        List<TestCase> tests = new ArrayList<>();
+        if (analog) {
+            for (byte[] sample : SHIFT_ANALOG_SAMPLES) {
+                for (int shift : SHIFT_AMOUNTS) {
+                    tests.add(new ConstantCombinationalTestCase(
+                            Map.of("A", new PinValue(sample.clone()), "B", new PinValue(signedLanes(shift))),
+                            Map.of("Y", new PinValue(shiftLanes(sample, shift, rotate, true)))));
+                }
+            }
+        } else {
+            for (int sample : SHIFT_DIGITAL_SAMPLES) {
+                byte[] data = pin8(sample);
+                for (int shift : SHIFT_AMOUNTS) {
+                    tests.add(new ConstantCombinationalTestCase(
+                            Map.of("A", new PinValue(data.clone()), "B", new PinValue(signedLanes(shift))),
+                            Map.of("Y", new PinValue(shiftLanes(data, shift, rotate, false)))));
+                }
+            }
+        }
+        return tests;
+    }
+
+    public static final CircuitExperiment BITWISE_AND = register("bitwise_and", BuiltinCircuitComponents.BITWISE_AND.getIcon(),
+            new CircuitExperiment(buildBitwise8Tests((a, b) -> a & b), BuiltinCircuitComponents.BITWISE_AND));
+
+    public static final CircuitExperiment BITWISE_OR = register("bitwise_or", BuiltinCircuitComponents.BITWISE_OR.getIcon(),
+            new CircuitExperiment(buildBitwise8Tests((a, b) -> a | b), BuiltinCircuitComponents.BITWISE_OR));
+
+    public static final CircuitExperiment BITWISE_XOR = register("bitwise_xor", BuiltinCircuitComponents.BITWISE_XOR.getIcon(),
+            new CircuitExperiment(buildBitwise8Tests((a, b) -> a ^ b), BuiltinCircuitComponents.BITWISE_XOR));
+
+    public static final CircuitExperiment BITWISE_NAND = register("bitwise_nand", BuiltinCircuitComponents.BITWISE_NAND.getIcon(),
+            new CircuitExperiment(buildBitwise8Tests((a, b) -> ~(a & b) & 0xFF), BuiltinCircuitComponents.BITWISE_NAND));
+
+    public static final CircuitExperiment BITWISE_NOR = register("bitwise_nor", BuiltinCircuitComponents.BITWISE_NOR.getIcon(),
+            new CircuitExperiment(buildBitwise8Tests((a, b) -> ~(a | b) & 0xFF), BuiltinCircuitComponents.BITWISE_NOR));
+
+    public static final CircuitExperiment BITWISE_XNOR = register("bitwise_xnor", BuiltinCircuitComponents.BITWISE_XNOR.getIcon(),
+            new CircuitExperiment(buildBitwise8Tests((a, b) -> ~(a ^ b) & 0xFF), BuiltinCircuitComponents.BITWISE_XNOR));
+
+    public static final CircuitExperiment BITWISE_NOT = register("bitwise_not", BuiltinCircuitComponents.BITWISE_NOT.getIcon(),
+            new CircuitExperiment(buildBitwiseNotTests(), BuiltinCircuitComponents.BITWISE_NOT));
+
+    public static final CircuitExperiment OR_GATE_8 = register("or_gate_8", BuiltinCircuitComponents.OR_GATE_8.getIcon(),
+            new CircuitExperiment(buildGate8Tests(i -> i != 0), BuiltinCircuitComponents.OR_GATE_8));
+
+    public static final CircuitExperiment AND_GATE_8 = register("and_gate_8", BuiltinCircuitComponents.AND_GATE_8.getIcon(),
+            new CircuitExperiment(buildGate8Tests(i -> i == 0xFF), BuiltinCircuitComponents.AND_GATE_8));
+
+    public static final CircuitExperiment XOR_GATE_8 = register("xor_gate_8", BuiltinCircuitComponents.XOR_GATE_8.getIcon(),
+            new CircuitExperiment(buildGate8Tests(i -> (Integer.bitCount(i) & 1) == 1), BuiltinCircuitComponents.XOR_GATE_8));
+
+    public static final CircuitExperiment XNOR_GATE_8 = register("xnor_gate_8", BuiltinCircuitComponents.XNOR_GATE_8.getIcon(),
+            new CircuitExperiment(buildGate8Tests(i -> (Integer.bitCount(i) & 1) == 0), BuiltinCircuitComponents.XNOR_GATE_8));
+
+    public static final CircuitExperiment NEG = register("neg", BuiltinCircuitComponents.NEG.getIcon(),
+            new CircuitExperiment(buildNegTests(), BuiltinCircuitComponents.NEG));
+
+    public static final CircuitExperiment BITWISE_SHIFT = register("bitwise_shift", BuiltinCircuitComponents.BITWISE_SHIFT.getIcon(),
+            new CircuitExperiment(buildShifterTests(false, false), BuiltinCircuitComponents.BITWISE_SHIFT));
+
+    public static final CircuitExperiment BITWISE_ROTATE = register("bitwise_rotate", BuiltinCircuitComponents.BITWISE_ROTATE.getIcon(),
+            new CircuitExperiment(buildShifterTests(true, false), BuiltinCircuitComponents.BITWISE_ROTATE));
+
+    public static final CircuitExperiment BITWISE_SHIFT_ANALOG = register("bitwise_shift_analog", BuiltinCircuitComponents.BITWISE_SHIFT_ANALOG.getIcon(),
+            new CircuitExperiment(buildShifterTests(false, true), BuiltinCircuitComponents.BITWISE_SHIFT_ANALOG));
+
+    public static final CircuitExperiment BITWISE_ROTATE_ANALOG = register("bitwise_rotate_analog", BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG.getIcon(),
+            new CircuitExperiment(buildShifterTests(true, true), BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG));
+
     public static final CircuitExperiment MUX_2 = register("mux_2", BuiltinCircuitComponents.MUX_2.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(inputs -> {
         int d0 = inputs.get(0), d1 = inputs.get(1), a = inputs.get(2);
         return new ConstantCombinationalTestCase(
@@ -361,6 +534,126 @@ public class BuiltinExperiments {
                         "D0", new PinValue(d0), "D1", new PinValue(d1), "D2", new PinValue(d2), "D3", new PinValue(d3)),
                 Map.of("Y", new PinValue(data)));
     }).toList(), BuiltinCircuitComponents.MUX_ANALOG_4_8));
+
+    // ================= 译码器 =================
+    private static final byte[] BUS8_ZERO = {0, 0, 0, 0, 0, 0, 0, 0};
+
+    /** 译码器输出总线：8 个 4 位通道中第 index 通道为 15，其余为 0。 */
+    private static byte[] decoderBus(int index) {
+        byte[] lanes = new byte[8];
+        lanes[index] = 15;
+        return lanes;
+    }
+
+    public static final CircuitExperiment DECODER_2_4 = register("decoder_2_4", BuiltinCircuitComponents.DECODER_2_4.getIcon(), new CircuitExperiment(
+            IntStream.range(0, 4).mapToObj(x -> (TestCase) new ConstantCombinationalTestCase(
+                    Map.of("A0", new PinValue(x & 1), "A1", new PinValue((x >> 1) & 1)),
+                    Map.of("Y", new PinValue(decoderBus(x)))))
+            .toList(), BuiltinCircuitComponents.DECODER_2_4));
+
+    public static final CircuitExperiment DECODER_3_8 = register("decoder_3_8", BuiltinCircuitComponents.DECODER_3_8.getIcon(), new CircuitExperiment(
+            IntStream.range(0, 8).mapToObj(x -> (TestCase) new ConstantCombinationalTestCase(
+                    Map.of("A0", new PinValue(x & 1), "A1", new PinValue((x >> 1) & 1), "A2", new PinValue((x >> 2) & 1)),
+                    Map.of("Y", new PinValue(decoderBus(x)))))
+            .toList(), BuiltinCircuitComponents.DECODER_3_8));
+
+    public static final CircuitExperiment DECODER_4_16 = register("decoder_4_16", BuiltinCircuitComponents.DECODER_4_16.getIcon(), new CircuitExperiment(
+            IntStream.range(0, 16).mapToObj(x -> (TestCase) new ConstantCombinationalTestCase(
+                    Map.of("A0", new PinValue(x & 1), "A1", new PinValue((x >> 1) & 1),
+                            "A2", new PinValue((x >> 2) & 1), "A3", new PinValue((x >> 3) & 1)),
+                    x < 8
+                            ? Map.of("Y0", new PinValue(decoderBus(x)), "Y1", new PinValue(BUS8_ZERO))
+                            : Map.of("Y0", new PinValue(BUS8_ZERO), "Y1", new PinValue(decoderBus(x - 8)))))
+            .toList(), BuiltinCircuitComponents.DECODER_4_16));
+
+    // ================= 编码器 =================
+    /** 编码器输入总线：低 lineCount 个通道按 value 的对应位取 0/1。 */
+    private static byte[] encoderBus(int value, int lineCount) {
+        byte[] lanes = new byte[8];
+        for (int b = 0; b < lineCount && b < 8; b++) {
+            lanes[b] = (byte) (((value >> b) & 1) != 0 ? 1 : 0);
+        }
+        return lanes;
+    }
+
+    /** 普通编码：所有非 0 输入下标的按位或。 */
+    private static int encodeOr(int value, int lineCount) {
+        int acc = 0;
+        for (int i = 0; i < lineCount; i++) {
+            if (((value >> i) & 1) != 0) acc |= i;
+        }
+        return acc;
+    }
+
+    /** 优先编码：最大非 0 输入下标；全 0 返回 0。 */
+    private static int encodePriority(int value, int lineCount) {
+        for (int i = lineCount - 1; i >= 0; i--) {
+            if (((value >> i) & 1) != 0) return i;
+        }
+        return 0;
+    }
+
+    /** 编码器单个 1 位输出：编码值第 bit 位为 1 则 15，否则 0。 */
+    private static PinValue bitOut(int encoded, int bit) {
+        return new PinValue(((encoded >> bit) & 1) != 0 ? 15 : 0);
+    }
+
+    private static ConstantCombinationalTestCase encoder4Case(int value, boolean priority) {
+        int index = priority ? encodePriority(value, 4) : encodeOr(value, 4);
+        return new ConstantCombinationalTestCase(
+                Map.of("A", new PinValue(encoderBus(value, 4))),
+                Map.of("Y0", bitOut(index, 0), "Y1", bitOut(index, 1)));
+    }
+
+    private static ConstantCombinationalTestCase encoder8Case(int value, boolean priority) {
+        int index = priority ? encodePriority(value, 8) : encodeOr(value, 8);
+        return new ConstantCombinationalTestCase(
+                Map.of("A", new PinValue(encoderBus(value, 8))),
+                Map.of("Y0", bitOut(index, 0), "Y1", bitOut(index, 1), "Y2", bitOut(index, 2)));
+    }
+
+    private static ConstantCombinationalTestCase encoder16Case(int value, boolean priority) {
+        int index = priority ? encodePriority(value, 16) : encodeOr(value, 16);
+        return new ConstantCombinationalTestCase(
+                Map.of("A0", new PinValue(encoderBus(value & 0xFF, 8)),
+                        "A1", new PinValue(encoderBus((value >> 8) & 0xFF, 8))),
+                Map.of("Y0", bitOut(index, 0), "Y1", bitOut(index, 1),
+                        "Y2", bitOut(index, 2), "Y3", bitOut(index, 3)));
+    }
+
+    /** 16 输入编码：单点测试 + 多路组合（覆盖按位或 / 优先两种语义）。 */
+    private static List<TestCase> buildEncoder16Tests(boolean priority) {
+        List<Integer> values = new ArrayList<>();
+        for (int i = 0; i < 16; i++) values.add(1 << i);
+        values.add(0xFFFF);
+        values.add((1 << 5) | (1 << 6));
+        values.add((1 << 0) | (1 << 15));
+        values.add((1 << 3) | (1 << 12));
+        values.add((1 << 7) | (1 << 8));
+        values.add((1 << 0) | (1 << 2) | (1 << 4) | (1 << 6));
+        values.add(0);
+        List<TestCase> tests = new ArrayList<>();
+        for (int v : values) tests.add(encoder16Case(v, priority));
+        return tests;
+    }
+
+    public static final CircuitExperiment ENCODER_4_2 = register("encoder_4_2", BuiltinCircuitComponents.ENCODER_4_2.getIcon(), new CircuitExperiment(
+            IntStream.range(0, 16).mapToObj(v -> (TestCase) encoder4Case(v, false)).toList(), BuiltinCircuitComponents.ENCODER_4_2));
+
+    public static final CircuitExperiment ENCODER_8_3 = register("encoder_8_3", BuiltinCircuitComponents.ENCODER_8_3.getIcon(), new CircuitExperiment(
+            IntStream.range(0, 256).mapToObj(v -> (TestCase) encoder8Case(v, false)).toList(), BuiltinCircuitComponents.ENCODER_8_3));
+
+    public static final CircuitExperiment ENCODER_16_4 = register("encoder_16_4", BuiltinCircuitComponents.ENCODER_16_4.getIcon(), new CircuitExperiment(
+            buildEncoder16Tests(false), BuiltinCircuitComponents.ENCODER_16_4));
+
+    public static final CircuitExperiment PRIORITY_ENCODER_4_2 = register("priority_encoder_4_2", BuiltinCircuitComponents.PRIORITY_ENCODER_4_2.getIcon(), new CircuitExperiment(
+            IntStream.range(0, 16).mapToObj(v -> (TestCase) encoder4Case(v, true)).toList(), BuiltinCircuitComponents.PRIORITY_ENCODER_4_2));
+
+    public static final CircuitExperiment PRIORITY_ENCODER_8_3 = register("priority_encoder_8_3", BuiltinCircuitComponents.PRIORITY_ENCODER_8_3.getIcon(), new CircuitExperiment(
+            IntStream.range(0, 256).mapToObj(v -> (TestCase) encoder8Case(v, true)).toList(), BuiltinCircuitComponents.PRIORITY_ENCODER_8_3));
+
+    public static final CircuitExperiment PRIORITY_ENCODER_16_4 = register("priority_encoder_16_4", BuiltinCircuitComponents.PRIORITY_ENCODER_16_4.getIcon(), new CircuitExperiment(
+            buildEncoder16Tests(true), BuiltinCircuitComponents.PRIORITY_ENCODER_16_4));
 
     public static final CircuitExperiment TRI_STATE_BUFFER_ANALOG_8 = register("tri_state_buffer_analog_8", BuiltinCircuitComponents.TRI_STATE_BUFFER_ANALOG_8.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 2, 3, 4))).stream().<TestCase>map(inputs -> {
         int a = inputs.get(0);

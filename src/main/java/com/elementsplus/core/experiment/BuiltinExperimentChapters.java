@@ -242,6 +242,40 @@ public class BuiltinExperimentChapters {
             ).optional()
     ), Set.of(ADVANCED_GATE)));
 
+    public static final ExperimentChapter ENCODER_DECODER = register(chapter("encoder_decoder", null, ch -> List.of(
+            ch.text(8,
+                    line(0, style(GOLD)).withStyle(DARK_PURPLE),
+                    line(1, style(GOLD), style(GOLD)),
+                    line(3, style(ITALIC, RED)),
+                    line(4, style(BLUE)),
+                    line(5, style(GOLD)),
+                    line(6, style(GOLD)),
+                    line(7, style(GOLD))
+            ),
+            ch.experiments(
+                    BuiltinExperiments.DECODER_2_4,
+                    BuiltinExperiments.DECODER_3_8,
+                    BuiltinExperiments.DECODER_4_16
+            ).optional(BuiltinExperiments.DECODER_4_16),
+            ch.text(6,
+                    line(1, style(ITALIC, RED)),
+                    line(3, style(GOLD)),
+                    line(4, style(GOLD)),
+                    line(5, style(GOLD))
+            ),
+            ch.experiments(
+                    BuiltinExperiments.ENCODER_4_2,
+                    BuiltinExperiments.ENCODER_8_3,
+                    BuiltinExperiments.ENCODER_16_4
+            ).optional(BuiltinExperiments.ENCODER_16_4),
+            ch.text(1, line(0, style(GOLD))),
+            ch.experiments(
+                    BuiltinExperiments.PRIORITY_ENCODER_4_2,
+                    BuiltinExperiments.PRIORITY_ENCODER_8_3,
+                    BuiltinExperiments.PRIORITY_ENCODER_16_4
+            ).optional()
+    ), Set.of(ADVANCED_GATE)));
+
     public static final ExperimentChapter ONE_BIT_ADDER = register(chapter("one_bit_adder", null, ch -> List.of(
             ch.text(4,
                     line(2, style(BLUE)),
@@ -270,6 +304,72 @@ public class BuiltinExperimentChapters {
             ),
             ch.experiments(BuiltinExperiments.ADDER_8)
     ), Set.of(ONE_BIT_ADDER)));
+
+    public static final ExperimentChapter BITWISE_OPERATOR = register(chapter("bitwise_operator", null, ch -> List.of(
+            ch.text(3,
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD))
+            ),
+            ch.experiments(
+                    BuiltinExperiments.BITWISE_AND,
+                    BuiltinExperiments.BITWISE_OR,
+                    BuiltinExperiments.BITWISE_NOT,
+                    BuiltinExperiments.BITWISE_NAND,
+                    BuiltinExperiments.BITWISE_NOR,
+                    BuiltinExperiments.BITWISE_XOR,
+                    BuiltinExperiments.BITWISE_XNOR
+            ),
+            ch.text(2),
+            ch.text(4,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD)),
+                    line(3, style(GOLD))
+            ),
+            ch.experiments(
+                    BuiltinExperiments.OR_GATE_8,
+                    BuiltinExperiments.AND_GATE_8,
+                    BuiltinExperiments.XOR_GATE_8,
+                    BuiltinExperiments.XNOR_GATE_8
+            ).optional()
+    ), Set.of(MULTI_BIT_ADDER)));
+
+    public static final ExperimentChapter MULTI_BIT_SUBTRACT = register(chapter("multi_bit_subtract", null, ch -> List.of(
+            ch.text(3,
+                    line(0, style(ITALIC, RED)),
+                    line(1, style(BLUE)),
+                    line(2, style(ITALIC, RED))
+            ),
+            ch.text(3,
+                    line(0, style(ITALIC, RED)),
+                    line(1, style(BOLD))
+            ),
+            ch.text(6, line(4, style(ITALIC, RED))),
+            ch.text(8,
+                    line(5, style(ITALIC, RED)),
+                    line(7, style(ITALIC, RED))
+            ),
+            ch.text(2, line(0, style(GOLD))),
+            ch.experiments(BuiltinExperiments.NEG),
+            ch.text(1, line(0, style(GOLD)))
+    ), Set.of(BITWISE_OPERATOR)));
+
+    public static final ExperimentChapter BITWISE_SHIFTER = register(chapter("bitwise_shifter", null, ch -> List.of(
+            ch.text(3,
+                    line(0, style(BLUE), style(BLUE)),
+                    line(1, style(GOLD)),
+                    line(2, style(ITALIC, RED), style(ITALIC, RED))
+            ),
+            ch.text(1, line(0, style(GOLD), style(BLUE))),
+            ch.experiments(BuiltinExperiments.BITWISE_SHIFT),
+            ch.text(2,
+                    line(0, style(GOLD), style(ITALIC, RED), style(ITALIC, RED)),
+                    line(1, style(GOLD), style(BLUE))
+            ),
+            ch.experiments(BuiltinExperiments.BITWISE_ROTATE).optional(),
+            ch.text(1, line(0, style(GOLD), style(ITALIC, RED), style(ITALIC, RED), style(ITALIC, RED))),
+            ch.experiments(BuiltinExperiments.BITWISE_SHIFT_ANALOG, BuiltinExperiments.BITWISE_ROTATE_ANALOG).optional()
+    ), Set.of(MULTI_BIT_SUBTRACT)));
 
     public static ExperimentChapter register(ExperimentChapter experimentChapter) {
         BUILTIN_EXPERIMENT_CHAPTERS.add(experimentChapter);

@@ -244,7 +244,7 @@ public class CircuitSimulator {
                 if (hasSideMaterial(wire, m)) {
                     int id = uf.add();
                     elemIndex.put(new WirePoint(wire.x, wire.y, m), id);
-                    indexBw.put(id, wire.bitWidth);
+                    indexBw.put(id, wire.getBitWidth(m));
                 }
             }
         }
@@ -258,7 +258,7 @@ public class CircuitSimulator {
                     int ny = wire.y + d.getStepZ();
                     Wire neighbor = findWire(nx, ny);
                     if (neighbor != null
-                            && neighbor.bitWidth == wire.bitWidth
+                            && neighbor.getBitWidth(m) == wire.getBitWidth(m)
                             && materialAtSide(neighbor, d.getOpposite()) == m) {
                         Integer other = elemIndex.get(new WirePoint(nx, ny, m));
                         if (other != null) uf.union(self, other);
@@ -333,7 +333,7 @@ public class CircuitSimulator {
                         if (wire != null) {
                             WireMaterial m = materialAtSide(wire, pin.facing.getOpposite());
                             if (m != null) {
-                                if (wire.bitWidth == pinWidth) {
+                                if (wire.getBitWidth(m) == pinWidth) {
                                     Integer net = wireNet.get(new WirePoint(pin.ex, pin.ey, m));
                                     for (int b = 0; b < pinWidth; b++) {
                                         if (net != null) {
@@ -349,7 +349,7 @@ public class CircuitSimulator {
                         } else {
                             Component other = compAt(pin.ex, pin.ey);
                             if (other != null) {
-                                PinInfo op = otherPinAt(other, component, PinType.OUTPUT);
+                                PinInfo op = otherPinAt(other, pin, PinType.OUTPUT);
                                 if (op != null) {
                                     OutSlot slot = outputSlot(other.component, op.side, op.offset);
                                     int otherNode = compIndex.get(key(other.x, other.y));
@@ -372,7 +372,7 @@ public class CircuitSimulator {
                         if (wire != null) {
                             WireMaterial m = materialAtSide(wire, pin.facing.getOpposite());
                             if (m != null) {
-                                if (wire.bitWidth == pinWidth) {
+                                if (wire.getBitWidth(m) == pinWidth) {
                                     OutSlot slot = outputSlot(component.component, side, offset);
                                     Integer net = wireNet.get(new WirePoint(pin.ex, pin.ey, m));
                                     if (net != null) {
@@ -388,7 +388,7 @@ public class CircuitSimulator {
                         } else {
                             Component other = compAt(pin.ex, pin.ey);
                             if (other != null) {
-                                PinInfo ip = otherPinAt(other, component, PinType.INPUT);
+                                PinInfo ip = otherPinAt(other, pin, PinType.INPUT);
                                 if (ip != null) {
                                     int otherWidth = other.component.getPinBitWidth(ip.side, ip.offset);
                                     if (otherWidth != pinWidth) {
@@ -447,13 +447,16 @@ public class CircuitSimulator {
     }
 
     /**
-     * other 组件上、朝向 me 组件所在区域（旋转后包围盒）的某类型引脚。
+     * other 组件上、与 me 的引脚 {@code pin} 正对相邻的某类型引脚。
+     * <p>
+     * 判定标准：other 该引脚的外侧格恰好等于 {@code pin} 所在格
+     * （即 {@code pin} 的外侧格沿其朝向回退一格，落在 me 自身占据的格子上）。
+     * 这样即使多个同面引脚直接相邻且彼此错位，也能一一对应，
+     * 而不会像仅用包围盒判定那样让所有同面引脚都顶替成第一个引脚。
      */
-    private static PinInfo otherPinAt(Component other, Component me, PinType type) {
-        Direction rot = me.direction;
-        boolean ns = rot == Direction.NORTH || rot == Direction.SOUTH;
-        int wRot = ns ? me.component.getWidth() : me.component.getHeight();
-        int hRot = ns ? me.component.getHeight() : me.component.getWidth();
+    private static PinInfo otherPinAt(Component other, PinInfo pin, PinType type) {
+        int ownX = pin.ex - pin.facing.getStepX();
+        int ownY = pin.ey - pin.facing.getStepZ();
         for (Direction side : new Direction[]{Direction.WEST, Direction.SOUTH, Direction.EAST, Direction.NORTH}) {
             int count = (side == Direction.NORTH || side == Direction.SOUTH)
                     ? other.component.getWidth()
@@ -461,7 +464,7 @@ public class CircuitSimulator {
             for (int offset = 0; offset < count; offset++) {
                 if (other.component.getPin(side, offset) != type) continue;
                 PinInfo p = pinExternal(other.component, other.direction, other.x, other.y, side, offset);
-                if (p.ex >= me.x && p.ex < me.x + wRot && p.ey >= me.y && p.ey < me.y + hRot) {
+                if (p.ex == ownX && p.ey == ownY) {
                     return p;
                 }
             }
@@ -639,6 +642,30 @@ public class CircuitSimulator {
     }
 
     /**
+     * 译码器输出：8 元组中第 index 通道为 15，其余为 0。
+     */
+    private static long decodeTuple(int index) {
+        return 15L << (4 * index);
+    }
+
+    /**
+     * 编码器输入综合：low/high 两个 8 元组共 lineCount 条输入线（下标 0~lineCount-1）。
+     * 普通编码器返回所有非 0 输入下标的按位或；优先编码器返回最大非 0 下标（全 0 返回 0）。
+     */
+    private static int encodeIndex(long low, long high, int lineCount, boolean priority) {
+        int acc = 0;
+        int best = 0;
+        for (int i = 0; i < lineCount; i++) {
+            long tuple = i < 8 ? low : high;
+            int lane = i < 8 ? i : i - 8;
+            if (((tuple >> (4 * lane)) & 0xF) == 0) continue;
+            acc |= i;
+            best = i;
+        }
+        return priority ? best : acc;
+    }
+
+    /**
      * 4 选 1（数字/模拟，1 位/8 位同布局）被选中数据通道的值：
      * 输入 A1、A0 选择 D0~D3，即 index = A1*2 + A0 对应 D0..D3。
      */
@@ -661,6 +688,53 @@ public class CircuitSimulator {
         long t = 0L;
         for (int b = 0; b < 8; b++) {
             if (((bits >> b) & 1) != 0) t |= 15L << (4 * b);
+        }
+        return t;
+    }
+
+    /**
+     * 8 元组逐通道取反：通道非 0 变 0，通道为 0 变 15。按位非的输出语义。
+     */
+    private static long notTuple(long tuple) {
+        long t = 0L;
+        for (int b = 0; b < 8; b++) {
+            if (((tuple >> (4 * b)) & 0xF) == 0) t |= 15L << (4 * b);
+        }
+        return t;
+    }
+
+    /**
+     * 从 8 元组读取一个有符号 8 位整数（补码）：最高通道为符号位。
+     */
+    private static int signedFromTuple(long tuple) {
+        int v = tupleToInt(tuple);
+        return (v & 0x80) != 0 ? v - 0x100 : v;
+    }
+
+    /**
+     * 8 元组按通道移动（保留通道信号强度）：shift>0 左移，shift<0 右移，空位补 0。
+     * 目标通道 i 取源通道 i-shift，越界则填 0。
+     */
+    private static long analogShift(long tuple, int shift) {
+        long t = 0L;
+        for (int i = 0; i < 8; i++) {
+            int src = i - shift;
+            if (src >= 0 && src < 8) {
+                t |= ((tuple >> (4 * src)) & 0xF) << (4 * i);
+            }
+        }
+        return t;
+    }
+
+    /**
+     * 8 元组按通道循环移动（保留通道信号强度）：shift>0 循环左移，shift<0 循环右移。
+     * 目标通道 i 取源通道 (i-shift) mod 8。
+     */
+    private static long analogRotate(long tuple, int shift) {
+        long t = 0L;
+        for (int i = 0; i < 8; i++) {
+            int src = ((i - shift) % 8 + 8) % 8;
+            t |= ((tuple >> (4 * src)) & 0xF) << (4 * i);
         }
         return t;
     }
@@ -797,6 +871,47 @@ public class CircuitSimulator {
             long d = inPort(node, 0);
             int a = (int) inPort(node, 1);
             return a != 0 ? d : 0L;
+        } else if (cc == BuiltinCircuitComponents.DECODER_2_4) {
+            int index = ((inPort(node, 0) != 0 ? 1 : 0) << 1) | (inPort(node, 1) != 0 ? 1 : 0);
+            return decodeTuple(index) << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.DECODER_3_8) {
+            int index = ((inPort(node, 1) != 0 ? 1 : 0) << 2)
+                    | ((inPort(node, 0) != 0 ? 1 : 0) << 1)
+                    | (inPort(node, 2) != 0 ? 1 : 0);
+            return decodeTuple(index) << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.DECODER_4_16) {
+            int index = ((inPort(node, 2) != 0 ? 1 : 0) << 3)
+                    | ((inPort(node, 0) != 0 ? 1 : 0) << 2)
+                    | ((inPort(node, 1) != 0 ? 1 : 0) << 1)
+                    | (inPort(node, 3) != 0 ? 1 : 0);
+            if (index < 8) {
+                return decodeTuple(index) << outputSlot(cc, Direction.EAST, 0).bitStart();
+            }
+            return decodeTuple(index - 8) << outputSlot(cc, Direction.EAST, 1).bitStart();
+        } else if (cc == BuiltinCircuitComponents.ENCODER_4_2 || cc == BuiltinCircuitComponents.PRIORITY_ENCODER_4_2) {
+            boolean priority = cc == BuiltinCircuitComponents.PRIORITY_ENCODER_4_2;
+            int index = encodeIndex(inPort(node, 0), 0L, 4, priority);
+            long v = 0L;
+            if ((index & 1) != 0) v |= 15L << outputSlot(cc, Direction.NORTH, 0).bitStart();  // Y0
+            if ((index & 2) != 0) v |= 15L << outputSlot(cc, Direction.SOUTH, 0).bitStart();  // Y1
+            return v;
+        } else if (cc == BuiltinCircuitComponents.ENCODER_8_3 || cc == BuiltinCircuitComponents.PRIORITY_ENCODER_8_3) {
+            boolean priority = cc == BuiltinCircuitComponents.PRIORITY_ENCODER_8_3;
+            int index = encodeIndex(inPort(node, 0), 0L, 8, priority);
+            long v = 0L;
+            if ((index & 1) != 0) v |= 15L << outputSlot(cc, Direction.NORTH, 0).bitStart();  // Y0
+            if ((index & 2) != 0) v |= 15L << outputSlot(cc, Direction.EAST, 0).bitStart();   // Y1
+            if ((index & 4) != 0) v |= 15L << outputSlot(cc, Direction.SOUTH, 0).bitStart();  // Y2
+            return v;
+        } else if (cc == BuiltinCircuitComponents.ENCODER_16_4 || cc == BuiltinCircuitComponents.PRIORITY_ENCODER_16_4) {
+            boolean priority = cc == BuiltinCircuitComponents.PRIORITY_ENCODER_16_4;
+            int index = encodeIndex(inPort(node, 1), inPort(node, 0), 16, priority);
+            long v = 0L;
+            if ((index & 1) != 0) v |= 15L << outputSlot(cc, Direction.NORTH, 0).bitStart();  // Y0
+            if ((index & 2) != 0) v |= 15L << outputSlot(cc, Direction.EAST, 0).bitStart();   // Y1
+            if ((index & 4) != 0) v |= 15L << outputSlot(cc, Direction.EAST, 1).bitStart();   // Y2
+            if ((index & 8) != 0) v |= 15L << outputSlot(cc, Direction.SOUTH, 0).bitStart();  // Y3
+            return v;
         } else if (cc == BuiltinCircuitComponents.HALF_ADDER) {
             int a = (int) inPort(node, 0);
             int b = (int) inPort(node, 1);
@@ -834,6 +949,67 @@ public class CircuitSimulator {
             v |= intToTuple(sum & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
             v |= ((long) ((((sum >> 8) & 1) * 15) & 0xF)) << outputSlot(cc, Direction.SOUTH, 0).bitStart();
             return v;
+        } else if (cc == BuiltinCircuitComponents.BITWISE_AND
+                || cc == BuiltinCircuitComponents.BITWISE_OR
+                || cc == BuiltinCircuitComponents.BITWISE_XOR
+                || cc == BuiltinCircuitComponents.BITWISE_NAND
+                || cc == BuiltinCircuitComponents.BITWISE_NOR
+                || cc == BuiltinCircuitComponents.BITWISE_XNOR) {
+            // 8 位按位逻辑运算：逐通道对 A、B 进行对应逻辑运算，输出非 0 即 15。
+            long a = inPort(node, 0);
+            long b = inPort(node, 1);
+            long t = 0L;
+            for (int lane = 0; lane < 8; lane++) {
+                boolean av = ((a >> (4 * lane)) & 0xF) != 0;
+                boolean bv = ((b >> (4 * lane)) & 0xF) != 0;
+                boolean r;
+                if (cc == BuiltinCircuitComponents.BITWISE_AND) r = av && bv;
+                else if (cc == BuiltinCircuitComponents.BITWISE_OR) r = av || bv;
+                else if (cc == BuiltinCircuitComponents.BITWISE_XOR) r = av ^ bv;
+                else if (cc == BuiltinCircuitComponents.BITWISE_NAND) r = !(av && bv);
+                else if (cc == BuiltinCircuitComponents.BITWISE_NOR) r = !(av || bv);
+                else r = !(av ^ bv);
+                if (r) t |= 15L << (4 * lane);
+            }
+            return t << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.BITWISE_NOT) {
+            // 8 位按位非：逐通道取反，输出非 0 即 15。
+            long t = notTuple(inPort(node, 0));
+            return t << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.NEG) {
+            // 8 位取反器：输出 A 的相反数的补码表示。
+            int a = tupleToInt(inPort(node, 0));
+            return intToTuple((~a + 1) & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.OR_GATE_8
+                || cc == BuiltinCircuitComponents.AND_GATE_8
+                || cc == BuiltinCircuitComponents.XOR_GATE_8
+                || cc == BuiltinCircuitComponents.XNOR_GATE_8) {
+            // 8 路逻辑门：对 8 位输入 A 的 8 个通道进行逻辑运算，输出 1 位 Y。
+            long a = inPort(node, 0);
+            int count = 0;
+            for (int lane = 0; lane < 8; lane++) {
+                if (((a >> (4 * lane)) & 0xF) != 0) count++;
+            }
+            boolean r;
+            if (cc == BuiltinCircuitComponents.OR_GATE_8) r = count > 0;
+            else if (cc == BuiltinCircuitComponents.AND_GATE_8) r = count == 8;
+            else if (cc == BuiltinCircuitComponents.XOR_GATE_8) r = (count & 1) == 1;
+            else r = (count & 1) == 0;
+            return (r ? 15L : 0L) << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.BITWISE_SHIFT
+                || cc == BuiltinCircuitComponents.BITWISE_ROTATE
+                || cc == BuiltinCircuitComponents.BITWISE_SHIFT_ANALOG
+                || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG) {
+            // 8 位位移器 / 循环位移器：A 左移 B 位，B 视作有符号数（补码），为负则右移。
+            long a = inPort(node, 0);
+            int shift = signedFromTuple(inPort(node, 1));
+            boolean rotate = cc == BuiltinCircuitComponents.BITWISE_ROTATE
+                    || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG;
+            boolean analog = cc == BuiltinCircuitComponents.BITWISE_SHIFT_ANALOG
+                    || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG;
+            long shifted = rotate ? analogRotate(a, shift) : analogShift(a, shift);
+            long t = analog ? shifted : amplifyTuple(shifted);
+            return t << outputSlot(cc, Direction.EAST, 0).bitStart();
         }
         return 0;
     }

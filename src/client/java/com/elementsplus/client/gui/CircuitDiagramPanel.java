@@ -887,7 +887,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (block instanceof CircuitDiagram.Wire existing) {
             wire = existing;
         } else if (block == null) {
-            wire = new CircuitDiagram.Wire(null, null, null, null, wirePlaceBitWidth);
+            wire = new CircuitDiagram.Wire(null, null, null, null);
             wire.x = x;
             wire.y = y;
             diagram.setBlock(x, y, wire);
@@ -895,11 +895,17 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return;
         }
         playSound(WIRE_PLACE_SOUND);
+        // 位宽按材质分别记录：仅在该材质首次接入本格时写入当前放置位宽，
+        // 这样 8 位铜线与 1 位金线可以在同一格内共存。
+        boolean newMaterial = material != null && !wire.hasMaterial(material);
         switch (side) {
             case NORTH -> wire.north = material;
             case EAST -> wire.east = material;
             case SOUTH -> wire.south = material;
             case WEST -> wire.west = material;
+        }
+        if (newMaterial) {
+            wire.setBitWidth(material, wirePlaceBitWidth);
         }
     }
 
@@ -1306,7 +1312,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 int innerColor;
                 if (bad) {
                     innerColor = 0xFF000000;
-                } else if (wire.bitWidth == 8) {
+                } else if (wire.getBitWidth(target) == 8) {
                     innerColor = COLOR_BUS_8;
                 } else {
                     int value = dx == 0 && dy == 0 && simulator != null ? simulator.getWireValue(wire.x, wire.y, target) : 0;
@@ -1788,7 +1794,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             editor.setBlock(cellXOf(key), cellYOf(key), null);
         }
         for (CircuitDiagram.Wire w : dragWires) {
-            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west, w.bitWidth);
+            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west, w.copperBitWidth, w.goldBitWidth);
             nw.x = w.x + dx;
             nw.y = w.y + dy;
             editor.setBlock(nw.x, nw.y, nw, force);
@@ -1822,7 +1828,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         boolean force = Screen.hasShiftDown();
         List<CircuitDiagram.Component> copies = new ArrayList<>();
         for (CircuitDiagram.Wire w : dragWires) {
-            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west, w.bitWidth);
+            CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west, w.copperBitWidth, w.goldBitWidth);
             nw.x = w.x + dx;
             nw.y = w.y + dy;
             editor.setBlock(nw.x, nw.y, nw, force);

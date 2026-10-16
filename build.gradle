@@ -19,6 +19,14 @@ repositories {
     }
 }
 
+// 开发者本地配置（local.properties，已随 .gitignore 忽略，不会提交）。
+// 仅当文件中存在 dev.username / dev.uuid 时才作为运行参数注入，缺失则不附加任何参数。
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+
 loom {
     splitEnvironmentSourceSets()
 
@@ -31,8 +39,19 @@ loom {
 
     runs {
         client {
-            // 固定玩家名
-            programArguments = ["--username", "myworldzycpc", "--uuid", "6c9d1d18-f50b-4a00-9a7a-260787bf7aaf"]
+            // 从 local.properties 读取开发者玩家名/UUID，缺失则不加参数。
+            def devArgs = []
+            def devUsername = localProperties.getProperty('dev.username')
+            def devUuid = localProperties.getProperty('dev.uuid')
+            if (devUsername) {
+                devArgs.addAll(['--username', devUsername])
+            }
+            if (devUuid) {
+                devArgs.addAll(['--uuid', devUuid])
+            }
+            if (!devArgs.isEmpty()) {
+                programArguments = devArgs
+            }
         }
     }
 }

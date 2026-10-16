@@ -73,7 +73,7 @@ public final class ChipManufacture {
     /**
      * 统计电路图的原料需求：
      * 元件读取 ingredientSupplier（ItemIngredientSupplier→物品、ComponentIngredientSupplier→元件、null→无），
-     * 导线按有无对应侧向材料计 1 份，位宽为倍率。
+     * 导线按有无对应侧向材料计 1 份，各材质位宽为对应倍率。
      */
     public static List<MaterialRequirement> computeRequirements(CircuitDiagram diagram) {
         Map<Item, Integer> itemCounts = new LinkedHashMap<>();
@@ -84,12 +84,11 @@ public final class ChipManufacture {
                 for (int y = 0; y < 16; y++) {
                     CircuitDiagram.Wire wire = chunk.wires[x][y];
                     if (wire == null) continue;
-                    int multiplier = Math.max(1, wire.bitWidth);
                     if (hasSide(wire, CircuitDiagram.Wire.WireMaterial.COPPER)) {
-                        itemCounts.merge(ModItems.COPPER_WIRE, multiplier, Integer::sum);
+                        itemCounts.merge(ModItems.COPPER_WIRE, Math.max(1, wire.copperBitWidth), Integer::sum);
                     }
                     if (hasSide(wire, CircuitDiagram.Wire.WireMaterial.GOLD)) {
-                        itemCounts.merge(ModItems.GOLD_WIRE, multiplier, Integer::sum);
+                        itemCounts.merge(ModItems.GOLD_WIRE, Math.max(1, wire.goldBitWidth), Integer::sum);
                     }
                 }
             }

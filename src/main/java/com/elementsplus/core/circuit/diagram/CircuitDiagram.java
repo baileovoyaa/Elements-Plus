@@ -97,18 +97,49 @@ public class CircuitDiagram {
         }
 
         public WireMaterial north, east, south, west;
-        public int bitWidth = 1;
+
+        /**
+         * 位宽按材质分别记录：同一格内铜线与金线可以拥有不同的位宽
+         * （例如 8 位铜线可与 1 位金线交叉共存）。
+         */
+        public int copperBitWidth = 1;
+        public int goldBitWidth = 1;
 
         public Wire(WireMaterial north, WireMaterial east, WireMaterial south, WireMaterial west) {
             this(north, east, south, west, 1);
         }
 
+        /** 整格统一位宽（铜与金相同）。 */
         public Wire(WireMaterial north, WireMaterial east, WireMaterial south, WireMaterial west, int bitWidth) {
+            this(north, east, south, west, bitWidth, bitWidth);
+        }
+
+        public Wire(WireMaterial north, WireMaterial east, WireMaterial south, WireMaterial west,
+                    int copperBitWidth, int goldBitWidth) {
             this.north = north;
             this.east = east;
             this.south = south;
             this.west = west;
-            this.bitWidth = bitWidth;
+            this.copperBitWidth = copperBitWidth;
+            this.goldBitWidth = goldBitWidth;
+        }
+
+        /** 该材质在本格的导线位宽（1 或 8）。 */
+        public int getBitWidth(WireMaterial material) {
+            return material == WireMaterial.GOLD ? goldBitWidth : copperBitWidth;
+        }
+
+        public void setBitWidth(WireMaterial material, int bitWidth) {
+            if (material == WireMaterial.GOLD) {
+                goldBitWidth = bitWidth;
+            } else {
+                copperBitWidth = bitWidth;
+            }
+        }
+
+        /** 本格是否含有该材质的任意一侧。 */
+        public boolean hasMaterial(WireMaterial material) {
+            return north == material || east == material || south == material || west == material;
         }
     }
 
@@ -276,7 +307,7 @@ public class CircuitDiagram {
                 for (int y = 0; y < 16; y++) {
                     Wire wire = source.wires[x][y];
                     if (wire != null) {
-                        Wire newWire = new Wire(wire.north, wire.east, wire.south, wire.west, wire.bitWidth);
+                        Wire newWire = new Wire(wire.north, wire.east, wire.south, wire.west, wire.copperBitWidth, wire.goldBitWidth);
                         newWire.x = wire.x;
                         newWire.y = wire.y;
                         target.wires[x][y] = newWire;
@@ -306,8 +337,18 @@ public class CircuitDiagram {
             addMaterial(builder, ops, "east", input.east);
             addMaterial(builder, ops, "south", input.south);
             addMaterial(builder, ops, "west", input.west);
-            if (input.bitWidth > 1) {
-                builder.add("bitWidth", ops.createInt(input.bitWidth));
+            // 铜/金位宽相同时沿用旧的单一 "bitWidth" 字段以保持紧凑与向后兼容。
+            if (input.copperBitWidth == input.goldBitWidth) {
+                if (input.copperBitWidth > 1) {
+                    builder.add("bitWidth", ops.createInt(input.copperBitWidth));
+                }
+            } else {
+                if (input.copperBitWidth > 1) {
+                    builder.add("copperBitWidth", ops.createInt(input.copperBitWidth));
+                }
+                if (input.goldBitWidth > 1) {
+                    builder.add("goldBitWidth", ops.createInt(input.goldBitWidth));
+                }
             }
             return builder.build(prefix);
         }
@@ -317,13 +358,17 @@ public class CircuitDiagram {
             return ops.getMap(input).flatMap(map -> {
                 Optional<Integer> x = getField(Codec.INT, ops, map, "x");
                 Optional<Integer> y = getField(Codec.INT, ops, map, "y");
-                Optional<Integer> bitWidth = getField(Codec.INT, ops, map, "bitWidth");
+                // 旧格式只有单一 "bitWidth"，读写时同时作为铜/金的回退值。
+                Optional<Integer> legacyBitWidth = getField(Codec.INT, ops, map, "bitWidth");
+                int copperBitWidth = getField(Codec.INT, ops, map, "copperBitWidth").orElse(legacyBitWidth.orElse(1));
+                int goldBitWidth = getField(Codec.INT, ops, map, "goldBitWidth").orElse(legacyBitWidth.orElse(1));
                 Wire wire = new Wire(
                         getMaterial(ops, map, "north"),
                         getMaterial(ops, map, "east"),
                         getMaterial(ops, map, "south"),
                         getMaterial(ops, map, "west"),
-                        bitWidth.orElse(1));
+                        copperBitWidth,
+                        goldBitWidth);
                 wire.x = x.orElse(0);
                 wire.y = y.orElse(0);
                 return DataResult.success(new Pair<>(wire, input));
@@ -493,7 +538,8 @@ public class CircuitDiagram {
                 writeMaterial(buf, wire.east);
                 writeMaterial(buf, wire.south);
                 writeMaterial(buf, wire.west);
-                buf.writeVarInt(wire.bitWidth);
+                buf.writeVarInt(wire.copperBitWidth);
+                buf.writeVarInt(wire.goldBitWidth);
             }
             buf.writeVarInt(chunk.components.size());
             for (Component component : chunk.components) {
@@ -534,7 +580,8 @@ public class CircuitDiagram {
                 int y = buf.readVarInt();
                 Wire wire = new Wire(
                         readMaterial(buf), readMaterial(buf), readMaterial(buf), readMaterial(buf));
-                wire.bitWidth = buf.readVarInt();
+                wire.copperBitWidth = buf.readVarInt();
+                wire.goldBitWidth = buf.readVarInt();
                 wire.x = x;
                 wire.y = y;
                 chunk.wires[Math.floorMod(wire.x, 16)][Math.floorMod(wire.y, 16)] = wire;
