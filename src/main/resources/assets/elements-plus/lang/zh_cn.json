@@ -39,6 +39,10 @@
   "gui.elements-plus.lithography_machine.manufacture": "制造",
   "gui.elements-plus.lithography_machine.copy_compiled": "复制编译状态",
 
+  "key.categories.elements-plus": "元素++",
+  "key.elements-plus.mirror_horizontal": "水平镜像元件",
+  "key.elements-plus.mirror_vertical": "垂直镜像元件",
+
   "block.elements-plus.advanced_crafting_table": "高级工作台",
   "block.elements-plus.lithography_machine": "光刻机",
   "block.elements-plus.charged_lightning_rod": "充能避雷针",

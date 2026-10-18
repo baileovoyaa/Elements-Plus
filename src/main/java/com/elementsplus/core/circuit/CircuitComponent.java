@@ -115,6 +115,75 @@ public class CircuitComponent {
     }
 
     /**
+     * 计算引脚相对元件（旋转后）左上角的位置，单位：格。
+     * <p>
+     * 引脚先在元件本地坐标系中按 {@code rot} 顺时针旋转（{@code rot == NORTH} 表示原始方向），
+     * 若 {@code mirrored} 为 {@code true} 再在屏幕上做水平镜像（左右翻转，绕竖直轴）。
+     * <p>
+     * 只需要一个镜像布尔量：垂直镜像（上下翻转）恒等于“水平镜像 + 旋转 180 度”，
+     * 因此 {@code (rot, mirrored)} 的 8 种组合恰好对应该元件的 8 种朝向（二面体群 D4）。
+     * 调用方通过 {@link #verticalMirrorDirection} 与翻转 {@code mirrored} 来实现垂直镜像。
+     * <p>
+     * 返回值为 {@code {x, y}}，取值范围为 {@code x∈[0,wRot], y∈[0,hRot]}
+     * （wRot/hRot 为旋转后的宽高）。镜像只影响引脚位置，不影响元件图标，
+     * 也不改变元件占用的格子尺寸。
+     */
+    public static double[] rotatedPinOffset(int w0, int h0, Direction rot, boolean mirrored,
+                                            Direction side, int offset) {
+        double nx, ny;
+        switch (side) {
+            case NORTH -> {
+                nx = offset + 0.5;
+                ny = 0;
+            }
+            case EAST -> {
+                nx = w0;
+                ny = offset + 0.5;
+            }
+            case SOUTH -> {
+                nx = w0 - 0.5 - offset;
+                ny = h0;
+            }
+            default -> { // WEST
+                nx = 0;
+                ny = h0 - 0.5 - offset;
+            }
+        }
+        double rx, ry;
+        switch (rot) {
+            case EAST -> {
+                rx = h0 - ny;
+                ry = nx;
+            }
+            case SOUTH -> {
+                rx = w0 - nx;
+                ry = h0 - ny;
+            }
+            case WEST -> {
+                rx = ny;
+                ry = w0 - nx;
+            }
+            default -> { // NORTH
+                rx = nx;
+                ry = ny;
+            }
+        }
+        if (mirrored) {
+            rx = ((rot == Direction.EAST || rot == Direction.WEST) ? h0 : w0) - rx;
+        }
+        return new double[]{rx, ry};
+    }
+
+    /**
+     * 垂直镜像（上下翻转）对应的旋转方向：在原有 {@code rot} 基础上再转 180 度。
+     * 垂直镜像效果等价于“水平镜像 + 旋转 180 度”，故实现垂直镜像时
+     * 应把方向换成该值，并同时翻转镜像布尔量。
+     */
+    public static Direction verticalMirrorDirection(Direction rot) {
+        return rot.getOpposite();
+    }
+
+    /**
      * 引脚位宽。未显式设置的引脚默认 1 位。
      */
     public int getPinBitWidth(Direction side, int offset) {

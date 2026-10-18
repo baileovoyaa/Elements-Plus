@@ -536,6 +536,20 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             circuitPanel.deleteSelection();
             return true;
         }
+        if (buttonGroup.getSelected() == tabButtonDesign
+                && (speedEditBox == null || !speedEditBox.isFocused())
+                && (attributeEditBox == null || !attributeEditBox.isFocused())) {
+            if (ElementsPlusClient.keyMirrorHorizontal != null
+                    && ElementsPlusClient.keyMirrorHorizontal.matches(keyCode, scanCode)) {
+                circuitPanel.applyMirror(true);
+                return true;
+            }
+            if (ElementsPlusClient.keyMirrorVertical != null
+                    && ElementsPlusClient.keyMirrorVertical.matches(keyCode, scanCode)) {
+                circuitPanel.applyMirror(false);
+                return true;
+            }
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 

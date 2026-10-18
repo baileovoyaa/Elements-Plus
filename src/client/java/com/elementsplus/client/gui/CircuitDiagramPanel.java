@@ -94,6 +94,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private boolean erasing;
 
     private Direction rotation = Direction.NORTH;
+    private boolean placeMirrored = false;
     private ItemStack previewStack = ItemStack.EMPTY;
     private CircuitComponent virtualComponent;
     private CircuitDiagram.Wire.WireMaterial virtualWire;
@@ -169,6 +170,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     public final SoundInstance INVALID_SOUND = SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_HARP.value(), 0.5f, 1);
     public final SoundInstance ROTATE_CLOCKWISE_SOUND = SimpleSoundInstance.forUI(SoundEvents.COMPARATOR_CLICK, 0.55f, 1);
     public final SoundInstance ROTATE_ANTICLOCKWISE_SOUND = SimpleSoundInstance.forUI(SoundEvents.COMPARATOR_CLICK, 0.5f, 1);
+    public final SoundInstance MIRROR_SOUND = SimpleSoundInstance.forUI(SoundEvents.COMPARATOR_CLICK, 0.6f, 1);
 
     public CircuitDiagramPanel(LithographyMachineMenu menu, BooleanSupplier activeSupplier, int x, int y, int width, int height) {
         super(x, y, width, height, net.minecraft.network.chat.Component.empty());
@@ -680,7 +682,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         int ghostColor = conflict ? COLOR_GHOST_INVALID : COLOR_GHOST_VALID;
         float ghostAlpha = ((ghostColor >> 24) & 0xFF) / 255.0F;
-        drawPins(guiGraphics, component, rotation, left, top, ghostAlpha);
+        drawPins(guiGraphics, component, rotation, placeMirrored, left, top, ghostAlpha);
         drawIcon(guiGraphics, component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, ghostAlpha);
     }
 
@@ -729,7 +731,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
             }
         }
         CircuitDiagram editor = diagram.copy();
-        if (editor.setBlock(gx, gy, new CircuitDiagram.Component(component, rotation), force)) {
+        CircuitDiagram.Component placed = new CircuitDiagram.Component(component, rotation);
+        placed.mirrored = placeMirrored;
+        if (editor.setBlock(gx, gy, placed, force)) {
             playSound(COMPONENT_PLACE_SOUND);
             setSelectionSingle(gx, gy);
         }
@@ -996,7 +1000,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             guiGraphics.fill(lx, ty, lx + 1, by, COLOR_COMPONENT_BORDER);
             guiGraphics.fill(rx - 1, ty, rx, by, COLOR_COMPONENT_BORDER);
         }
-        drawPins(guiGraphics, component.component, component.direction, left, top, 1.0F);
+        drawPins(guiGraphics, component.component, component.direction, component.mirrored, left, top, 1.0F);
         drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, 1.0F);
         var font = Minecraft.getInstance().font;
         if (dx == 0 && dy == 0) {
@@ -1072,7 +1076,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             guiGraphics.fill(lx, ty, lx + 1, by, COLOR_GHOST_BORDER);
             guiGraphics.fill(rx - 1, ty, rx, by, COLOR_GHOST_BORDER);
         }
-        drawPins(guiGraphics, component.component, component.direction, left, top, alpha);
+        drawPins(guiGraphics, component.component, component.direction, component.mirrored, left, top, alpha);
         drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, alpha);
     }
 
@@ -1117,9 +1121,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
     /**
      * 渲染元件引脚：输入引脚为蓝色小方块，输出引脚为绿色小方块。
      * 引脚位置按元件的原始尺寸（component.getWidth()/getHeight()）定义在四条边上，
-     * direction 指定旋转（NORTH=原始方向，EAST/SOUTH/WEST=顺时针 90/180/270 度）。
+     * 先按 direction 旋转（NORTH=原始方向，EAST/SOUTH/WEST=顺时针 90/180/270 度），
+     * 再按 mirrored 在屏幕上做水平（左右）镜像（只影响引脚，不影响图标）。
      */
-    private void drawPins(GuiGraphics g, CircuitComponent component, Direction direction, double left, double top, float alpha) {
+    private void drawPins(GuiGraphics g, CircuitComponent component, Direction direction,
+                          boolean mirrored, double left, double top, float alpha) {
         int w0 = component.getWidth();
         int h0 = component.getHeight();
         if (w0 <= 0 || h0 <= 0) {
@@ -1132,44 +1138,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 if (type == null || type == PinType.NONE) {
                     continue;
                 }
-                double nx, ny;
-                switch (side) {
-                    case NORTH -> {
-                        nx = k + 0.5;
-                        ny = 0;
-                    }
-                    case EAST -> {
-                        nx = w0;
-                        ny = k + 0.5;
-                    }
-                    case SOUTH -> {
-                        nx = w0 - 0.5 - k;
-                        ny = h0;
-                    }
-                    default -> { // WEST
-                        nx = 0;
-                        ny = h0 - 0.5 - k;
-                    }
-                }
-                double rx, ry;
-                switch (direction) {
-                    case EAST -> {
-                        rx = h0 - ny;
-                        ry = nx;
-                    }
-                    case SOUTH -> {
-                        rx = w0 - nx;
-                        ry = h0 - ny;
-                    }
-                    case WEST -> {
-                        rx = ny;
-                        ry = w0 - nx;
-                    }
-                    default -> { // NORTH
-                        rx = nx;
-                        ry = ny;
-                    }
-                }
+                double[] local = CircuitComponent.rotatedPinOffset(w0, h0, direction, mirrored, side, k);
+                double rx = local[0];
+                double ry = local[1];
                 double sx = left + rx * zoom;
                 double sy = top + ry * zoom;
                 int size = Mth.clamp((int) Math.round(zoom * 0.35), 2, 8);
@@ -2051,6 +2022,77 @@ public class CircuitDiagramPanel extends AbstractWidget {
             c.direction = opposite ? c.direction.getOpposite() : (clockwise ? c.direction.getClockWise() : c.direction.getCounterClockWise());
             editor.setBlock(c.x, c.y, c, true);
         }
+        return true;
+    }
+
+    /**
+     * 镜像入口（由宿主 Screen 的按键绑定调用）：
+     * 鼠标拿起元件时翻转放置预览（虚影）的镜像状态；未拿起元件时，对鼠标悬停的元件原地镜像
+     * （整体逻辑与旋转一致，只是镜像不改变元件占用的尺寸，因此不会产生冲突）。
+     * <p>
+     * 垂直镜像等价于“水平镜像 + 旋转 180 度”，因此这里同时翻转镜像布尔量与旋转方向；
+     * 二者最终都只改变“引脚位置”，不改变元件占用的格子尺寸。
+     */
+    public void applyMirror(boolean horizontal) {
+        if (isReadOnly() || !hasDiagram()) {
+            return;
+        }
+        if (activeComponent() != null) {
+            if (!horizontal) {
+                rotation = CircuitComponent.verticalMirrorDirection(rotation);
+            }
+            placeMirrored = !placeMirrored;
+            playSound(MIRROR_SOUND);
+            return;
+        }
+        if (lastMouseX == null || lastMouseY == null || !contains(lastMouseX, lastMouseY)) {
+            return;
+        }
+        tryMirrorAt(cellX(lastMouseX), cellY(lastMouseY), horizontal);
+    }
+
+    private void tryMirrorAt(int gx, int gy, boolean horizontal) {
+        CircuitDiagram.Component under = blockComponent(gx, gy);
+        if (under == null) {
+            return;
+        }
+        if (!selectedCells.contains(cellKey(under.x, under.y))) {
+            setSelectionSingle(under.x, under.y);
+        }
+        if (tryMirrorGroup(horizontal)) {
+            playSound(MIRROR_SOUND);
+        }
+    }
+
+    private boolean tryMirrorGroup(boolean horizontal) {
+        if (selectedCells.isEmpty()) {
+            return false;
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return false;
+        }
+        CircuitDiagram editor = diagram.copy();
+        boolean any = false;
+        for (Map.Entry<Long, CircuitDiagram.Chunk> entry : editor.chunks.entrySet()) {
+            for (CircuitDiagram.Component c : entry.getValue().components) {
+                if (selectedCells.contains(cellKey(c.x, c.y))) {
+                    if (horizontal) {
+                        c.mirrorHorizontal();
+                    } else {
+                        c.mirrorVertical();
+                    }
+                    any = true;
+                }
+            }
+        }
+        if (!any) {
+            return false;
+        }
+        commitDiagram(stack, editor);
+        updateSelBox();
+        bumpSelection();
         return true;
     }
 

@@ -147,6 +147,14 @@ public class CircuitDiagram {
         public CircuitComponent component;
         public CircuitComponentInstance instance;
         public Direction direction;
+        /**
+         * 是否镜像。镜像为屏幕坐标系中的水平翻转（左右翻转，绕竖直轴），在旋转之后应用。
+         * 只影响引脚位置，不影响图标。
+         * <p>
+         * 垂直镜像（上下翻转）不单独存储：它恒等于“水平镜像 + 旋转 180 度”，
+         * 因此 {@code (direction, mirrored)} 已足够表示元件的全部 8 种朝向。
+         */
+        public boolean mirrored;
 
         public Component(CircuitComponent component, Direction direction, CircuitComponentInstance instance) {
             this.component = component;
@@ -159,7 +167,20 @@ public class CircuitDiagram {
         }
 
         public Component copy() {
-            return new Component(component, direction, instance.copy());
+            Component copy = new Component(component, direction, instance.copy());
+            copy.mirrored = mirrored;
+            return copy;
+        }
+
+        /** 水平镜像（左右翻转）：只翻转镜像布尔量。 */
+        public void mirrorHorizontal() {
+            mirrored = !mirrored;
+        }
+
+        /** 垂直镜像（上下翻转）：旋转 180 度并翻转镜像布尔量。 */
+        public void mirrorVertical() {
+            direction = CircuitComponent.verticalMirrorDirection(direction);
+            mirrored = !mirrored;
         }
 
         public int getHeight() {
@@ -404,6 +425,10 @@ public class CircuitDiagram {
                     .add("y", ops.createInt(input.y))
                     .add("id", ResourceLocation.CODEC.encodeStart(ops, id))
                     .add("direction", DIRECTION_CODEC.encodeStart(ops, input.direction));
+            // 仅镜像时写入字段，保持旧存档紧凑与向后兼容。
+            if (input.mirrored) {
+                builder.add("mirrored", ops.createBoolean(true));
+            }
             for (CircuitComponentInstance.Config config : input.instance.getConfigs()) {
                 if (config instanceof CircuitComponentInstance.IntConfig) {
                     builder.add(config.key, ops.createInt(input.instance.getInt(config.key)));
@@ -430,6 +455,7 @@ public class CircuitDiagram {
                 Optional<Integer> x = getField(Codec.INT, ops, map, "x");
                 Optional<Integer> y = getField(Codec.INT, ops, map, "y");
                 Optional<Direction> direction = getField(DIRECTION_CODEC, ops, map, "direction");
+                boolean mirrored = getField(Codec.BOOL, ops, map, "mirrored").orElse(false);
                 CircuitComponentInstance instance = circuitComponent.createInstance();
                 for (CircuitComponentInstance.Config config : instance.getConfigs()) {
                     if (config instanceof CircuitComponentInstance.IntConfig) {
@@ -443,6 +469,7 @@ public class CircuitDiagram {
                 Component component = new Component(circuitComponent, direction.orElse(Direction.NORTH), instance);
                 component.x = x.orElse(0);
                 component.y = y.orElse(0);
+                component.mirrored = mirrored;
                 return DataResult.success(new Pair<>(component, input));
             });
         }
@@ -546,6 +573,7 @@ public class CircuitDiagram {
                 buf.writeVarInt(component.x);
                 buf.writeVarInt(component.y);
                 buf.writeVarInt(component.direction.ordinal());
+                buf.writeBoolean(component.mirrored);
                 ResourceLocation id = component.component.getId();
                 if (id == null) {
                     throw new IllegalArgumentException("Circuit component has no registered id: " + component.component.getName().getString());
@@ -591,6 +619,7 @@ public class CircuitDiagram {
                 int x = buf.readVarInt();
                 int y = buf.readVarInt();
                 Direction direction = Direction.values()[buf.readVarInt()];
+                boolean mirrored = buf.readBoolean();
                 CircuitComponent circuitComponent = BuiltinCircuitComponents.byId(ResourceLocation.STREAM_CODEC.decode(buf));
                 if (circuitComponent == null) {
                     throw new IllegalArgumentException("Unknown circuit component id");
@@ -608,6 +637,7 @@ public class CircuitDiagram {
                 Component component = new Component(circuitComponent, direction, instance);
                 component.x = x;
                 component.y = y;
+                component.mirrored = mirrored;
                 chunk.components.add(component);
             }
             diagram.chunks.put(key, chunk);

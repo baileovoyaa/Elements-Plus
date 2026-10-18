@@ -324,7 +324,8 @@ public class CircuitSimulator {
                 for (int offset = 0; offset < count; offset++) {
                     PinType type = component.component.getPin(side, offset);
                     if (type == null || type == PinType.NONE) continue;
-                    PinInfo pin = pinExternal(component.component, component.direction, component.x, component.y, side, offset);
+                    PinInfo pin = pinExternal(component.component, component.direction,
+                            component.mirrored, component.x, component.y, side, offset);
                     int pinWidth = component.component.getPinBitWidth(side, offset);
 
                     if (type == PinType.INPUT) {
@@ -463,7 +464,8 @@ public class CircuitSimulator {
                     : other.component.getHeight();
             for (int offset = 0; offset < count; offset++) {
                 if (other.component.getPin(side, offset) != type) continue;
-                PinInfo p = pinExternal(other.component, other.direction, other.x, other.y, side, offset);
+                PinInfo p = pinExternal(other.component, other.direction,
+                        other.mirrored, other.x, other.y, side, offset);
                 if (p.ex == ownX && p.ey == ownY) {
                     return p;
                 }
@@ -1088,47 +1090,12 @@ public class CircuitSimulator {
     private record PinInfo(Direction facing, int ex, int ey, Direction side, int offset) {
     }
 
-    private static PinInfo pinExternal(CircuitComponent comp, Direction rot, int cx, int cy, Direction side, int offset) {
+    private static PinInfo pinExternal(CircuitComponent comp, Direction rot, boolean mirrored, int cx, int cy, Direction side, int offset) {
         int w0 = comp.getWidth();
         int h0 = comp.getHeight();
-        double nx, ny;
-        switch (side) {
-            case NORTH -> {
-                nx = offset + 0.5;
-                ny = 0;
-            }
-            case EAST -> {
-                nx = w0;
-                ny = offset + 0.5;
-            }
-            case SOUTH -> {
-                nx = w0 - 0.5 - offset;
-                ny = h0;
-            }
-            default -> { // WEST
-                nx = 0;
-                ny = h0 - 0.5 - offset;
-            }
-        }
-        double rx, ry;
-        switch (rot) {
-            case EAST -> {
-                rx = h0 - ny;
-                ry = nx;
-            }
-            case SOUTH -> {
-                rx = w0 - nx;
-                ry = h0 - ny;
-            }
-            case WEST -> {
-                rx = ny;
-                ry = w0 - nx;
-            }
-            default -> { // NORTH
-                rx = nx;
-                ry = ny;
-            }
-        }
+        double[] local = CircuitComponent.rotatedPinOffset(w0, h0, rot, mirrored, side, offset);
+        double rx = local[0];
+        double ry = local[1];
         int wRot = (rot == Direction.EAST || rot == Direction.WEST) ? h0 : w0;
         int hRot = (rot == Direction.EAST || rot == Direction.WEST) ? w0 : h0;
         Direction facing;

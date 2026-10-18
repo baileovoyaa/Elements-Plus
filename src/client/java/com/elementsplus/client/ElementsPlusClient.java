@@ -13,18 +13,31 @@ import com.elementsplus.network.ExperimentTableStatusPayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
 import com.elementsplus.player.PlayerToolbox;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 
+import org.lwjgl.glfw.GLFW;
+
 public class ElementsPlusClient implements ClientModInitializer {
 
     private static PlayerToolbox toolbox;
+
+    /** 按键绑定分类（在「选项 → 按键控制」中显示）。 */
+    public static final String KEY_CATEGORY = "key.categories.elements-plus";
+
+    /** 水平镜像元件（默认为 M）。 */
+    public static KeyMapping keyMirrorHorizontal;
+    /** 垂直镜像元件（默认为 N）。 */
+    public static KeyMapping keyMirrorVertical;
 
     @Override
     public void onInitializeClient() {
@@ -32,6 +45,11 @@ public class ElementsPlusClient implements ClientModInitializer {
         CircuitDiagramPanel.colorBackground = ClientConfig.get().darkMode ? 0xFF2B2B28 : 0xFFE0E0E0;
         CircuitDiagramPanel.colorDot = ClientConfig.get().darkMode ? 0xFF4A4A44 : 0xFFA0A0A0;
         CircuitDiagramPanel.sound = !ClientConfig.get().muted;
+
+        keyMirrorHorizontal = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.elements-plus.mirror_horizontal", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_M, KEY_CATEGORY));
+        keyMirrorVertical = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.elements-plus.mirror_vertical", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, KEY_CATEGORY));
 
         // This entrypoint is suitable for setting up client-specific logic, such as rendering.
         ModMenuScreens.initialize();
