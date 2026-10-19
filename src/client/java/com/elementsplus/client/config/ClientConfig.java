@@ -16,6 +16,8 @@ public class ClientConfig {
 
     public boolean darkMode = true;
     public boolean muted = false;
+    /** 光刻机设计页“检查”模式：开启后悬停元件/导线显示详细信息。 */
+    public boolean inspect = false;
 
     private ClientConfig() {
     }
@@ -31,6 +33,7 @@ public class ClientConfig {
                 if (loaded != null) {
                     INSTANCE.darkMode = loaded.darkMode;
                     INSTANCE.muted = loaded.muted;
+                    INSTANCE.inspect = loaded.inspect;
                 }
             } catch (IOException | com.google.gson.JsonSyntaxException e) {
                 // Keep defaults on failure

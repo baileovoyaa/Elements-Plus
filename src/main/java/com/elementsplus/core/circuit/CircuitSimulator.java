@@ -100,6 +100,7 @@ public class CircuitSimulator {
     private List<Dep>[] netInputDeps = new List[0];
 
     private Map<WirePoint, Integer> wireNet = new HashMap<>();
+    private final Map<Long, Integer> compNodes = new HashMap<>();
     private Set<Long> mismatchCells = new HashSet<>();
 
     private final Map<WirePoint, Integer> wireValues = new HashMap<>();
@@ -192,6 +193,76 @@ public class CircuitSimulator {
         return v == null ? 0 : tupleToInt(v.intValue() & 0xFFFFFFFFL);
     }
 
+    /**
+     * 读取某个元件引脚当前各通道的信号强度（用于“检查”tooltip）。
+     * 返回数组长度等于引脚位宽（1 或 8）：输入引脚读取其连接的来源，输出引脚读取元件自身输出。
+     */
+    public int[] getPinLanes(CircuitDiagram.Component component, Direction side, int offset) {
+        if (component == null) {
+            return new int[1];
+        }
+        int width = Math.max(1, component.component.getPinBitWidth(side, offset));
+        int[] lanes = new int[width];
+        if (diagram == null) {
+            return lanes;
+        }
+        Integer nodeObj = compNodes.get(key(component.x, component.y));
+        if (nodeObj == null || nodeObj >= nodeKind.length) {
+            return lanes;
+        }
+        int node = nodeObj;
+        PinType type = component.component.getPin(side, offset);
+        if (type == PinType.INPUT) {
+            int portIndex = inputPortIndex(component.component, side, offset);
+            InputPort[] ports = node < inputPorts.length ? inputPorts[node] : null;
+            if (ports == null || portIndex < 0 || portIndex >= ports.length) {
+                return lanes;
+            }
+            Dep[] deps = ports[portIndex].lanes();
+            for (int b = 0; b < width && b < deps.length; b++) {
+                Dep d = deps[b];
+                if (d != null) {
+                    lanes[b] = (int) ((nodeVals[d.node()] >> d.bit()) & 0xF);
+                }
+            }
+        } else if (type == PinType.OUTPUT) {
+            OutSlot slot = outputSlot(component.component, side, offset);
+            long v = nodeVals[node];
+            for (int b = 0; b < width; b++) {
+                lanes[b] = (int) ((v >> (slot.bitStart() + 4 * b)) & 0xF);
+            }
+        }
+        return lanes;
+    }
+
+    /**
+     * 读取某格某材质导线当前各通道的信号强度（用于“检查”tooltip）。
+     * 1 位导线返回长度 1，8 位总线返回长度 8。
+     */
+    public int[] getWireLanes(int x, int y, WireMaterial material) {
+        int width = isWireBus(x, y, material) ? 8 : 1;
+        int[] lanes = new int[width];
+        int v = getWireValue(x, y, material);
+        for (int b = 0; b < width; b++) {
+            lanes[b] = (v >> (4 * b)) & 0xF;
+        }
+        return lanes;
+    }
+
+    /** 输入引脚在其元件输入端口列表中的序号（顺序同 rebuild：西、南、东、北）。 */
+    private static int inputPortIndex(CircuitComponent cc, Direction side, int offset) {
+        int index = 0;
+        for (Direction s : new Direction[]{Direction.WEST, Direction.SOUTH, Direction.EAST, Direction.NORTH}) {
+            int count = (s == Direction.NORTH || s == Direction.SOUTH) ? cc.getWidth() : cc.getHeight();
+            for (int o = 0; o < count; o++) {
+                if (cc.getPin(s, o) != PinType.INPUT) continue;
+                if (s == side && o == offset) return index;
+                index++;
+            }
+        }
+        return -1;
+    }
+
     /* ============================================================
      *  构建依赖图
      * ============================================================ */
@@ -201,6 +272,7 @@ public class CircuitSimulator {
         capNodes.clear();
         resNodes.clear();
         wireNet.clear();
+        compNodes.clear();
         wireValues.clear();
         wireBad.clear();
         compValues.clear();
@@ -295,9 +367,8 @@ public class CircuitSimulator {
             }
         }
 
-        Map<Long, Integer> compIndex = new HashMap<>();
         for (int i = 0; i < numComps; i++) {
-            compIndex.put(key(comps.get(i).x, comps.get(i).y), numNets + i);
+            compNodes.put(key(comps.get(i).x, comps.get(i).y), numNets + i);
         }
 
         /* ---------- 2. 建边（含位宽匹配检测） ---------- */
@@ -353,7 +424,7 @@ public class CircuitSimulator {
                                 PinInfo op = otherPinAt(other, pin, PinType.OUTPUT);
                                 if (op != null) {
                                     OutSlot slot = outputSlot(other.component, op.side, op.offset);
-                                    int otherNode = compIndex.get(key(other.x, other.y));
+                                    int otherNode = compNodes.get(key(other.x, other.y));
                                     if (slot.width() == pinWidth) {
                                         for (int b = 0; b < pinWidth; b++) {
                                             lanes[b] = new Dep(otherNode, DepKind.WHOLE,
@@ -395,7 +466,7 @@ public class CircuitSimulator {
                                     if (otherWidth != pinWidth) {
                                         mismatchCells.add(seamKey(pin.ex, pin.ey, pin.facing));
                                     } else {
-                                        int otherNode = compIndex.get(key(other.x, other.y));
+                                        int otherNode = compNodes.get(key(other.x, other.y));
                                         if (nodeKind[otherNode] != NodeKind.CAP) predSets[otherNode].add(node);
                                     }
                                 }

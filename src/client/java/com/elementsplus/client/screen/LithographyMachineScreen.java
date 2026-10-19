@@ -83,9 +83,12 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private IconButton bitWidthButton;
     private IconButton themeButton;
     private IconButton muteButton;
+    private IconButton inspectButton;
 
     public boolean darkMode;
     public boolean muted;
+    /** 设计页“检查”模式：悬停元件/导线时显示详细 tooltip。 */
+    public boolean inspect;
 
     public int bitWidth = 1;
 
@@ -110,6 +113,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         ClientConfig cfg = ClientConfig.get();
         this.darkMode = cfg.darkMode;
         this.muted = cfg.muted;
+        this.inspect = cfg.inspect;
     }
 
     @Override
@@ -301,6 +305,18 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             }
             CircuitDiagramPanel.sound = !muted;
             ClientConfig.get().muted = muted;
+            ClientConfig.get().save();
+        }));
+
+        // 检查模式
+        toolbarWidget.addChild(new ToolbarSeparator(toolbarX += 16 + 5, 2, 1, 14));
+        toolbarWidget.addChild(inspectButton = new IconButton(toolbarX += 5, 1, 16, 16,
+                inspect ? ElementsPlus.id("textures/gui/inspect_on.png") : ElementsPlus.id("textures/gui/inspect_off.png"), button -> {
+            inspect = !inspect;
+            inspectButton.icon = ElementsPlus.id(inspect
+                    ? "textures/gui/inspect_on.png"
+                    : "textures/gui/inspect_off.png");
+            ClientConfig.get().inspect = inspect;
             ClientConfig.get().save();
         }));
 
@@ -1017,6 +1033,15 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     @Override
     protected void renderTooltip(GuiGraphics guiGraphics, int i, int j) {
         super.renderTooltip(guiGraphics, i, j);
+        if (inspect && toolboxDialog == null && contextMenu == null
+                && buttonGroup != null && buttonGroup.getSelected() == tabButtonDesign
+                && circuitPanel != null && circuitPanel.contains(i, j)) {
+            List<Component> inspectLines = circuitPanel.buildInspectTooltip(i, j);
+            if (inspectLines != null && !inspectLines.isEmpty()) {
+                guiGraphics.renderComponentTooltip(this.font, inspectLines, i, j);
+                return;
+            }
+        }
         if (tooltip != null) {
             if (tooltip instanceof ItemStack itemStack) {
                 guiGraphics.renderTooltip(this.font, itemStack, i, j);
