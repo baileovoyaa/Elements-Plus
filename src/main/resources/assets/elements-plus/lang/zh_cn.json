@@ -43,6 +43,18 @@
   "key.elements-plus.mirror_horizontal": "水平镜像元件",
   "key.elements-plus.mirror_vertical": "垂直镜像元件",
 
+  "gui.elements-plus.inspect.rotation": "旋转：%s°",
+  "gui.elements-plus.inspect.mirrored_suffix": " (已镜像)",
+  "gui.elements-plus.inspect.inputs": "输入：",
+  "gui.elements-plus.inspect.outputs": "输出：",
+  "gui.elements-plus.inspect.wire_sep": "：",
+  "gui.elements-plus.direction.north": "北",
+  "gui.elements-plus.direction.east": "东",
+  "gui.elements-plus.direction.south": "南",
+  "gui.elements-plus.direction.west": "西",
+  "gui.elements-plus.wire.copper": "铜线",
+  "gui.elements-plus.wire.gold": "金线",
+
   "block.elements-plus.advanced_crafting_table": "高级工作台",
   "block.elements-plus.lithography_machine": "光刻机",
   "block.elements-plus.charged_lightning_rod": "充能避雷针",

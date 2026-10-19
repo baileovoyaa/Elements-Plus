@@ -23,6 +23,8 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
@@ -32,6 +34,9 @@ import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +74,17 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private static final int COLOR_BUS_16 = 0xFFA000FF;
     private static final int COLOR_BUS_32 = 0xFF8000FF;
     private static final int COLOR_BUS_64 = 0xFF0000FF;
+
+    /** 检查 tooltip 文本颜色（RGB）。 */
+    private static final int COLOR_TEXT_NAME = 0xFFD700;
+    private static final int COLOR_TEXT_BUS = 0xFF00FF;
+    private static final int COLOR_TEXT_1BIT = 0xAAAAAA;
+    private static final int COLOR_TEXT_COPPER = 0xB06030;
+    private static final int COLOR_TEXT_GOLD = 0xFFD700;
+
+    private static final Direction[] CLOCKWISE_SIDES = {
+            Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST
+    };
 
     private static final double DRAG_THRESHOLD = 4.0;
     private static final double PAN_KEEP_VISIBLE = 16.0;
@@ -2094,6 +2110,222 @@ public class CircuitDiagramPanel extends AbstractWidget {
         updateSelBox();
         bumpSelection();
         return true;
+    }
+
+    /* ============================================================
+     *  检查（inspect）tooltip
+     * ============================================================ */
+
+    /** 一个引脚在检查 tooltip 中的展示信息。 */
+    private record PinView(Direction actualSide, double order, String name, PinType type,
+                           Direction side, int offset) {
+    }
+
+    /**
+     * 构建鼠标悬停元件/导线的检查信息行；未悬停到对象时返回 {@code null}。
+     * 由宿主 Screen 在开启检查模式时调用。
+     */
+    public List<Component> buildInspectTooltip(int mouseX, int mouseY) {
+        if (simulator == null || !contains(mouseX, mouseY)) {
+            return null;
+        }
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return null;
+        }
+        CircuitDiagram.Block block = diagram.getBlock(cellX(mouseX), cellY(mouseY));
+        if (block instanceof CircuitDiagram.Component component) {
+            return buildComponentInspect(component);
+        }
+        if (block instanceof CircuitDiagram.Wire wire) {
+            return buildWireInspect(wire);
+        }
+        return null;
+    }
+
+    private List<Component> buildComponentInspect(CircuitDiagram.Component component) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(component.component.getName().copy()
+                .withStyle(style -> style.withColor(TextColor.fromRgb(COLOR_TEXT_NAME))));
+
+        int degrees = switch (component.direction) {
+            case EAST -> 90;
+            case SOUTH -> 180;
+            case WEST -> 270;
+            default -> 0;
+        };
+        MutableComponent rotation = Component.translatable("gui.elements-plus.inspect.rotation", degrees);
+        if (component.mirrored) {
+            rotation.append(Component.translatable("gui.elements-plus.inspect.mirrored_suffix"));
+        }
+        lines.add(rotation);
+
+        List<PinView> pins = collectPinViews(component);
+        Map<Long, Integer> rank = new HashMap<>();
+        Map<Direction, Integer> counts = new EnumMap<>(Direction.class);
+        for (Direction side : CLOCKWISE_SIDES) {
+            List<PinView> onSide = new ArrayList<>();
+            for (PinView pin : pins) {
+                if (pin.actualSide() == side) {
+                    onSide.add(pin);
+                }
+            }
+            if (onSide.isEmpty()) {
+                continue;
+            }
+            onSide.sort(Comparator.comparingDouble(PinView::order));
+            counts.put(side, onSide.size());
+            for (int i = 0; i < onSide.size(); i++) {
+                PinView pin = onSide.get(i);
+                rank.put(pinKey(pin.side(), pin.offset()), i);
+            }
+        }
+        pins.sort(Comparator.comparingInt((PinView pin) -> sideOrder(pin.actualSide()))
+                .thenComparingDouble(PinView::order));
+
+        List<PinView> inputs = new ArrayList<>();
+        List<PinView> outputs = new ArrayList<>();
+        for (PinView pin : pins) {
+            if (pin.type() == PinType.INPUT) {
+                inputs.add(pin);
+            } else {
+                outputs.add(pin);
+            }
+        }
+        appendPinSection(lines, "gui.elements-plus.inspect.inputs", inputs, rank, counts, component);
+        appendPinSection(lines, "gui.elements-plus.inspect.outputs", outputs, rank, counts, component);
+        return lines;
+    }
+
+    private List<PinView> collectPinViews(CircuitDiagram.Component component) {
+        CircuitComponent cc = component.component;
+        int w0 = cc.getWidth();
+        int h0 = cc.getHeight();
+        List<PinView> pins = new ArrayList<>();
+        for (Direction side : CLOCKWISE_SIDES) {
+            int count = (side == Direction.NORTH || side == Direction.SOUTH) ? w0 : h0;
+            for (int offset = 0; offset < count; offset++) {
+                PinType type = cc.getPin(side, offset);
+                if (type == null || type == PinType.NONE) {
+                    continue;
+                }
+                double[] pos = CircuitComponent.rotatedPinOffset(w0, h0, component.direction,
+                        component.mirrored, side, offset);
+                Direction actual = CircuitComponent.rotatedPinSide(w0, h0, component.direction,
+                        component.mirrored, side, offset);
+                double order = switch (actual) {
+                    case NORTH -> pos[0];
+                    case EAST -> pos[1];
+                    case SOUTH -> -pos[0];
+                    case WEST -> -pos[1];
+                    default -> 0;
+                };
+                pins.add(new PinView(actual, order, cc.getPinName(side, offset), type, side, offset));
+            }
+        }
+        return pins;
+    }
+
+    private void appendPinSection(List<Component> lines, String headerKey, List<PinView> pins,
+                                  Map<Long, Integer> rank, Map<Direction, Integer> counts,
+                                  CircuitDiagram.Component component) {
+        if (pins.isEmpty()) {
+            return;
+        }
+        lines.add(Component.translatable(headerKey));
+        for (PinView pin : pins) {
+            int count = counts.getOrDefault(pin.actualSide(), 1);
+            int index = rank.getOrDefault(pinKey(pin.side(), pin.offset()), 0);
+            MutableComponent direction = Component.translatable(directionKey(pin.actualSide()));
+            if (count > 1) {
+                direction.append(String.valueOf(index));
+            }
+            MutableComponent line = Component.literal("- ").append(direction);
+            String name = pin.name();
+            if (name != null && !name.isEmpty()) {
+                line.append(Component.literal(" (" + name + ")"));
+            }
+            int[] lanes = simulator.getPinLanes(component, pin.side(), pin.offset());
+            line.append(Component.literal(": ")).append(formatLanes(lanes));
+            lines.add(line);
+        }
+    }
+
+    private List<Component> buildWireInspect(CircuitDiagram.Wire wire) {
+        List<Component> lines = new ArrayList<>();
+        CircuitDiagram.Wire.WireMaterial[] materials = {
+                CircuitDiagram.Wire.WireMaterial.COPPER, CircuitDiagram.Wire.WireMaterial.GOLD
+        };
+        for (CircuitDiagram.Wire.WireMaterial material : materials) {
+            if (!wire.hasMaterial(material)) {
+                continue;
+            }
+            boolean copper = material == CircuitDiagram.Wire.WireMaterial.COPPER;
+            MutableComponent label = Component.translatable(copper
+                            ? "gui.elements-plus.wire.copper"
+                            : "gui.elements-plus.wire.gold")
+                    .withStyle(style -> style.withColor(
+                            TextColor.fromRgb(copper ? COLOR_TEXT_COPPER : COLOR_TEXT_GOLD)));
+            int[] lanes = simulator.getWireLanes(wire.x, wire.y, material);
+            lines.add(Component.empty()
+                    .append(label)
+                    .append(Component.translatable("gui.elements-plus.inspect.wire_sep"))
+                    .append(formatLanes(lanes)));
+        }
+        return lines;
+    }
+
+    /**
+     * 值格式化：8 位总线显示 {@code 十进制(通道0 ... 通道7)}（全 0 只显示 0），
+     * 1 位信号只显示强度。总线用总线颜色，1 位用灰色。
+     */
+    private Component formatLanes(int[] lanes) {
+        if (lanes != null && lanes.length >= 8) {
+            int packed = 0;
+            for (int b = 0; b < 8; b++) {
+                if ((lanes[b] & 0xF) != 0) {
+                    packed |= 1 << b;
+                }
+            }
+            String text;
+            if (packed == 0) {
+                text = "0";
+            } else {
+                StringBuilder sb = new StringBuilder();
+                sb.append(packed).append('(');
+                for (int b = 0; b < 8; b++) {
+                    if (b > 0) {
+                        sb.append(' ');
+                    }
+                    sb.append(lanes[b] & 0xF);
+                }
+                sb.append(')');
+                text = sb.toString();
+            }
+            return Component.literal(text)
+                    .withStyle(style -> style.withColor(TextColor.fromRgb(COLOR_TEXT_BUS)));
+        }
+        int value = lanes == null || lanes.length == 0 ? 0 : lanes[0] & 0xF;
+        return Component.literal(String.valueOf(value))
+                .withStyle(style -> style.withColor(TextColor.fromRgb(COLOR_TEXT_1BIT)));
+    }
+
+    private static long pinKey(Direction side, int offset) {
+        return ((long) side.ordinal() << 32) | (offset & 0xFFFFFFFFL);
+    }
+
+    private static int sideOrder(Direction side) {
+        return switch (side) {
+            case NORTH -> 0;
+            case EAST -> 1;
+            case SOUTH -> 2;
+            case WEST -> 3;
+            default -> 4;
+        };
+    }
+
+    private static String directionKey(Direction side) {
+        return "gui.elements-plus.direction." + side.getSerializedName();
     }
 
     @Override

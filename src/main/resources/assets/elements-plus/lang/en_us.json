@@ -42,6 +42,18 @@
   "key.elements-plus.mirror_horizontal": "Mirror Component Horizontally",
   "key.elements-plus.mirror_vertical": "Mirror Component Vertically",
 
+  "gui.elements-plus.inspect.rotation": "Rotation: %s°",
+  "gui.elements-plus.inspect.mirrored_suffix": " (Mirrored)",
+  "gui.elements-plus.inspect.inputs": "Inputs:",
+  "gui.elements-plus.inspect.outputs": "Outputs:",
+  "gui.elements-plus.inspect.wire_sep": ": ",
+  "gui.elements-plus.direction.north": "North",
+  "gui.elements-plus.direction.east": "East",
+  "gui.elements-plus.direction.south": "South",
+  "gui.elements-plus.direction.west": "West",
+  "gui.elements-plus.wire.copper": "Copper Wire",
+  "gui.elements-plus.wire.gold": "Gold Wire",
+
   "block.elements-plus.advanced_crafting_table": "Advanced Crafting Table",
   "block.elements-plus.lithography_machine": "Lithography Machine",
   "block.elements-plus.charged_lightning_rod": "Charged Lightning Rod",

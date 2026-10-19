@@ -20,6 +20,7 @@ public class CircuitComponent {
     private final int width;
     private final PinType[] pins;
     private final int[] pinBitWidths;
+    private final String[] pinNames;
     private Supplier<CircuitComponentInstance> instanceFactory = () -> SimpleComponentInstance.INSTANCE;
     private IngredientSupplier ingredientSupplier;
 
@@ -35,6 +36,7 @@ public class CircuitComponent {
         this.pins = new PinType[2 * (width + height)];
         Arrays.fill(this.pins, PinType.NONE);
         this.pinBitWidths = new int[2 * (width + height)];
+        this.pinNames = new String[2 * (width + height)];
 
         setSelfAsIngredientSupplier();
     }
@@ -115,6 +117,32 @@ public class CircuitComponent {
     }
 
     /**
+     * 一次性设置引脚类型与名称，位宽默认为 1。
+     */
+    public void setPin(Direction side, int offset, PinType type, String name) {
+        setPin(side, offset, type, name, 1);
+    }
+
+    /**
+     * 一次性设置引脚类型、名称与位宽。位宽 {@code <= 0} 时按 1 处理。
+     */
+    public void setPin(Direction side, int offset, PinType type, String name, int bitWidth) {
+        Integer i = index(side, offset);
+        if (i == null) return;
+        pins[i] = type;
+        pinNames[i] = name;
+        pinBitWidths[i] = bitWidth > 0 ? bitWidth : 1;
+    }
+
+    /**
+     * 引脚名称（用于检查功能的 tooltip），未命名时返回 {@code null}。
+     */
+    public String getPinName(Direction side, int offset) {
+        Integer i = index(side, offset);
+        return i != null ? pinNames[i] : null;
+    }
+
+    /**
      * 计算引脚相对元件（旋转后）左上角的位置，单位：格。
      * <p>
      * 引脚先在元件本地坐标系中按 {@code rot} 顺时针旋转（{@code rot == NORTH} 表示原始方向），
@@ -184,6 +212,23 @@ public class CircuitComponent {
     }
 
     /**
+     * 引脚在应用旋转与镜像后所处的那条边（即检查 tooltip 中显示的“实际方向”）。
+     * 判定优先级与 {@link CircuitSimulator} 一致：先上下、再左右。
+     */
+    public static Direction rotatedPinSide(int w0, int h0, Direction rot, boolean mirrored,
+                                           Direction side, int offset) {
+        double[] p = rotatedPinOffset(w0, h0, rot, mirrored, side, offset);
+        double rx = p[0];
+        double ry = p[1];
+        double wRot = (rot == Direction.EAST || rot == Direction.WEST) ? h0 : w0;
+        double hRot = (rot == Direction.EAST || rot == Direction.WEST) ? w0 : h0;
+        if (ry <= 1e-6) return Direction.NORTH;
+        if (ry >= hRot - 1e-6) return Direction.SOUTH;
+        if (rx <= 1e-6) return Direction.WEST;
+        return Direction.EAST;
+    }
+
+    /**
      * 引脚位宽。未显式设置的引脚默认 1 位。
      */
     public int getPinBitWidth(Direction side, int offset) {
@@ -191,12 +236,6 @@ public class CircuitComponent {
         if (i == null) return 1;
         int w = pinBitWidths[i];
         return w > 0 ? w : 1;
-    }
-
-    public void setPinBitWidth(Direction side, int offset, int bitWidth) {
-        Integer i = index(side, offset);
-        if (i == null || bitWidth <= 0) return;
-        pinBitWidths[i] = bitWidth;
     }
 
     public void setInstanceFactory(Supplier<CircuitComponentInstance> instanceFactory) {
