@@ -6,6 +6,7 @@ import com.elementsplus.client.screen.CrystallizerScreen;
 import com.elementsplus.client.screen.ExperimentTableScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
 import com.elementsplus.client.screen.MetalCatalystScreen;
+import com.elementsplus.client.screen.PressureMachineScreen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screens.MenuScreens;
@@ -16,6 +17,7 @@ public class ModMenuScreens {
         MenuScreens.register(ModMenuTypes.CRYSTALLIZER, CrystallizerScreen::new);
         MenuScreens.register(ModMenuTypes.ADVANCED_CRAFTING_TABLE, AdvancedCraftingTableScreen::new);
         MenuScreens.register(ModMenuTypes.METAL_CATALYST, MetalCatalystScreen::new);
+        MenuScreens.register(ModMenuTypes.PRESSURE_MACHINE, PressureMachineScreen::new);
         MenuScreens.register(ModMenuTypes.LITHOGRAPHY_MACHINE, LithographyMachineScreen::new);
         MenuScreens.register(ModMenuTypes.EXPERIMENT_TABLE, ExperimentTableScreen::new);
     }

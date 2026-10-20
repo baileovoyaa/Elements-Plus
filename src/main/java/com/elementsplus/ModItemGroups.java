@@ -57,6 +57,7 @@ public class ModItemGroups {
                 ModBlocks.ADVANCED_CRAFTING_TABLE,
                 ModBlocks.CRYSTALLIZER,
                 ModBlocks.METAL_CATALYST,
+                ModBlocks.PRESSURE_MACHINE,
                 ModItems.PLASTIC,
                 ModItems.AMETHYST_LENS,
                 ModItems.COPPER_WIRE,

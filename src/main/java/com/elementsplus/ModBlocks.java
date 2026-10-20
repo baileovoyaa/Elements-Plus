@@ -234,6 +234,14 @@ public class ModBlocks {
             "metal_catalyst"
     );
 
+    public static final Block PRESSURE_MACHINE = register(
+            new PressureMachineBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+            ),
+            "pressure_machine"
+    );
+
     public static final Block LITHOGRAPHY_MACHINE = register(
             new LithographyMachineBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
@@ -295,6 +303,7 @@ public class ModBlocks {
         Items.registerBlock(new BlockItem(CRYSTALLIZER, new Item.Properties()) );
         Items.registerBlock(new BlockItem(ADVANCED_CRAFTING_TABLE, new Item.Properties()) );
         Items.registerBlock(new BlockItem(METAL_CATALYST, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(PRESSURE_MACHINE, new Item.Properties()) );
         Items.registerBlock(new BlockItem(LITHOGRAPHY_MACHINE, new Item.Properties()) );
         Items.registerBlock(new BlockItem(EXPERIMENT_TABLE, new Item.Properties()) );
         Items.registerBlock(new BlockItem(CHARGED_LIGHTNING_ROD, new Item.Properties()) );

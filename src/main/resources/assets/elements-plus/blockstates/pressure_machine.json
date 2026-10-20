@@ -1,0 +1,27 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "elements-plus:block/pressure_machine"
+    },
+    "facing=east": {
+      "model": "elements-plus:block/pressure_machine",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "elements-plus:block/pressure_machine",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "elements-plus:block/pressure_machine",
+      "y": 270
+    },
+    "facing=up": {
+      "model": "elements-plus:block/pressure_machine",
+      "x": 270
+    },
+    "facing=down": {
+      "model": "elements-plus:block/pressure_machine",
+      "x": 90
+    }
+  }
+}

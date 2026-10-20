@@ -34,6 +34,17 @@
   "container.elements-plus.metal_catalyst": "金属催化器",
   "gui.elements-plus.metal_catalyst.clear_waste": "清空废液",
 
+  "block.elements-plus.pressure_machine": "加压机",
+  "container.elements-plus.pressure_machine": "加压机",
+  "gui.elements-plus.pressure_machine.flow": "流量: %s B·atm/s",
+  "gui.elements-plus.pressure_machine.input": "入口",
+  "gui.elements-plus.pressure_machine.output": "出口",
+  "gui.elements-plus.pressure_machine.sealed": "密闭",
+  "gui.elements-plus.pressure_machine.open": "开放",
+  "gui.elements-plus.pressure_machine.working": "工作中",
+  "gui.elements-plus.pressure_machine.idle": "未工作",
+  "gui.elements-plus.pressure_machine.same_space": "同一空间",
+
   "container.elements-plus.lithography_machine": "光刻机",
   "gui.elements-plus.lithography_machine.design": "设计",
   "gui.elements-plus.lithography_machine.manufacture": "制造",

@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "elements-plus:block/pressure_machine/side",
+    "north": "elements-plus:block/pressure_machine/front",
+    "south": "elements-plus:block/pressure_machine/back",
+    "east": "elements-plus:block/pressure_machine/side",
+    "west": "elements-plus:block/pressure_machine/side",
+    "up": "elements-plus:block/pressure_machine/side",
+    "down": "elements-plus:block/pressure_machine/side"
+  }
+}

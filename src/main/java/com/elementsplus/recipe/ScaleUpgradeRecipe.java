@@ -88,6 +88,9 @@ public class ScaleUpgradeRecipe extends CustomRecipe {
         if (!stack.is(ModItems.CIRCUIT_DIAGRAM)) {
             return false;
         }
+        if (stack.get(ModDataComponents.EQUIVALENT_COMPONENT) != null) {
+            return false;
+        }
         CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
         return diagram != null && diagram.scale.canUpgrade();
     }

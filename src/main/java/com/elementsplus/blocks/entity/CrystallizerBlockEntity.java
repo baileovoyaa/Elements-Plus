@@ -1,6 +1,7 @@
 package com.elementsplus.blocks.entity;
 
 import com.elementsplus.ModBlockEntityTypes;
+import com.elementsplus.blocks.CrystallizerBlock;
 import com.elementsplus.menu.CrystallizerMenu;
 import com.elementsplus.recipe.CrystallizerRecipe;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -97,6 +98,18 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
         return this.pressure > 0;
     }
 
+    /** 当前压强值（0~100）。加压机原型会调用 {@link #addPressure(int)} 补充。 */
+    public int getPressure() {
+        return this.pressure;
+    }
+
+    /** 增加压强，上限 100。 */
+    public void addPressure(int amount) {
+        if (amount > 0) {
+            this.pressure = Math.min(100, this.pressure + amount);
+        }
+    }
+
     @Override
     protected void loadAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
         super.loadAdditional(compoundTag, provider);
@@ -128,7 +141,6 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
     }
 
     public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, CrystallizerBlockEntity crystallizerBlockEntity) {
-        boolean bl = crystallizerBlockEntity.isLit();
         boolean bl2 = false;
         if (crystallizerBlockEntity.isLit()) {
             crystallizerBlockEntity.litTime--;
@@ -182,9 +194,10 @@ public class CrystallizerBlockEntity extends BaseContainerBlockEntity implements
             }
         }
 
-        if (bl != crystallizerBlockEntity.isLit()) {
+        boolean lit = crystallizerBlockEntity.isLit();
+        if (blockState.getValue(CrystallizerBlock.LIT) != lit) {
             bl2 = true;
-            level.setBlock(blockPos, blockState, 3);
+            level.setBlock(blockPos, blockState.setValue(CrystallizerBlock.LIT, lit), 3);
         }
 
         if (bl2) {

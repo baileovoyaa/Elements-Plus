@@ -29,6 +29,11 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
      * 默认勾选，与客户端 CheckBox 默认状态保持一致。
      */
     private boolean copyCompiled = true;
+    /**
+     * 当前是否处于设计页（由客户端同步）。设计页只显示电路图槽位，
+     * 快速移动时不能把物品放进不可见的制造输入槽。
+     */
+    private boolean designTab = true;
     private boolean updatingResult = false;
     private boolean outputGenerated = false;
     public final Container container = new SimpleContainer(3) {
@@ -247,6 +252,13 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         updateManufactureResult();
     }
 
+    /**
+     * 客户端切换标签页时同步当前是否为设计页。
+     */
+    public void setDesignTab(boolean designTab) {
+        this.designTab = designTab;
+    }
+
     @Override
     public @NotNull ItemStack quickMoveStack(Player player, int i) {
         ItemStack itemStack = ItemStack.EMPTY;
@@ -258,7 +270,10 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
             ItemStack itemStack2 = slot.getItem();
             itemStack = itemStack2.copy();
             if (i < 36) {
-                if (!this.moveItemStackTo(itemStack2, 36, 38, false)) {
+                // 设计页只显示电路图槽（36）；制造输入槽（37）仅在制造页可见，
+                // 避免快速移动把物品放进玩家看不到的槽位。
+                int end = designTab ? 37 : 38;
+                if (!this.moveItemStackTo(itemStack2, 36, end, false)) {
                     return ItemStack.EMPTY;
                 }
             } else if (!this.moveItemStackTo(itemStack2, 0, 36, false)) {
@@ -366,11 +381,13 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
     public void removed(Player player) {
         super.removed(player);
 
-        // 如果有结果/输出槽，通常不返还，先清空，防止复制物品
-        // this.resultContainer.removeItemNoUpdate(1);
-
-        // 返还输入容器中的物品
-        this.access.execute((level, blockPos) -> this.clearContainer(player, this.container));
+        this.access.execute((level, blockPos) -> {
+            // 输出槽中的产物不返还：未取走就关闭界面时直接丢弃，
+            // 否则会在未扣料的情况下把产物返还给玩家（刷物品）。
+            this.container.removeItemNoUpdate(2);
+            // 仅返还电路图槽与制造输入槽中的物品
+            this.clearContainer(player, this.container);
+        });
     }
 
 }

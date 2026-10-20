@@ -5,6 +5,7 @@ import com.elementsplus.menu.CrystallizerMenu;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.menu.MetalCatalystMenu;
+import com.elementsplus.menu.PressureMachineMenu;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -19,6 +20,7 @@ public class ModMenuTypes {
     public static final MenuType<CrystallizerMenu> CRYSTALLIZER = register("crystallizer", CrystallizerMenu::new);
     public static final MenuType<AdvancedCraftingTableMenu> ADVANCED_CRAFTING_TABLE = register("advanced_crafting_table", AdvancedCraftingTableMenu::new);
     public static final MenuType<MetalCatalystMenu> METAL_CATALYST = register("metal_catalyst", MetalCatalystMenu::new);
+    public static final MenuType<PressureMachineMenu> PRESSURE_MACHINE = register("pressure_machine", PressureMachineMenu::new);
     public static final MenuType<LithographyMachineMenu> LITHOGRAPHY_MACHINE = register("lithography_machine", LithographyMachineMenu::new);
     public static final MenuType<ExperimentTableMenu> EXPERIMENT_TABLE = register("experiment_table", ExperimentTableMenu::new);
 

@@ -17,6 +17,7 @@ import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableSelectionChangePayload;
 import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
 import com.elementsplus.network.ExperimentTableStatusPayload;
+import com.elementsplus.network.LithographyTabPayload;
 import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
@@ -120,6 +121,14 @@ public class ElementsPlus implements ModInitializer {
                 context.server().execute(() -> {
                     if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
                         menu.setCopyCompiled(payload.copyCompiled());
+                    }
+                }));
+
+        PayloadTypeRegistry.playC2S().register(LithographyTabPayload.TYPE, LithographyTabPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(LithographyTabPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
+                        menu.setDesignTab(payload.designTab());
                     }
                 }));
 

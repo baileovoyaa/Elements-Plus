@@ -50,25 +50,56 @@ public class MetalCatalystRecipe implements Recipe<MetalCatalystRecipe.Input> {
 
     @Override
     public boolean matches(Input input, Level level) {
-        if (input.size() != inputs.size()) {
-            return false;
-        }
-        boolean[] matched = new boolean[inputs.size()];
-        for (int i = 0; i < input.size(); i++) {
-            ItemStack stack = input.getItem(i);
-            boolean found = false;
-            for (int j = 0; j < inputs.size(); j++) {
-                if (!matched[j] && inputs.get(j).test(stack)) {
-                    matched[j] = true;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                return false;
+        return matchSlots(input.items()) != null;
+    }
+
+    /**
+     * 将配方输入匹配到真实槽位。
+     *
+     * @param slotStacks 输入槽中的物品栈，列表下标即真实槽位下标（允许包含空栈）
+     * @return {@code slotMapping[配方输入下标] = 槽位下标}；无法匹配时返回 {@code null}
+     */
+    public int[] matchSlots(List<ItemStack> slotStacks) {
+        int nonEmpty = 0;
+        for (ItemStack stack : slotStacks) {
+            if (!stack.isEmpty()) {
+                nonEmpty++;
             }
         }
-        return true;
+        if (nonEmpty != inputs.size()) {
+            return null;
+        }
+        int[] mapping = new int[inputs.size()];
+        boolean[] used = new boolean[slotStacks.size()];
+        return assign(0, slotStacks, used, mapping) ? mapping : null;
+    }
+
+    /**
+     * 回溯匹配：为每个配方输入分配一个互不相同的非空槽位。
+     * 槽位数量很少（最多两个），回溯成本可以忽略；相比逐个贪心匹配，
+     * 它能正确处理“槽位顺序与配方顺序不同、且数量不同”的情况。
+     */
+    private boolean assign(int recipeIndex, List<ItemStack> slotStacks, boolean[] used, int[] mapping) {
+        if (recipeIndex >= inputs.size()) {
+            return true;
+        }
+        InputEntry entry = inputs.get(recipeIndex);
+        for (int slot = 0; slot < slotStacks.size(); slot++) {
+            if (used[slot]) {
+                continue;
+            }
+            ItemStack stack = slotStacks.get(slot);
+            if (stack.isEmpty() || !entry.test(stack)) {
+                continue;
+            }
+            used[slot] = true;
+            mapping[recipeIndex] = slot;
+            if (assign(recipeIndex + 1, slotStacks, used, mapping)) {
+                return true;
+            }
+            used[slot] = false;
+        }
+        return false;
     }
 
     @Override
@@ -106,11 +137,29 @@ public class MetalCatalystRecipe implements Recipe<MetalCatalystRecipe.Input> {
                 .toList();
     }
 
-    public static MetalCatalystRecipe findRecipe(List<ItemStack> inputStacks, Level level) {
+    /**
+     * 匹配结果：命中的配方，以及每个配方输入对应的真实槽位下标。
+     */
+    public record Match(MetalCatalystRecipe recipe, int[] slotMapping) {
+    }
+
+    /**
+     * 在给定槽位物品中查找可用的配方（只返回配方本身）。
+     */
+    public static MetalCatalystRecipe findRecipe(List<ItemStack> slotStacks, Level level) {
+        Match match = findMatch(slotStacks, level);
+        return match == null ? null : match.recipe();
+    }
+
+    /**
+     * 在给定槽位物品中查找可用配方，并返回“配方输入 → 真实槽位”的映射。
+     * 扣料时必须使用该映射，不能按“非空槽压缩后”的顺序扣料。
+     */
+    public static Match findMatch(List<ItemStack> slotStacks, Level level) {
         for (MetalCatalystRecipe recipe : getAll(level)) {
-            Input input = new Input(inputStacks);
-            if (recipe.matches(input, level)) {
-                return recipe;
+            int[] mapping = recipe.matchSlots(slotStacks);
+            if (mapping != null) {
+                return new Match(recipe, mapping);
             }
         }
         return null;

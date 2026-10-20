@@ -1,6 +1,7 @@
 package com.elementsplus.blocks.entity;
 
 import com.elementsplus.ModBlockEntityTypes;
+import com.elementsplus.blocks.MetalCatalystBlock;
 import com.elementsplus.menu.MetalCatalystMenu;
 import com.elementsplus.recipe.MetalCatalystRecipe;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -143,7 +144,6 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
     }
 
     public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, MetalCatalystBlockEntity blockEntity) {
-        boolean wasLit = blockEntity.isLit();
         boolean changed = false;
         if (blockEntity.isLit()) {
             blockEntity.litTime--;
@@ -151,9 +151,11 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
 
         ItemStack fuel = blockEntity.items.get(2);
         boolean hasFuel = !fuel.isEmpty();
-        List<ItemStack> inputs = new ArrayList<>();
-        if (!blockEntity.items.get(0).isEmpty()) inputs.add(blockEntity.items.get(0));
-        if (!blockEntity.items.get(1).isEmpty()) inputs.add(blockEntity.items.get(1));
+        // 保留真实槽位下标（0/1），允许空栈；匹配与扣料都基于该列表，
+        // 避免“0 号槽为空、1 号槽有料”时扣到空槽上。
+        List<ItemStack> inputs = new ArrayList<>(2);
+        inputs.add(blockEntity.items.get(0));
+        inputs.add(blockEntity.items.get(1));
 
         boolean canWork = !blockEntity.isOverfilled() && hasFuel && canBurn(blockEntity, inputs, level);
 
@@ -188,9 +190,10 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
             blockEntity.cookingProgress = Mth.clamp(blockEntity.cookingProgress - 2, 0, blockEntity.cookingTotalTime);
         }
 
-        if (wasLit != blockEntity.isLit()) {
+        boolean lit = blockEntity.isLit();
+        if (blockState.getValue(MetalCatalystBlock.LIT) != lit) {
             changed = true;
-            level.setBlock(blockPos, blockState, 3);
+            level.setBlock(blockPos, blockState.setValue(MetalCatalystBlock.LIT, lit), 3);
         }
 
         if (changed) {
@@ -218,10 +221,11 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
         if (!canBurn(blockEntity, inputs, level)) {
             return;
         }
-        MetalCatalystRecipe recipe = MetalCatalystRecipe.findRecipe(inputs, level);
-        if (recipe == null) {
+        MetalCatalystRecipe.Match match = MetalCatalystRecipe.findMatch(inputs, level);
+        if (match == null) {
             return;
         }
+        MetalCatalystRecipe recipe = match.recipe();
 
         ItemStack output = blockEntity.items.get(4);
         ItemStack willOutput = recipe.getResultItem(level.registryAccess());
@@ -231,11 +235,14 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
             output.grow(willOutput.getCount());
         }
 
-        for (int i = 0; i < inputs.size(); i++) {
-            if (i < recipe.getInputs().size()) {
-                int shrinkAmount = recipe.getInputs().get(i).count();
-                blockEntity.items.get(i).shrink(shrinkAmount);
-            }
+        // 按“配方输入 → 真实槽位”的映射扣料：
+        // 不能按非空槽压缩后的顺序扣，否则 0 号槽为空时会扣到空槽（无限产出），
+        // 双输入且槽位顺序与配方顺序不同时也会扣错数量。
+        int[] slotMapping = match.slotMapping();
+        for (int recipeIndex = 0; recipeIndex < recipe.getInputs().size(); recipeIndex++) {
+            int slot = slotMapping[recipeIndex];
+            int shrinkAmount = recipe.getInputs().get(recipeIndex).count();
+            blockEntity.items.get(slot).shrink(shrinkAmount);
         }
 
         RandomSource random = level.random;

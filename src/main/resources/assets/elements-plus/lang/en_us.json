@@ -33,6 +33,17 @@
   "container.elements-plus.metal_catalyst": "Metal Catalyst",
   "gui.elements-plus.metal_catalyst.clear_waste": "Clear Waste",
 
+  "block.elements-plus.pressure_machine": "Pressure Machine",
+  "container.elements-plus.pressure_machine": "Pressure Machine",
+  "gui.elements-plus.pressure_machine.flow": "Flow: %s B·atm/s",
+  "gui.elements-plus.pressure_machine.input": "Input",
+  "gui.elements-plus.pressure_machine.output": "Output",
+  "gui.elements-plus.pressure_machine.sealed": "Sealed",
+  "gui.elements-plus.pressure_machine.open": "Open",
+  "gui.elements-plus.pressure_machine.working": "Working",
+  "gui.elements-plus.pressure_machine.idle": "Idle",
+  "gui.elements-plus.pressure_machine.same_space": "Same space",
+
   "container.elements-plus.lithography_machine": "Lithography Machine",
   "gui.elements-plus.lithography_machine.design": "Design",
   "gui.elements-plus.lithography_machine.manufacture": "Manufacture",

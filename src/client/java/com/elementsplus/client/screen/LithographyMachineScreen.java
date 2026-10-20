@@ -18,6 +18,7 @@ import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.CopyCompiledSettingPayload;
+import com.elementsplus.network.LithographyTabPayload;
 import com.elementsplus.network.ToolboxUpdatePayload;
 import com.elementsplus.player.PlayerToolbox;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -585,6 +586,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         manufactureWidget.visible = manufactureTab;
         if (manufactureTab) {
             updateManufactureWidget();
+        }
+        // 服务端菜单据此限制快速移动目标槽位（设计页不写入不可见的制造输入槽）。
+        if (ClientPlayNetworking.canSend(LithographyTabPayload.TYPE)) {
+            ClientPlayNetworking.send(new LithographyTabPayload(designTab));
         }
     }
 
