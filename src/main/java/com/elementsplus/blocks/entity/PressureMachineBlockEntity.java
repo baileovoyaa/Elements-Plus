@@ -1,17 +1,27 @@
 package com.elementsplus.blocks.entity;
 
+import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModBlockEntityTypes;
 import com.elementsplus.blocks.PressureMachineBlock;
 import com.elementsplus.menu.PressureMachineMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.WorldlyContainer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.Item;
@@ -22,6 +32,7 @@ import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,13 +44,15 @@ import java.util.Set;
 /**
  * 加压机原型。
  * <p>
- * 当前实现为了先“跑起来”，做了如下简化，后续实测时再调整：
+ * 当前实现为可运行的原型：
  * <ul>
- *     <li>输入/输出空间的压强按“每台加压机各存一份”处理，尚未做多方块共享空间网络；</li>
- *     <li>空间检测为有界洪水填充：不完整方块（{@code canOcclude() == false} 且非方块实体）视为空气，
- *     任一边长超过 16 格或空气数超过 4096 视为开放空间；</li>
- *     <li>参数均为占位值，见下方常量；</li>
- *     <li>暂未实现生物反胃/伤害效果。</li>
+ *     <li>压强按“密闭空间”共享（{@link PressureNetwork}），连接同一空间的多台机器读写同一份压强；</li>
+ *     <li>空间检测为有界洪水填充：完整碰撞箱方块视为实心（玻璃也算实心），
+ *     台阶/楼梯等不完整方块视为空气；任一边长超过 16 格或空气数超过 4096 视为开放空间；</li>
+ *     <li>流量随压差变化：顺压差（入口更高）时更快，逆压差（出口更高）时更慢；
+ *     输入或输出口被堵住、或两侧连成同一空间时不工作；</li>
+ *     <li>空间压强偏离标准值会施加反胃与高压/低压伤害；</li>
+ *     <li>参数均为占位值，见下方常量，后续进游戏实测调整。</li>
  * </ul>
  */
 public class PressureMachineBlockEntity extends BaseContainerBlockEntity implements WorldlyContainer {
@@ -49,17 +62,35 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
     public static final int MAX_AXIS = 16;
     /** 密闭空间允许的最大空气方块数（16×16×16）。 */
     public static final int MAX_VOLUME = MAX_AXIS * MAX_AXIS * MAX_AXIS;
-    /** 加压机流量，B·atm/s。 */
+    /** 压差为 0 时的基础流量，B·atm/s。 */
     public static final double TRANSFER_RATE = 2.08;
+    /** 顺压差（入口压强更高）时的流量增益，每 atm。 */
+    public static final double FORWARD_GAIN = 1.0;
+    /** 逆压差（出口压强更高）时的流量衰减，每 atm。 */
+    public static final double REVERSE_GAIN = 1.0;
+    /** 顺压差时的最大流量倍率。 */
+    public static final double MAX_FLOW_MULTIPLIER = 4.0;
     /** 泄漏死区。 */
     public static final double LEAK_DEADZONE = 0.1;
     /** 泄漏幂指数。 */
     public static final double LEAK_BETA = 3.0;
     /** 泄漏系数。 */
     public static final double LEAK_C = 0.304;
-    /** 压强下限/上限（atm）。 */
-    public static final double MIN_PRESSURE = 0.1;
+    /** 压强下限/上限（atm）。下限为 0 以允许真空与低压伤害。 */
+    public static final double MIN_PRESSURE = 0.0;
     public static final double MAX_PRESSURE = 3.0;
+
+    /** 反胃阈值（|p-1|）。 */
+    public static final double NAUSEA_THRESHOLD = 0.7;
+    /** 高压伤害阈值（p-1）。 */
+    public static final double HIGH_DAMAGE_THRESHOLD = 1.25;
+    /** 低压伤害阈值（1-p）。 */
+    public static final double LOW_DAMAGE_THRESHOLD = 0.9;
+    /** 高压伤害系数（心/秒/Δ）。 */
+    public static final double HIGH_DAMAGE_K = 0.9;
+    /** 低压伤害系数（心/秒/Δ）。 */
+    public static final double LOW_DAMAGE_K = 5;
+
     /** 高压结晶器开始补充压强的阈值。 */
     public static final double CRYSTALLIZER_THRESHOLD = 1.5;
     /** 每补充 1 点结晶器压强消耗的空气量，B·atm。 */
@@ -68,6 +99,11 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
     public static final int CRYSTALLIZER_INTERVAL = 10;
     /** 空间扫描间隔（tick）。 */
     public static final int SCAN_INTERVAL = 20;
+
+    private static final ResourceKey<DamageType> PRESSURE_HIGH_DAMAGE =
+            ResourceKey.create(Registries.DAMAGE_TYPE, ElementsPlus.id("pressure_high"));
+    private static final ResourceKey<DamageType> PRESSURE_LOW_DAMAGE =
+            ResourceKey.create(Registries.DAMAGE_TYPE, ElementsPlus.id("pressure_low"));
 
     // ---- ContainerData 索引 ----
     public static final int DATA_LIT_TIME = 0;
@@ -84,6 +120,7 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
     public static final int DATA_COUNT = 11;
 
     private static final int[] SLOTS = new int[]{0};
+    private static final SpaceInfo EMPTY_SPACE = new SpaceInfo(0, false, Set.of(), Set.of(), null, null, null);
 
     protected NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
 
@@ -100,9 +137,11 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
     boolean sameSpace;
     double flow;
 
+    private SpaceInfo inputSpace = EMPTY_SPACE;
+    private SpaceInfo outputSpace = EMPTY_SPACE;
+
     int scanCooldown;
     int crystallizerCooldown;
-    private final Set<BlockPos> outputCrystallizers = new HashSet<>();
 
     protected final ContainerData dataAccess = new ContainerData() {
         @Override
@@ -186,8 +225,7 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
     }
 
     public boolean isWorking() {
-        return litTime > 0 && !sameSpace
-                && ((inputSealed && inputVolume > 0) || (outputSealed && outputVolume > 0));
+        return litTime > 0 && flow > 0.0;
     }
 
     public boolean isSameSpace() {
@@ -211,8 +249,9 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         ContainerHelper.loadAllItems(tag, this.items, registries);
         this.litTime = tag.getShort("BurnTime");
         this.litDuration = tag.getShort("BurnTimeTotal");
-        this.inputPressure = tag.contains("InputPressure") ? tag.getDouble("InputPressure") : 1.0;
-        this.outputPressure = tag.contains("OutputPressure") ? tag.getDouble("OutputPressure") : 1.0;
+        // 压强由共享网络维护（当前为内存实现），这里只做默认值。
+        this.inputPressure = 1.0;
+        this.outputPressure = 1.0;
     }
 
     @Override
@@ -221,8 +260,6 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         ContainerHelper.saveAllItems(tag, this.items, registries);
         tag.putShort("BurnTime", (short) this.litTime);
         tag.putShort("BurnTimeTotal", (short) this.litDuration);
-        tag.putDouble("InputPressure", this.inputPressure);
-        tag.putDouble("OutputPressure", this.outputPressure);
     }
 
     // ---- tick ----
@@ -240,13 +277,19 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
             be.scanCooldown--;
         }
 
-        // 泄漏始终存在（仅对密闭空间生效）
-        changed |= be.maintainSpaces();
+        // 共享压强：先读取，再按空间施加一次泄漏，最后读回最新值。
+        be.syncFromNetwork(level);
+        be.applyLeaks(level);
+        be.syncFromNetwork(level);
 
-        boolean hasSpace = !be.sameSpace
-                && ((be.inputSealed && be.inputVolume > 0) || (be.outputSealed && be.outputVolume > 0));
+        // 端口是否被堵住每 tick 立即判断，避免扫描间隔内继续工作。
+        Direction facing = state.getValue(PressureMachineBlock.FACING);
+        boolean portsOpen = isAirCell(level, pos.relative(facing))
+                && isAirCell(level, pos.relative(facing.getOpposite()));
+        boolean canWork = portsOpen && be.canWork();
+
         ItemStack fuel = be.items.get(0);
-        if (be.litTime <= 0 && hasSpace && !fuel.isEmpty() && isFuel(fuel)) {
+        if (be.litTime <= 0 && canWork && !fuel.isEmpty() && isFuel(fuel)) {
             int burn = be.getBurnDuration(fuel);
             if (burn > 0) {
                 be.litTime = burn;
@@ -262,10 +305,14 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         }
 
         be.flow = 0.0;
-        if (be.litTime > 0 && hasSpace) {
+        if (be.litTime > 0 && canWork) {
             be.pump(level, pos);
             changed = true;
         }
+        be.writeToNetwork(level);
+
+        // 生物效果每秒结算一次（同一空间由共享网络去重）。
+        be.applySpaceEffects(level);
 
         boolean lit = be.litTime > 0;
         if (state.getValue(PressureMachineBlock.LIT) != lit) {
@@ -279,23 +326,41 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         }
     }
 
-    /** 把空气从入口空间搬到出口空间；参数均为原型值。 */
+    /** 把空气从入口空间搬到出口空间；流量随压差变化，并受可用空气/容量限制。 */
     private void pump(Level level, BlockPos pos) {
         final double dt = 1.0 / 20.0;
-        if (sameSpace) {
+        if (!canWork()) {
             flow = 0.0;
             return;
         }
 
-        if (inputSealed && inputVolume > 0) {
-            double air = inputPressure * inputVolume - TRANSFER_RATE * dt;
-            inputPressure = clamp(air / inputVolume);
+        double effectiveInput = inputSealed ? inputPressure : 1.0;
+        double effectiveOutput = outputSealed ? outputPressure : 1.0;
+        double delta = effectiveInput - effectiveOutput;
+
+        double transfer = nominalFlow(delta) * dt;
+        // 入口只能搬走“高于最低压强”的空气
+        if (inputSealed) {
+            double available = Math.max(0.0, (inputPressure - MIN_PRESSURE) * inputVolume);
+            transfer = Math.min(transfer, available);
         }
-        if (outputSealed && outputVolume > 0) {
-            double air = outputPressure * outputVolume + TRANSFER_RATE * dt;
-            outputPressure = clamp(air / outputVolume);
+        // 出口只能容纳“低于最高压强”的空气
+        if (outputSealed) {
+            double room = Math.max(0.0, (MAX_PRESSURE - outputPressure) * outputVolume);
+            transfer = Math.min(transfer, room);
         }
-        flow = TRANSFER_RATE;
+        if (transfer <= 0.0) {
+            flow = 0.0;
+            return;
+        }
+
+        if (inputSealed) {
+            inputPressure = clamp(inputPressure - transfer / inputVolume);
+        }
+        if (outputSealed) {
+            outputPressure = clamp(outputPressure + transfer / outputVolume);
+        }
+        flow = transfer / dt;
 
         // 高压空间给结晶器补充压强（原型：直接补充结晶器的 pressure 值，并消耗空间空气）
         if (outputSealed && outputVolume > 0 && outputPressure > CRYSTALLIZER_THRESHOLD) {
@@ -303,7 +368,7 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
                 crystallizerCooldown--;
             } else {
                 boolean supplied = false;
-                for (BlockPos crystallizerPos : outputCrystallizers) {
+                for (BlockPos crystallizerPos : outputSpace.crystallizers()) {
                     if (outputPressure <= CRYSTALLIZER_THRESHOLD) {
                         break;
                     }
@@ -314,7 +379,7 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
                         continue;
                     }
                     double air = outputPressure * outputVolume - CRYSTALLIZER_AIR_COST;
-                    if (air <= 0.0) {
+                    if (air < MIN_PRESSURE * outputVolume) {
                         break;
                     }
                     crystallizer.addPressure(1);
@@ -329,26 +394,22 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         }
     }
 
-    /** 对密闭空间施加泄漏，返回压强是否发生变化。 */
-    private boolean maintainSpaces() {
-        final double dt = 1.0 / 20.0;
-        boolean changed = false;
-        if (inputSealed && inputVolume > 0) {
-            double before = inputPressure;
-            inputPressure = clamp(inputPressure - leakRate(inputPressure) / inputVolume * dt);
-            changed |= Math.abs(inputPressure - before) > 1.0e-12;
+    /**
+     * 输入/输出口都不能被堵住，且至少一侧是密闭空间时才搬运空气。
+     * 只开一侧的开放空间也允许（例如从大气抽气给密闭空间加压）。
+     */
+    private boolean canWork() {
+        return !sameSpace && inputVolume > 0 && outputVolume > 0 && (inputSealed || outputSealed);
+    }
+
+    /**
+     * 名义流量（B·atm/s）：顺压差时随压差增大而变快，逆压差时随压差增大而变慢。
+     */
+    private static double nominalFlow(double delta) {
+        if (delta >= 0.0) {
+            return TRANSFER_RATE * Math.min(1.0 + FORWARD_GAIN * delta, MAX_FLOW_MULTIPLIER);
         }
-        if (sameSpace) {
-            if (outputPressure != inputPressure) {
-                outputPressure = inputPressure;
-                changed = true;
-            }
-        } else if (outputSealed && outputVolume > 0) {
-            double before = outputPressure;
-            outputPressure = clamp(outputPressure - leakRate(outputPressure) / outputVolume * dt);
-            changed |= Math.abs(outputPressure - before) > 1.0e-12;
-        }
-        return changed;
+        return TRANSFER_RATE / (1.0 + REVERSE_GAIN * (-delta));
     }
 
     private static double leakRate(double pressure) {
@@ -361,42 +422,86 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         return Math.max(MIN_PRESSURE, Math.min(MAX_PRESSURE, pressure));
     }
 
+    // ---- 共享压力网络 ----
+
+    /** 从共享网络同步当前压强到本地缓存。 */
+    private void syncFromNetwork(Level level) {
+        PressureNetwork network = PressureNetwork.get(level);
+
+        if (inputSealed && inputSpace.key() != null) {
+            inputPressure = network.get(inputSpace.key());
+        } else {
+            inputPressure = 1.0;
+            if (inputSpace.key() != null) {
+                network.remove(inputSpace.key());
+            }
+        }
+
+        if (sameSpace) {
+            outputPressure = inputPressure;
+        } else if (outputSealed && outputSpace.key() != null) {
+            outputPressure = network.get(outputSpace.key());
+        } else {
+            outputPressure = 1.0;
+            if (outputSpace.key() != null) {
+                network.remove(outputSpace.key());
+            }
+        }
+    }
+
+    /** 同一 tick 内同一空间只泄漏一次。 */
+    private void applyLeaks(Level level) {
+        final double dt = 1.0 / 20.0;
+        long gameTime = level.getGameTime();
+        PressureNetwork network = PressureNetwork.get(level);
+
+        if (inputSealed && inputVolume > 0 && inputSpace.key() != null
+                && network.markLeak(inputSpace.key(), gameTime)) {
+            double pressure = network.get(inputSpace.key());
+            network.set(inputSpace.key(), clamp(pressure - leakRate(pressure) / inputVolume * dt));
+        }
+        if (!sameSpace && outputSealed && outputVolume > 0 && outputSpace.key() != null
+                && network.markLeak(outputSpace.key(), gameTime)) {
+            double pressure = network.get(outputSpace.key());
+            network.set(outputSpace.key(), clamp(pressure - leakRate(pressure) / outputVolume * dt));
+        }
+    }
+
+    /** 把本 tick 更新后的压强写回共享网络。 */
+    private void writeToNetwork(Level level) {
+        PressureNetwork network = PressureNetwork.get(level);
+        if (inputSealed && inputSpace.key() != null) {
+            network.set(inputSpace.key(), inputPressure);
+        }
+        if (!sameSpace && outputSealed && outputSpace.key() != null) {
+            network.set(outputSpace.key(), outputPressure);
+        }
+    }
+
     // ---- 空间检测 ----
 
     private void refreshSpaces(Level level, BlockPos pos, BlockState state) {
         Direction facing = state.getValue(PressureMachineBlock.FACING);
         BlockPos inputStart = pos.relative(facing.getOpposite());
         BlockPos outputStart = pos.relative(facing);
-        SpaceInfo input = scanSpace(level, inputStart);
-        SpaceInfo output = scanSpace(level, outputStart);
+        inputSpace = scanSpace(level, inputStart);
+        outputSpace = scanSpace(level, outputStart);
 
-        inputVolume = input.volume();
-        inputSealed = input.sealed();
-        outputVolume = output.volume();
-        outputSealed = output.sealed();
+        inputVolume = inputSpace.volume();
+        inputSealed = inputSpace.sealed();
+        outputVolume = outputSpace.volume();
+        outputSealed = outputSpace.sealed();
         // 前后连成同一片空间时，搬运没有意义；同时避免把同一空间当成两份来“造气”。
-        sameSpace = input.cells().contains(outputStart) || output.cells().contains(inputStart);
-
-        if (!inputSealed) {
-            inputPressure = 1.0;
-        }
-        if (sameSpace) {
-            outputPressure = inputPressure;
-        } else if (!outputSealed) {
-            outputPressure = 1.0;
-        }
-
-        outputCrystallizers.clear();
-        outputCrystallizers.addAll(output.crystallizers());
+        sameSpace = inputSpace.cells().contains(outputStart) || outputSpace.cells().contains(inputStart);
     }
 
     /**
      * 从 {@code start} 开始做有界洪水填充。
-     * 不完整方块（不遮挡且不是方块实体）视为空气。
+     * 完整碰撞箱方块（包括玻璃）视为实心；不完整方块视为空气。
      */
     private static SpaceInfo scanSpace(Level level, BlockPos start) {
         if (!isAirCell(level, start)) {
-            return new SpaceInfo(0, false, Set.of(), Set.of());
+            return EMPTY_SPACE;
         }
 
         Set<BlockPos> visited = new HashSet<>();
@@ -442,7 +547,10 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
                 break;
             }
         }
-        return new SpaceInfo(visited.size(), sealed, crystallizers, visited);
+
+        BlockPos min = new BlockPos(minX, minY, minZ);
+        BlockPos max = new BlockPos(maxX, maxY, maxZ);
+        return new SpaceInfo(visited.size(), sealed, crystallizers, visited, min, min, max);
     }
 
     private static boolean isAirCell(Level level, BlockPos pos) {
@@ -450,11 +558,74 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         if (state.isAir()) {
             return true;
         }
-        // 不完整方块视为空气；带方块实体的机器仍作为边界，避免把前后空间连通。
-        return !state.canOcclude() && !(state.getBlock() instanceof BaseEntityBlock);
+        // 玻璃等完整方块：碰撞箱是完整方块，视为实心；
+        // 台阶、楼梯等不完整方块视为空气。
+        return !state.isCollisionShapeFullBlock(level, pos);
     }
 
-    private record SpaceInfo(int volume, boolean sealed, Set<BlockPos> crystallizers, Set<BlockPos> cells) {
+    private record SpaceInfo(int volume, boolean sealed, Set<BlockPos> crystallizers,
+                             Set<BlockPos> cells, BlockPos key, BlockPos min, BlockPos max) {
+    }
+
+    // ---- 生物效果 ----
+
+    private void applySpaceEffects(Level level) {
+        long second = level.getGameTime() / 20L;
+        PressureNetwork network = PressureNetwork.get(level);
+        if (inputSealed) {
+            applyEffectsForSpace(level, network, inputSpace, inputPressure, second);
+        }
+        if (!sameSpace && outputSealed) {
+            applyEffectsForSpace(level, network, outputSpace, outputPressure, second);
+        }
+    }
+
+    private void applyEffectsForSpace(Level level, PressureNetwork network, SpaceInfo space,
+                                      double pressure, long second) {
+        if (space == null || !space.sealed() || space.cells().isEmpty()
+                || space.key() == null || space.min() == null || space.max() == null) {
+            return;
+        }
+        if (!network.markEffect(space.key(), second)) {
+            return;
+        }
+
+        double delta = pressure - 1.0;
+        boolean nausea = Math.abs(delta) >= NAUSEA_THRESHOLD;
+        boolean highDamage = delta >= HIGH_DAMAGE_THRESHOLD;
+        boolean lowDamage = -delta >= LOW_DAMAGE_THRESHOLD;
+        if (!nausea && !highDamage && !lowDamage) {
+            return;
+        }
+
+        AABB box = new AABB(
+                space.min().getX(), space.min().getY(), space.min().getZ(),
+                space.max().getX() + 1, space.max().getY() + 1, space.max().getZ() + 1);
+        for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, box)) {
+            if (!space.cells().contains(entity.blockPosition())) {
+                continue;
+            }
+            if (entity instanceof Player player && (player.isCreative() || player.isSpectator())) {
+                continue;
+            }
+            if (nausea) {
+                entity.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 120, 0, false, false));
+            }
+            if (highDamage) {
+                double dps = HIGH_DAMAGE_K * (delta - HIGH_DAMAGE_THRESHOLD);
+                entity.hurt(pressureDamage(level, PRESSURE_HIGH_DAMAGE), (float) (dps * 2.0));
+            } else if (lowDamage) {
+                double dps = LOW_DAMAGE_K * (-delta - LOW_DAMAGE_THRESHOLD);
+                entity.hurt(pressureDamage(level, PRESSURE_LOW_DAMAGE), (float) (dps * 2.0));
+            }
+        }
+    }
+
+    private static DamageSource pressureDamage(Level level, ResourceKey<DamageType> key) {
+        Holder<DamageType> holder = level.registryAccess()
+                .registryOrThrow(Registries.DAMAGE_TYPE)
+                .getHolderOrThrow(key);
+        return new DamageSource(holder);
     }
 
     // ---- 容器 / 燃料 ----

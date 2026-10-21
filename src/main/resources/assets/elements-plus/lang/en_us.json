@@ -44,6 +44,9 @@
   "gui.elements-plus.pressure_machine.idle": "Idle",
   "gui.elements-plus.pressure_machine.same_space": "Same space",
 
+  "death.attack.elements-plus.pressure_high": "%1$s was crushed by high pressure",
+  "death.attack.elements-plus.pressure_low": "%1$s suffocated in low pressure",
+
   "container.elements-plus.lithography_machine": "Lithography Machine",
   "gui.elements-plus.lithography_machine.design": "Design",
   "gui.elements-plus.lithography_machine.manufacture": "Manufacture",

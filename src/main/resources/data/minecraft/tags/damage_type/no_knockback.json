@@ -1,0 +1,7 @@
+{
+    "replace": false,
+    "values": [
+        "elements-plus:pressure_high",
+        "elements-plus:pressure_low"
+    ]
+}

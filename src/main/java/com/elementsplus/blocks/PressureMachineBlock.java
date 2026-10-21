@@ -109,6 +109,7 @@ public class PressureMachineBlock extends BaseEntityBlock {
         }
         level.addParticle(ParticleTypes.SMOKE, x, y, z, 0.0, 0.0, 0.0);
         level.addParticle(ParticleTypes.FLAME, x, y, z, 0.0, 0.0, 0.0);
+        // TODO: 改为灰尘粒子表示空气流向
     }
 
     @Override

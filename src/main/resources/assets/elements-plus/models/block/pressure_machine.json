@@ -1,12 +1,23 @@
 {
-  "parent": "minecraft:block/cube",
+  "parent": "block/block",
   "textures": {
-    "particle": "elements-plus:block/pressure_machine/side",
-    "north": "elements-plus:block/pressure_machine/front",
-    "south": "elements-plus:block/pressure_machine/back",
-    "east": "elements-plus:block/pressure_machine/side",
-    "west": "elements-plus:block/pressure_machine/side",
-    "up": "elements-plus:block/pressure_machine/side",
-    "down": "elements-plus:block/pressure_machine/side"
-  }
+    "0": "elements-plus:block/pressure_machine/back",
+    "1": "elements-plus:block/pressure_machine/front",
+    "2": "elements-plus:block/pressure_machine/side",
+    "particle": "elements-plus:block/pressure_machine/side"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#1"},
+        "east": {"uv": [0, 0, 16, 16], "texture": "#2"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#0"},
+        "west": {"uv": [0, 0, 16, 16], "rotation": 180, "texture": "#2"},
+        "up": {"uv": [0, 0, 16, 16], "rotation": 270, "texture": "#2"},
+        "down": {"uv": [0, 0, 16, 16], "rotation": 90, "texture": "#2"}
+      }
+    }
+  ]
 }
