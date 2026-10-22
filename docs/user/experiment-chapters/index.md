@@ -16,9 +16,9 @@ category: "用户文档"
 - [位运算器](bitwise-operator.md)
 - [多位减法](multi-bit-subtract.md)
 - [位移器](bitwise-shifter.md)
-- 乘除器
-- 多功能运算器（基础版）
-- 多功能运算器（高级版）
+- [乘除器](multiplier-divisor.md)
+- [多功能运算器（基础版）](alu-basic.md)
+- [多功能运算器（高级版）](alu-advanced.md)
 - 触发器
 - 一位寄存器
 - 多位寄存器

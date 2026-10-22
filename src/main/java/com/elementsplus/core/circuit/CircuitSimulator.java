@@ -800,6 +800,28 @@ public class CircuitSimulator {
     }
 
     /**
+     * 8 元组算术移动：右移时越界通道补符号位（第 7 通道），左移补 0。
+     * 目标通道 i 取源通道 i-shift；右移时若源通道 >= 8 则取符号位。
+     */
+    private static long analogArithmeticShift(long tuple, int shift) {
+        long sign = (tuple >> (4 * 7)) & 0xF;
+        long t = 0L;
+        for (int i = 0; i < 8; i++) {
+            int src = i - shift;
+            long lane;
+            if (src >= 0 && src < 8) {
+                lane = (tuple >> (4 * src)) & 0xF;
+            } else if (shift < 0) {
+                lane = sign;
+            } else {
+                lane = 0L;
+            }
+            t |= lane << (4 * i);
+        }
+        return t;
+    }
+
+    /**
      * 8 元组按通道循环移动（保留通道信号强度）：shift>0 循环左移，shift<0 循环右移。
      * 目标通道 i 取源通道 (i-shift) mod 8。
      */
@@ -1070,17 +1092,20 @@ public class CircuitSimulator {
             else r = (count & 1) == 0;
             return (r ? 15L : 0L) << outputSlot(cc, Direction.EAST, 0).bitStart();
         } else if (cc == BuiltinCircuitComponents.BITWISE_SHIFT
+                || cc == BuiltinCircuitComponents.BITWISE_SHIFT_ARITHMETIC
                 || cc == BuiltinCircuitComponents.BITWISE_ROTATE
                 || cc == BuiltinCircuitComponents.BITWISE_SHIFT_ANALOG
                 || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG) {
-            // 8 位位移器 / 循环位移器：A 左移 B 位，B 视作有符号数（补码），为负则右移。
+            // 8 位位移器 / 算术位移器 / 循环位移器：A 左移 B 位，B 视作有符号数（补码），为负则右移。
             long a = inPort(node, 0);
             int shift = signedFromTuple(inPort(node, 1));
+            boolean arithmetic = cc == BuiltinCircuitComponents.BITWISE_SHIFT_ARITHMETIC;
             boolean rotate = cc == BuiltinCircuitComponents.BITWISE_ROTATE
                     || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG;
             boolean analog = cc == BuiltinCircuitComponents.BITWISE_SHIFT_ANALOG
                     || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG;
-            long shifted = rotate ? analogRotate(a, shift) : analogShift(a, shift);
+            long shifted = arithmetic ? analogArithmeticShift(a, shift)
+                    : (rotate ? analogRotate(a, shift) : analogShift(a, shift));
             long t = analog ? shifted : amplifyTuple(shifted);
             return t << outputSlot(cc, Direction.EAST, 0).bitStart();
         }

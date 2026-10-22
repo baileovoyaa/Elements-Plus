@@ -1,5 +1,6 @@
 package com.elementsplus.client.screen;
 
+import com.elementsplus.ElementsPlus;
 import com.elementsplus.client.gui.GuiUtil;
 import com.elementsplus.menu.PressureMachineMenu;
 import net.fabricmc.api.EnvType;
@@ -15,8 +16,8 @@ import net.minecraft.world.inventory.Slot;
 
 @Environment(EnvType.CLIENT)
 public class PressureMachineScreen extends AbstractContainerScreen<PressureMachineMenu> {
-    private static final ResourceLocation LIT_PROGRESS_SPRITE =
-            ResourceLocation.withDefaultNamespace("container/furnace/lit_progress");
+    private static final ResourceLocation LIT_PROGRESS_SPRITE = ResourceLocation.withDefaultNamespace("container/furnace/lit_progress");
+    private static final ResourceLocation TEXTURE = ElementsPlus.id("textures/gui/pressure_machine.png");
     private static final int TEXT_COLOR = 0xFF404040;
 
     public PressureMachineScreen(PressureMachineMenu menu, Inventory inventory, Component title) {
@@ -34,12 +35,7 @@ public class PressureMachineScreen extends AbstractContainerScreen<PressureMachi
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        // 暂无 GUI 纹理，先用代码绘制简易面板与槽位。
-        GuiUtil.drawMainPanel(guiGraphics, this.leftPos, this.topPos,
-                this.leftPos + this.imageWidth, this.topPos + this.imageHeight);
-        for (Slot slot : this.menu.slots) {
-            GuiUtil.drawSlot(guiGraphics, this.leftPos + slot.x - 1, this.topPos + slot.y - 1);
-        }
+        guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight);
 
         if (this.menu.isLit()) {
             int n = Mth.ceil(this.menu.getLitProgress() * 13.0F) + 1;
@@ -65,20 +61,20 @@ public class PressureMachineScreen extends AbstractContainerScreen<PressureMachi
 
         y += 10;
         guiGraphics.drawString(this.font, sideLine("gui.elements-plus.pressure_machine.input",
-                this.menu.getInputPressure(), this.menu.getInputVolume(), this.menu.isInputSealed()),
+                        this.menu.getInputPressure(), this.menu.getInputVolume(), this.menu.isInputSealed()),
                 x, y, TEXT_COLOR, false);
 
         y += 10;
         guiGraphics.drawString(this.font, sideLine("gui.elements-plus.pressure_machine.output",
-                this.menu.getOutputPressure(), this.menu.getOutputVolume(), this.menu.isOutputSealed()),
+                        this.menu.getOutputPressure(), this.menu.getOutputVolume(), this.menu.isOutputSealed()),
                 x, y, TEXT_COLOR, false);
 
         y += 10;
         Component status = this.menu.isSameSpace()
                 ? Component.translatable("gui.elements-plus.pressure_machine.same_space")
                 : Component.translatable(this.menu.isWorking()
-                        ? "gui.elements-plus.pressure_machine.working"
-                        : "gui.elements-plus.pressure_machine.idle");
+                ? "gui.elements-plus.pressure_machine.working"
+                : "gui.elements-plus.pressure_machine.idle");
         guiGraphics.drawString(this.font, status, x, y, TEXT_COLOR, false);
     }
 

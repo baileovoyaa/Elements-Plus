@@ -352,6 +352,41 @@ public class BuiltinExperiments {
         return tests;
     }
 
+    /**
+     * 算术位移期望输出：左移缺失位补 0；右移缺失位补符号位（A 的第 7 通道）。
+     * 输出按数字语义放大为 0/15。
+     */
+    private static byte[] arithmeticShiftLanes(byte[] data, int shift) {
+        byte[] out = new byte[8];
+        int sign = (data[7] & 0xFF) != 0 ? 15 : 0;
+        for (int i = 0; i < 8; i++) {
+            int src = i - shift;
+            int lane;
+            if (src >= 0 && src < 8) {
+                lane = data[src] & 0xFF;
+            } else if (shift < 0) {
+                lane = sign;
+            } else {
+                lane = 0;
+            }
+            out[i] = (byte) (lane != 0 ? 15 : 0);
+        }
+        return out;
+    }
+
+    private static List<TestCase> buildArithmeticShiftTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int sample : SHIFT_DIGITAL_SAMPLES) {
+            byte[] data = pin8(sample);
+            for (int shift : SHIFT_AMOUNTS) {
+                tests.add(new ConstantCombinationalTestCase(
+                        Map.of("A", new PinValue(data.clone()), "B", new PinValue(signedLanes(shift))),
+                        Map.of("Y", new PinValue(arithmeticShiftLanes(data, shift)))));
+            }
+        }
+        return tests;
+    }
+
     public static final CircuitExperiment BITWISE_AND = register("bitwise_and", BuiltinCircuitComponents.BITWISE_AND.getIcon(),
             new CircuitExperiment(buildBitwise8Tests((a, b) -> a & b), BuiltinCircuitComponents.BITWISE_AND));
 
@@ -390,6 +425,10 @@ public class BuiltinExperiments {
 
     public static final CircuitExperiment BITWISE_SHIFT = register("bitwise_shift", BuiltinCircuitComponents.BITWISE_SHIFT.getIcon(),
             new CircuitExperiment(buildShifterTests(false, false), BuiltinCircuitComponents.BITWISE_SHIFT));
+
+    public static final CircuitExperiment BITWISE_SHIFT_ARITHMETIC = register("bitwise_shift_arithmetic",
+            BuiltinCircuitComponents.BITWISE_SHIFT_ARITHMETIC.getIcon(),
+            new CircuitExperiment(buildArithmeticShiftTests(), BuiltinCircuitComponents.BITWISE_SHIFT_ARITHMETIC));
 
     public static final CircuitExperiment BITWISE_ROTATE = register("bitwise_rotate", BuiltinCircuitComponents.BITWISE_ROTATE.getIcon(),
             new CircuitExperiment(buildShifterTests(true, false), BuiltinCircuitComponents.BITWISE_ROTATE));

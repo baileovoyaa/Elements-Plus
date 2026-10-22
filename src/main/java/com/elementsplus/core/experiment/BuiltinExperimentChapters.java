@@ -360,8 +360,12 @@ public class BuiltinExperimentChapters {
                     line(1, style(GOLD)),
                     line(2, style(ITALIC, RED), style(ITALIC, RED))
             ),
-            ch.text(1, line(0, style(GOLD), style(BLUE))),
-            ch.experiments(BuiltinExperiments.BITWISE_SHIFT),
+            ch.text(3,
+                    line(0, style(BLUE), style(BLUE)),
+                    line(1, style(GOLD), style(BLUE)),
+                    line(2, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.BITWISE_SHIFT, BuiltinExperiments.BITWISE_SHIFT_ARITHMETIC),
             ch.text(2,
                     line(0, style(GOLD), style(ITALIC, RED), style(ITALIC, RED)),
                     line(1, style(GOLD), style(BLUE))
