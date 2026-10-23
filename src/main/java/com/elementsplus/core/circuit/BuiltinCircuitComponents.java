@@ -416,7 +416,8 @@ public class BuiltinCircuitComponents {
     public static final CircuitComponent DIVIDER = register(new CircuitComponent(ElementsPlus.id("divider"), Component.translatable("circuit.elements-plus.component.divider"), null, ElementsPlus.id("textures/circuit/divider.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
         setPin(Direction.WEST, 1, PinType.INPUT, "B", 8);
-        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Q", 8);
+        setPin(Direction.SOUTH, 0, PinType.OUTPUT, "R", 8);
     }});
     // 多功能运算器
     public static final CircuitComponent ALU = register(new CircuitComponent(ElementsPlus.id("alu"), Component.translatable("circuit.elements-plus.component.alu"), null, ElementsPlus.id("textures/circuit/alu.png"), 2, 2) {{

@@ -69,6 +69,8 @@ category: "用户文档"
 
 本次实验我们要实现“<font color="gold">8位取反器</font>”。输入A（8位），输出其相反数的补码表示Y（8位）。
 
-> 8位取反器
+```epp-experiments
+8位取反器
+```
 
 结合<font color="gold">8位加法器</font>，就可以实现8位减法了。

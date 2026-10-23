@@ -84,6 +84,9 @@ public class CircuitSimulator {
     private int numNets;
     private NodeKind[] nodeKind = new NodeKind[0];
     private long[] nodeVals = new long[0];
+    /** 元件输出超过 64 位时使用的高位字（如高级 ALU 的 Y1 最高 4 位）。 */
+    private long[] nodeValsHigh = new long[0];
+    private long evalHighBits;
     private int[] netWidth = new int[0];
     private int[] topo = new int[0];
     private int topoLen;
@@ -222,14 +225,13 @@ public class CircuitSimulator {
             for (int b = 0; b < width && b < deps.length; b++) {
                 Dep d = deps[b];
                 if (d != null) {
-                    lanes[b] = (int) ((nodeVals[d.node()] >> d.bit()) & 0xF);
+                    lanes[b] = (int) readLane(d.node(), d.bit());
                 }
             }
         } else if (type == PinType.OUTPUT) {
             OutSlot slot = outputSlot(component.component, side, offset);
-            long v = nodeVals[node];
             for (int b = 0; b < width; b++) {
-                lanes[b] = (int) ((v >> (slot.bitStart() + 4 * b)) & 0xF);
+                lanes[b] = (int) readLane(node, slot.bitStart() + 4 * b);
             }
         }
         return lanes;
@@ -284,6 +286,7 @@ public class CircuitSimulator {
             numNets = 0;
             nodeKind = new NodeKind[0];
             nodeVals = new long[0];
+            nodeValsHigh = new long[0];
             netWidth = new int[0];
             topo = new int[0];
             topoLen = 0;
@@ -511,6 +514,7 @@ public class CircuitSimulator {
         }
 
         nodeVals = new long[totalNodes];
+        nodeValsHigh = new long[totalNodes];
     }
 
     private Component compAt(int x, int y) {
@@ -643,6 +647,7 @@ public class CircuitSimulator {
 
     private void evalOnce() {
         Arrays.fill(nodeVals, 0L);
+        Arrays.fill(nodeValsHigh, 0L);
         for (int k = 0; k < topoLen; k++) {
             int node = topo[k];
             NodeKind kind = nodeKind[node];
@@ -664,16 +669,38 @@ public class CircuitSimulator {
                 default -> {
                     int idx = node - numNets;
                     Component component = comps.get(idx);
-                    nodeVals[node] = kind == NodeKind.RES ? evalResonator(component, node) : evalCombinational(component, node);
+                    if (kind == NodeKind.RES) {
+                        nodeVals[node] = evalResonator(component, node);
+                    } else {
+                        evalHighBits = 0;
+                        nodeVals[node] = evalCombinational(component, node);
+                        nodeValsHigh[node] = evalHighBits;
+                    }
                 }
             }
         }
     }
 
+    /** 读取某节点从 bit 开始的 4 位通道；bit >= 64 时落到高位字。 */
+    private long readLane(int node, int bit) {
+        if (bit >= 64) {
+            return (nodeValsHigh[node] >>> (bit - 64)) & 0xF;
+        }
+        return (nodeVals[node] >>> bit) & 0xF;
+    }
+
     private long depValue(Dep d) {
         return switch (d.kind()) {
-            case WHOLE -> (nodeVals[d.node()] >> d.bit()) & 0xF;
-            case TUPLE -> (nodeVals[d.node()] >> d.bit()) & 0xFFFFFFFFL;
+            case WHOLE -> readLane(d.node(), d.bit());
+            case TUPLE -> {
+                int bit = d.bit();
+                long high = nodeValsHigh[d.node()];
+                long v = bit >= 64 ? high >>> (bit - 64) : nodeVals[d.node()] >>> bit;
+                if (bit > 32 && bit < 64) {
+                    v |= high << (64 - bit);
+                }
+                yield v & 0xFFFFFFFFL;
+            }
         };
     }
 
@@ -1108,6 +1135,85 @@ public class CircuitSimulator {
                     : (rotate ? analogRotate(a, shift) : analogShift(a, shift));
             long t = analog ? shifted : amplifyTuple(shifted);
             return t << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.MULTIPLIER) {
+            // 8 位无符号乘法：Y0 为低 8 位，Y1 为高 8 位。
+            int a = tupleToInt(inPort(node, 0));
+            int b = tupleToInt(inPort(node, 1));
+            int product = a * b;
+            long v = 0L;
+            v |= intToTuple(product & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
+            v |= intToTuple((product >> 8) & 0xFF) << outputSlot(cc, Direction.EAST, 1).bitStart();
+            return v;
+        } else if (cc == BuiltinCircuitComponents.DIVIDER) {
+            // 8 位无符号除法：Q 为整数商，R 为余数；除数为 0 时输出 0。
+            int a = tupleToInt(inPort(node, 0));
+            int b = tupleToInt(inPort(node, 1));
+            int q = 0;
+            int r = 0;
+            if (b != 0) {
+                q = a / b;
+                r = a % b;
+            }
+            long v = 0L;
+            v |= intToTuple(q & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
+            v |= intToTuple(r & 0xFF) << outputSlot(cc, Direction.SOUTH, 0).bitStart();
+            return v;
+        } else if (cc == BuiltinCircuitComponents.ALU || cc == BuiltinCircuitComponents.ALU_ADVANCED) {
+            // 多功能运算器：输入端口顺序为 A、B、OP、CI。
+            boolean advanced = cc == BuiltinCircuitComponents.ALU_ADVANCED;
+            int a = tupleToInt(inPort(node, 0));
+            int b = tupleToInt(inPort(node, 1));
+            int op = tupleToInt(inPort(node, 2)) & 0x7;
+            int ci = inPort(node, 3) != 0 ? 1 : 0;
+            int y;
+            int y1 = 0;
+            int co = 0;
+            switch (op) {
+                case 0 -> {
+                    int sum = a + b + ci;
+                    y = sum & 0xFF;
+                    co = (sum >> 8) & 1;
+                }
+                case 1 -> {
+                    // 减法复用 CI/CO 作为借位输入/输出：Y = A - B - CI，CO = 1 表示不够减。
+                    y = (a - b - ci) & 0xFF;
+                    co = a < b + ci ? 1 : 0;
+                }
+                case 2 -> y = a & b;
+                case 3 -> y = a | b;
+                case 4 -> y = ~a & 0xFF;
+                case 5 -> y = a ^ b;
+                case 6 -> {
+                    // 逻辑移位，B 按 8 位补码解释：非负左移、负数右移，空位补 0。
+                    int shift = (byte) (b & 0xFF);
+                    if (shift >= 0) {
+                        y = shift >= 8 ? 0 : (a << shift) & 0xFF;
+                    } else {
+                        int s = -shift;
+                        y = s >= 8 ? 0 : (a & 0xFF) >>> s;
+                    }
+                }
+                case 7 -> {
+                    if (advanced) {
+                        int product = a * b;
+                        y = product & 0xFF;
+                        y1 = (product >> 8) & 0xFF;
+                    } else {
+                        y = 0;
+                    }
+                }
+                default -> y = 0;
+            }
+            long v = 0L;
+            v |= intToTuple(y & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
+            if (advanced) {
+                long y1Tuple = intToTuple(y1 & 0xFF);
+                v |= (y1Tuple & 0x0FFFFFFFL) << outputSlot(cc, Direction.EAST, 1).bitStart();
+                // Y1 的槽位跨过第 64 位，最高 4 位写入高位字。
+                evalHighBits = (y1Tuple >>> 28) & 0xF;
+            }
+            v |= (long) (co != 0 ? 15 : 0) << outputSlot(cc, Direction.SOUTH, 0).bitStart();
+            return v;
         }
         return 0;
     }

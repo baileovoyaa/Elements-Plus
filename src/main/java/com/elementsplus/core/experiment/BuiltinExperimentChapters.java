@@ -105,8 +105,10 @@ public class BuiltinExperimentChapters {
         for (int i = 0; i < lineCount; i++) {
             String key = keyPrefix + ".text" + i;
             ArgSpec spec = byLine.get(i);
-            if (spec == null || spec.params().isEmpty()) {
+            if (spec == null) {
                 lines.add(Component.translatable(key));
+            } else if (spec.params().isEmpty()) {
+                lines.add(Component.translatable(key).withStyle(spec.formats()));
             } else {
                 Object[] args = new Object[spec.params().size()];
                 for (int j = 0; j < args.length; j++) {
@@ -374,6 +376,55 @@ public class BuiltinExperimentChapters {
             ch.text(1, line(0, style(GOLD), style(ITALIC, RED), style(ITALIC, RED), style(ITALIC, RED))),
             ch.experiments(BuiltinExperiments.BITWISE_SHIFT_ANALOG, BuiltinExperiments.BITWISE_ROTATE_ANALOG).optional()
     ), Set.of(MULTI_BIT_SUBTRACT)));
+
+    public static final ExperimentChapter MULTIPLIER_DIVISOR = register(chapter("multiplier_divisor", null, ch -> List.of(
+            ch.text(3,
+                    line(0).withStyle(BOLD),
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD))
+            ),
+            ch.text(1, line(0, style(GOLD), style(ITALIC, RED))),
+            ch.experiments(BuiltinExperiments.MULTIPLIER),
+            ch.text(1),
+            ch.text(2,
+                    line(0, style(BLUE)),
+                    line(1, style(BOLD))
+            ),
+            ch.text(2, line(0, style(GOLD), style(ITALIC, RED))),
+            ch.experiments(BuiltinExperiments.DIVIDER).optional()
+    ), Set.of(BITWISE_SHIFTER)));
+
+    public static final ExperimentChapter ALU_BASIC = register(chapter("alu_basic", null, ch -> List.of(
+            ch.text(2),
+            ch.text(8,
+                    line(0, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(1, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(2, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(3, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(4, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(5, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(6, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(7, style(ITALIC, RED))
+            ),
+            ch.text(2, line(0, style(GOLD))),
+            ch.experiments(BuiltinExperiments.ALU)
+    ), Set.of(BITWISE_SHIFTER)));
+
+    public static final ExperimentChapter ALU_ADVANCED = register(chapter("alu_advanced", null, ch -> List.of(
+            ch.text(2, line(0, style(GOLD), style(GOLD))),
+            ch.text(8,
+                    line(0, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(1, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(2, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(3, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(4, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(5, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(6, style(ITALIC, RED), style(ITALIC, RED)),
+                    line(7, style(ITALIC, RED), style(ITALIC, RED))
+            ),
+            ch.text(2, line(0, style(GOLD))),
+            ch.experiments(BuiltinExperiments.ALU_ADVANCED)
+    ), Set.of(ALU_BASIC, MULTIPLIER_DIVISOR)));
 
     public static ExperimentChapter register(ExperimentChapter experimentChapter) {
         BUILTIN_EXPERIMENT_CHAPTERS.add(experimentChapter);

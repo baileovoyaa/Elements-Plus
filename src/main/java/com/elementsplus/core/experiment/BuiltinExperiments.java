@@ -439,6 +439,174 @@ public class BuiltinExperiments {
     public static final CircuitExperiment BITWISE_ROTATE_ANALOG = register("bitwise_rotate_analog", BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG.getIcon(),
             new CircuitExperiment(buildShifterTests(true, true), BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG));
 
+    // ================= 乘除器 =================
+
+    private static final int[] ARITH_GRID_VALUES = {0, 1, 2, 3, 15, 16, 127, 255};
+
+    private static final int[][] SPECIAL_PRODUCT_PAIRS = {
+            {0xAA, 0x55}, {0x55, 0xAA}, {0xF0, 0x0F}, {0x0F, 0xF0},
+            {0x80, 0x02}, {0x02, 0x80}, {0x7F, 0x02}, {0x02, 0x7F},
+            {0x96, 0x69}, {0x69, 0x96}, {0x10, 0x10}, {0x20, 0x08},
+            {0x40, 0x04}, {0xFF, 0x80}, {0x80, 0xFF}, {0xFE, 0xFD},
+    };
+
+    private static final int[][] SPECIAL_DIVIDEND_PAIRS = {
+            {0xAA, 0x0F}, {0xFF, 0x10}, {0x96, 0x07}, {0x69, 0x0A},
+            {0x7F, 0x03}, {0x80, 0x11}, {0xFE, 0x02}, {0xFD, 0x03},
+            {0x64, 0x07}, {0xC8, 0x11}, {0xFF, 0x02}, {0x80, 0x7F},
+    };
+
+    private static RandomizedCombinationalTestCase multiplierCase(int a, int b) {
+        int product = a * b;
+        return new RandomizedCombinationalTestCase(
+                Map.of("A", new PinValue(pin8(a)), "B", new PinValue(pin8(b))),
+                Map.of("Y0", new PinValue(pin8(product & 0xFF)),
+                        "Y1", new PinValue(pin8((product >> 8) & 0xFF))));
+    }
+
+    /**
+     * 乘法器测例：8×8 网格覆盖小值、2 的幂与最大值，再补充若干特殊位型。
+     */
+    private static List<TestCase> buildMultiplierTests() {
+        List<TestCase> tests = new ArrayList<>();
+        Set<Integer> seen = new LinkedHashSet<>();
+        for (int a : ARITH_GRID_VALUES) {
+            for (int b : ARITH_GRID_VALUES) {
+                if (seen.add((a << 8) | b)) tests.add(multiplierCase(a, b));
+            }
+        }
+        for (int[] pair : SPECIAL_PRODUCT_PAIRS) {
+            if (seen.add((pair[0] << 8) | pair[1])) tests.add(multiplierCase(pair[0], pair[1]));
+        }
+        return tests;
+    }
+
+    private static RandomizedCombinationalTestCase dividerCase(int a, int b) {
+        int q = b == 0 ? 0 : a / b;
+        int r = b == 0 ? 0 : a % b;
+        return new RandomizedCombinationalTestCase(
+                Map.of("A", new PinValue(pin8(a)), "B", new PinValue(pin8(b))),
+                Map.of("Q", new PinValue(pin8(q & 0xFF)),
+                        "R", new PinValue(pin8(r & 0xFF))));
+    }
+
+    /**
+     * 除法器测例：包含除数为 0 的测例，约定此时 Q 和 R 均输出 0。
+     */
+    private static List<TestCase> buildDividerTests() {
+        List<TestCase> tests = new ArrayList<>();
+        Set<Integer> seen = new LinkedHashSet<>();
+        for (int a : ARITH_GRID_VALUES) {
+            for (int b : ARITH_GRID_VALUES) {
+                if (seen.add((a << 8) | b)) tests.add(dividerCase(a, b));
+            }
+        }
+        for (int[] pair : SPECIAL_DIVIDEND_PAIRS) {
+            if (seen.add((pair[0] << 8) | pair[1])) tests.add(dividerCase(pair[0], pair[1]));
+        }
+        // 补充除数为 0 的特殊被除数，确保各种位型下都输出全 0。
+        for (int a : new int[]{0xAA, 0xFF, 0x80, 0x01}) {
+            if (seen.add(a << 8)) tests.add(dividerCase(a, 0));
+        }
+        return tests;
+    }
+
+    // ================= 多功能运算器 =================
+
+    private static final int[][] ALU_OPERAND_PAIRS = {
+            {0x00, 0x00}, {0x01, 0x00}, {0x00, 0x01}, {0x01, 0x01},
+            {0xFF, 0x00}, {0x00, 0xFF}, {0xFF, 0x01}, {0x01, 0xFF},
+            {0xAA, 0x55}, {0x55, 0xAA}, {0x80, 0x80}, {0x7F, 0x80},
+            {0x80, 0x02}, {0x96, 0xFE}, {0x0F, 0x04}, {0xF0, 0xF9},
+    };
+
+    /**
+     * ALU 的逻辑移位：B 按 8 位补码解释，非负左移、负数右移，空位补 0。
+     */
+    private static int aluShift(int value, int shiftAmount) {
+        int shift = (byte) (shiftAmount & 0xFF);
+        if (shift >= 0) {
+            return shift >= 8 ? 0 : (value << shift) & 0xFF;
+        }
+        int s = -shift;
+        return s >= 8 ? 0 : (value & 0xFF) >>> s;
+    }
+
+    private static int aluResult(int op, int a, int b, int ci, boolean advanced) {
+        return switch (op) {
+            case 0 -> (a + b + ci) & 0xFF;
+            case 1 -> (a - b - ci) & 0xFF;
+            case 2 -> a & b;
+            case 3 -> a | b;
+            case 4 -> ~a & 0xFF;
+            case 5 -> a ^ b;
+            case 6 -> aluShift(a, b);
+            case 7 -> advanced ? (a * b) & 0xFF : 0;
+            default -> 0;
+        };
+    }
+
+    /**
+     * CO 约定：加法为进位输出；减法为借位输出（A < B + CI 表示不够减）；其余运算为 0。
+     */
+    private static int aluCarry(int op, int a, int b, int ci) {
+        return switch (op) {
+            case 0 -> ((a + b + ci) >> 8) & 1;
+            case 1 -> a < b + ci ? 1 : 0;
+            default -> 0;
+        };
+    }
+
+    private static RandomizedCombinationalTestCase aluCase(boolean advanced, int op, int a, int b, int ci) {
+        Map<String, PinValue> inputs = Map.of(
+                "A", new PinValue(pin8(a)),
+                "B", new PinValue(pin8(b)),
+                "OP", new PinValue(pin8(op)),
+                "CI", new PinValue(ci != 0 ? 15 : 0));
+        int y = aluResult(op, a, b, ci, advanced);
+        int co = aluCarry(op, a, b, ci);
+        Map<String, PinValue> outputs;
+        if (advanced) {
+            int y1 = op == 7 ? ((a * b) >> 8) & 0xFF : 0;
+            outputs = Map.of(
+                    "Y0", new PinValue(pin8(y)),
+                    "Y1", new PinValue(pin8(y1)),
+                    "CO", new PinValue(co != 0 ? 15 : 0));
+        } else {
+            outputs = Map.of(
+                    "Y", new PinValue(pin8(y)),
+                    "CO", new PinValue(co != 0 ? 15 : 0));
+        }
+        return new RandomizedCombinationalTestCase(inputs, outputs);
+    }
+
+    /**
+     * ALU 测例：操作码 0~7 × 16 组操作数 × CI(0/1)。B 的取值同时覆盖移位量与乘法操作数。
+     */
+    private static List<TestCase> buildAluTests(boolean advanced) {
+        List<TestCase> tests = new ArrayList<>();
+        for (int op = 0; op < 8; op++) {
+            for (int[] pair : ALU_OPERAND_PAIRS) {
+                for (int ci = 0; ci <= 1; ci++) {
+                    tests.add(aluCase(advanced, op, pair[0], pair[1], ci));
+                }
+            }
+        }
+        return tests;
+    }
+
+    public static final CircuitExperiment MULTIPLIER = register("multiplier", BuiltinCircuitComponents.MULTIPLIER.getIcon(),
+            new CircuitExperiment(buildMultiplierTests(), BuiltinCircuitComponents.MULTIPLIER));
+
+    public static final CircuitExperiment DIVIDER = register("divider", BuiltinCircuitComponents.DIVIDER.getIcon(),
+            new CircuitExperiment(buildDividerTests(), BuiltinCircuitComponents.DIVIDER));
+
+    public static final CircuitExperiment ALU = register("alu", BuiltinCircuitComponents.ALU.getIcon(),
+            new CircuitExperiment(buildAluTests(false), BuiltinCircuitComponents.ALU));
+
+    public static final CircuitExperiment ALU_ADVANCED = register("alu_advanced", BuiltinCircuitComponents.ALU_ADVANCED.getIcon(),
+            new CircuitExperiment(buildAluTests(true), BuiltinCircuitComponents.ALU_ADVANCED));
+
     public static final CircuitExperiment MUX_2 = register("mux_2", BuiltinCircuitComponents.MUX_2.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(inputs -> {
         int d0 = inputs.get(0), d1 = inputs.get(1), a = inputs.get(2);
         return new ConstantCombinationalTestCase(
