@@ -7,12 +7,14 @@ import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.CircuitComponent.PinType;
+import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.UpdateCircuitDiagramPayload;
+import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -22,6 +24,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.Direction;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
@@ -33,8 +36,11 @@ import net.minecraft.world.item.ItemStack;
 
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -159,6 +165,16 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private boolean boxSelectionActive;
     private int selectionVersion;
 
+    private static final int MAX_HISTORY = 100;
+    private final Deque<CircuitDiagram> undoStack = new ArrayDeque<>();
+    private final Deque<CircuitDiagram> redoStack = new ArrayDeque<>();
+    private ItemStack historyStack = ItemStack.EMPTY;
+    private CircuitDiagram historyStored;
+    private CircuitDiagram historyBaseline;
+    private boolean historyTransactionActive;
+    private CircuitDiagram historyTransactionStart;
+    private long historyGraceUntil;
+
     private boolean pressActive;
     private double pressScreenX, pressScreenY;
     private int pressCellX, pressCellY;
@@ -202,6 +218,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         super(x, y, width, height, net.minecraft.network.chat.Component.empty());
         this.menu = menu;
         this.activeSupplier = activeSupplier;
+        if (menu.slots.size() > 36) {
+            ensureHistory(menu.slots.get(36).getItem());
+        }
     }
 
     @Override
@@ -211,16 +230,28 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (!show) {
             return;
         }
+        if (menu.slots.size() > 36) {
+            ensureHistory(menu.slots.get(36).getItem());
+        }
 
         if ((pressActive || dragMode != DragMode.NONE) && !isLeftMouseDown()) {
             finalizePress(lastMouseX != null ? lastMouseX : mouseX, lastMouseY != null ? lastMouseY : mouseY);
         }
-        // 鼠标在控件外松开时可能收不到 mouseReleased，补一次直线导线的提交。
-        if (straightWireDrag && draggingWire != null && !isLeftMouseDown()) {
-            updateStraightWireDrag(cellX(mouseX), cellY(mouseY));
-            commitStraightWire();
+        // 鼠标在控件外松开时可能收不到 mouseReleased，补一次导线提交/历史事务结束。
+        if (draggingWire != null && !isLeftMouseDown()) {
+            if (straightWireDrag) {
+                updateStraightWireDrag(cellX(mouseX), cellY(mouseY));
+                commitStraightWire();
+            }
             draggingWire = null;
             straightWireDrag = false;
+            endHistoryTransaction();
+        }
+        if (erasing && !isRightMouseDown()) {
+            erasing = false;
+            lastEraseX = Integer.MIN_VALUE;
+            lastEraseY = Integer.MIN_VALUE;
+            endHistoryTransaction();
         }
 
         if (this.lastMouseX == null) {
@@ -972,10 +1003,294 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void commitDiagram(ItemStack stack, CircuitDiagram editor) {
+        if (editor == null) {
+            return;
+        }
+        ensureHistory(stack);
         stack.set(ModDataComponents.CIRCUIT_DIAGRAM, editor);
+        if (!historyTransactionActive) {
+            recordHistory(editor);
+        }
+        historyStored = editor;
+        historyGraceUntil = Util.getMillis() + 250L;
         simulationDirty = true;
         menu.onDiagramChanged();
         ClientPlayNetworking.send(new UpdateCircuitDiagramPayload(editor));
+    }
+
+    /** 当物品栈或存储的电路图对象发生变化时，维护/清空历史，避免撤销到另一张电路图。 */
+    private void ensureHistory(ItemStack stack) {
+        CircuitDiagram current = stack == null || stack.isEmpty()
+                ? null
+                : stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (stack == historyStack && current == historyStored) {
+            return;
+        }
+        // 服务端可能把同一张图同步回来（新的 ItemStack / CircuitDiagram 对象）。
+        // 内容仍等于最近一次本地状态或最近一次提交状态时，保留历史。
+        boolean sameItemType = !historyStack.isEmpty() && stack != null && !stack.isEmpty()
+                && stack.is(historyStack.getItem());
+        if (sameItemType && (Util.getMillis() < historyGraceUntil
+                || historyTransactionActive
+                || sameDiagram(current, historyStored)
+                || sameDiagram(current, historyBaseline))) {
+            historyStack = stack;
+            historyStored = current;
+            return;
+        }
+        historyStack = stack;
+        historyStored = current;
+        historyBaseline = current == null ? null : current.copy();
+        historyGraceUntil = 0L;
+        undoStack.clear();
+        redoStack.clear();
+        historyTransactionActive = false;
+        historyTransactionStart = null;
+    }
+
+    private void recordHistory(CircuitDiagram editor) {
+        if (editor == null) {
+            return;
+        }
+        if (historyBaseline == null) {
+            historyBaseline = editor.copy();
+            return;
+        }
+        if (sameDiagram(historyBaseline, editor)) {
+            historyBaseline = editor.copy();
+            return;
+        }
+        pushUndo(historyBaseline);
+        historyBaseline = editor.copy();
+        redoStack.clear();
+    }
+
+    private void beginHistoryTransaction() {
+        if (historyTransactionActive) {
+            return;
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        ensureHistory(stack);
+        historyTransactionActive = true;
+        historyTransactionStart = historyBaseline == null ? null : historyBaseline.copy();
+    }
+
+    private void endHistoryTransaction() {
+        if (!historyTransactionActive) {
+            return;
+        }
+        historyTransactionActive = false;
+        historyGraceUntil = Util.getMillis() + 250L;
+        CircuitDiagram start = historyTransactionStart;
+        historyTransactionStart = null;
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram current = stack.isEmpty() ? null : stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        historyStored = current;
+        if (current == null) {
+            return;
+        }
+        if (start == null) {
+            historyBaseline = current.copy();
+            return;
+        }
+        if (sameDiagram(start, current)) {
+            historyBaseline = current.copy();
+            return;
+        }
+        pushUndo(start);
+        historyBaseline = current.copy();
+        redoStack.clear();
+    }
+
+    private void pushUndo(CircuitDiagram state) {
+        if (state == null) {
+            return;
+        }
+        undoStack.addLast(state);
+        while (undoStack.size() > MAX_HISTORY) {
+            undoStack.removeFirst();
+        }
+    }
+
+    private void pushRedo(CircuitDiagram state) {
+        if (state == null) {
+            return;
+        }
+        redoStack.addLast(state);
+        while (redoStack.size() > MAX_HISTORY) {
+            redoStack.removeFirst();
+        }
+    }
+
+    private static boolean sameDiagram(CircuitDiagram a, CircuitDiagram b) {
+        if (a == b) {
+            return true;
+        }
+        if (a == null || b == null) {
+            return false;
+        }
+        try {
+            return Arrays.equals(diagramSignature(a), diagramSignature(b));
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /** 与序列化顺序无关的电路图内容签名，用于判断服务端同步/空提交是否真的改变了电路。 */
+    private static byte[] diagramSignature(CircuitDiagram diagram) {
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            buf.writeVarInt(diagram.scale.ordinal());
+            List<Map.Entry<Long, CircuitDiagram.Chunk>> chunks = new ArrayList<>(diagram.chunks.entrySet());
+            chunks.sort(Comparator.comparingLong(entry -> entry.getKey()));
+            buf.writeVarInt(chunks.size());
+            for (Map.Entry<Long, CircuitDiagram.Chunk> entry : chunks) {
+                long key = entry.getKey();
+                buf.writeVarInt((int) (key >> 32));
+                buf.writeVarInt((int) (key & 0xFFFFFFFFL));
+                CircuitDiagram.Chunk chunk = entry.getValue();
+
+                List<CircuitDiagram.Wire> wires = new ArrayList<>();
+                for (CircuitDiagram.Wire[] row : chunk.wires) {
+                    for (CircuitDiagram.Wire wire : row) {
+                        if (wire != null) {
+                            wires.add(wire);
+                        }
+                    }
+                }
+                wires.sort(Comparator.comparingInt((CircuitDiagram.Wire wire) -> wire.x)
+                        .thenComparingInt(wire -> wire.y));
+                buf.writeVarInt(wires.size());
+                for (CircuitDiagram.Wire wire : wires) {
+                    buf.writeVarInt(wire.x);
+                    buf.writeVarInt(wire.y);
+                    writeSignatureMaterial(buf, wire.north);
+                    writeSignatureMaterial(buf, wire.east);
+                    writeSignatureMaterial(buf, wire.south);
+                    writeSignatureMaterial(buf, wire.west);
+                    buf.writeVarInt(wire.copperBitWidth);
+                    buf.writeVarInt(wire.goldBitWidth);
+                }
+
+                List<CircuitDiagram.Component> components = new ArrayList<>(chunk.components);
+                components.sort(Comparator.comparingInt((CircuitDiagram.Component component) -> component.x)
+                        .thenComparingInt(component -> component.y)
+                        .thenComparing(component -> component.component.getId() == null
+                                ? ""
+                                : component.component.getId().toString()));
+                buf.writeVarInt(components.size());
+                for (CircuitDiagram.Component component : components) {
+                    buf.writeVarInt(component.x);
+                    buf.writeVarInt(component.y);
+                    buf.writeVarInt(component.direction.ordinal());
+                    buf.writeBoolean(component.mirrored);
+                    ResourceLocation id = component.component.getId();
+                    buf.writeUtf(id == null ? "" : id.toString());
+                    List<CircuitComponentInstance.Config> configs = new ArrayList<>(component.instance.getConfigs());
+                    configs.sort(Comparator.comparing(config -> config.key));
+                    buf.writeVarInt(configs.size());
+                    for (CircuitComponentInstance.Config config : configs) {
+                        buf.writeUtf(config.key);
+                        if (config instanceof CircuitComponentInstance.IntConfig) {
+                            buf.writeByte(0);
+                            buf.writeInt(component.instance.getInt(config.key));
+                        } else if (config instanceof CircuitComponentInstance.FloatConfig) {
+                            buf.writeByte(1);
+                            buf.writeInt(Float.floatToIntBits(component.instance.getFloat(config.key)));
+                        } else if (config instanceof CircuitComponentInstance.StringConfig) {
+                            buf.writeByte(2);
+                            buf.writeUtf(component.instance.getString(config.key));
+                        } else {
+                            buf.writeByte(3);
+                        }
+                    }
+                }
+            }
+            byte[] bytes = new byte[buf.readableBytes()];
+            buf.readBytes(bytes);
+            return bytes;
+        } finally {
+            buf.release();
+        }
+    }
+
+    private static void writeSignatureMaterial(FriendlyByteBuf buf, CircuitDiagram.Wire.WireMaterial material) {
+        buf.writeByte(material == null ? -1 : material.ordinal());
+    }
+
+    public boolean undo() {
+        if (isReadOnly() || pressActive || draggingWire != null || erasing
+                || isLeftMouseDown() || isRightMouseDown()) {
+            return false;
+        }
+        if (historyTransactionActive) {
+            endHistoryTransaction();
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        ensureHistory(stack);
+        if (undoStack.isEmpty()) {
+            return false;
+        }
+        CircuitDiagram current = stack.isEmpty() ? null : stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (current == null) {
+            return false;
+        }
+        if (historyBaseline == null || !sameDiagram(current, historyBaseline)) {
+            // 当前显示状态已不是历史基线（换图/外部同步/未提交修改），放弃旧历史，避免撤错图。
+            historyBaseline = current.copy();
+            historyStored = current;
+            undoStack.clear();
+            redoStack.clear();
+            return false;
+        }
+        CircuitDiagram currentState = historyBaseline.copy();
+        CircuitDiagram target = undoStack.removeLast();
+        pushRedo(currentState);
+        applyHistoryState(stack, target);
+        return true;
+    }
+
+    public boolean redo() {
+        if (isReadOnly() || pressActive || draggingWire != null || erasing
+                || isLeftMouseDown() || isRightMouseDown()) {
+            return false;
+        }
+        if (historyTransactionActive) {
+            endHistoryTransaction();
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        ensureHistory(stack);
+        if (redoStack.isEmpty()) {
+            return false;
+        }
+        CircuitDiagram current = stack.isEmpty() ? null : stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (current == null) {
+            return false;
+        }
+        if (historyBaseline == null || !sameDiagram(current, historyBaseline)) {
+            historyBaseline = current.copy();
+            historyStored = current;
+            undoStack.clear();
+            redoStack.clear();
+            return false;
+        }
+        CircuitDiagram currentState = historyBaseline.copy();
+        CircuitDiagram target = redoStack.removeLast();
+        pushUndo(currentState);
+        applyHistoryState(stack, target);
+        return true;
+    }
+
+    private void applyHistoryState(ItemStack stack, CircuitDiagram state) {
+        CircuitDiagram copy = state.copy();
+        stack.set(ModDataComponents.CIRCUIT_DIAGRAM, copy);
+        historyStored = copy;
+        historyBaseline = copy.copy();
+        historyGraceUntil = Util.getMillis() + 250L;
+        simulationDirty = true;
+        clearSelection();
+        menu.onDiagramChanged();
+        ClientPlayNetworking.send(new UpdateCircuitDiagramPayload(copy));
     }
 
     private CircuitDiagram.Wire.WireMaterial wireMaterial() {
@@ -1667,6 +1982,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     CircuitDiagram.Wire.WireMaterial wire = wireMaterial();
                     if (wire != null) {
                         draggingWire = wire;
+                        beginHistoryTransaction();
                         straightWireDrag = Screen.hasControlDown();
                         if (straightWireDrag) {
                             straightWireStartX = cellX(mouseX);
@@ -1716,6 +2032,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     int gy = cellY(mouseY);
                     if (diagram.getBlock(gx, gy) instanceof CircuitDiagram.Wire) {
                         erasing = true;
+                        beginHistoryTransaction();
                         lastEraseX = gx;
                         lastEraseY = gy;
                         tryErase(gx, gy, mouseX, mouseY);
@@ -1738,6 +2055,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 int gx = cellX(mouseX);
                 int gy = cellY(mouseY);
                 erasing = true;
+                beginHistoryTransaction();
                 lastEraseX = gx;
                 lastEraseY = gy;
                 tryErase(gx, gy, mouseX, mouseY);
@@ -1761,6 +2079,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             erasing = false;
             lastEraseX = Integer.MIN_VALUE;
             lastEraseY = Integer.MIN_VALUE;
+            endHistoryTransaction();
         }
         if (button == 0) {
             if (draggingWire != null && straightWireDrag) {
@@ -1772,6 +2091,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             if (pressActive || dragMode != DragMode.NONE) {
                 finalizePress((int) mouseX, (int) mouseY);
             }
+            endHistoryTransaction();
         }
         return this.active && this.visible;
     }
@@ -1816,6 +2136,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private boolean isLeftMouseDown() {
         return GLFW.glfwGetMouseButton(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT)
+                == GLFW.GLFW_PRESS;
+    }
+
+    private boolean isRightMouseDown() {
+        return GLFW.glfwGetMouseButton(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_RIGHT)
                 == GLFW.GLFW_PRESS;
     }
 
@@ -2195,7 +2520,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     public void deleteSelection() {
         boolean hasBox = hasSelectionBox();
-        if (isReadOnly() || (selectedCells.isEmpty() && !hasBox)) {
+        if (isReadOnly() || historyTransactionActive || pressActive || draggingWire != null || erasing
+                || (selectedCells.isEmpty() && !hasBox)) {
             return;
         }
         ItemStack stack = menu.slots.get(36).getItem();

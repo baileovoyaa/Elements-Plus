@@ -30,6 +30,7 @@ import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -556,6 +557,21 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (buttonGroup.getSelected() == tabButtonDesign
                 && (speedEditBox == null || !speedEditBox.isFocused())
                 && (attributeEditBox == null || !attributeEditBox.isFocused())) {
+            if (Screen.hasControlDown() && !(getFocused() instanceof EditBox)) {
+                if (keyCode == GLFW.GLFW_KEY_Z) {
+                    if (Screen.hasShiftDown()) {
+                        if (circuitPanel.redo()) {
+                            return true;
+                        }
+                    } else if (circuitPanel.undo()) {
+                        return true;
+                    }
+                } else if (keyCode == GLFW.GLFW_KEY_Y) {
+                    if (circuitPanel.redo()) {
+                        return true;
+                    }
+                }
+            }
             if (ElementsPlusClient.keyMirrorHorizontal != null
                     && ElementsPlusClient.keyMirrorHorizontal.matches(keyCode, scanCode)) {
                 circuitPanel.applyMirror(true);
