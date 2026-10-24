@@ -549,7 +549,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (keyCode == GLFW.GLFW_KEY_DELETE && buttonGroup.getSelected() == tabButtonDesign
                 && (speedEditBox == null || !speedEditBox.isFocused())
                 && (attributeEditBox == null || !attributeEditBox.isFocused())
-                && (circuitPanel.hasSelection() || circuitPanel.isMultiSelected())) {
+                && (circuitPanel.hasSelection() || circuitPanel.isMultiSelected() || circuitPanel.hasSelectionBox())) {
             circuitPanel.deleteSelection();
             return true;
         }

@@ -156,6 +156,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private final Set<Long> selectedCells = new HashSet<>();
     private int selBoxX, selBoxY, selBoxW, selBoxH;
+    private boolean boxSelectionActive;
     private int selectionVersion;
 
     private boolean pressActive;
@@ -163,6 +164,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private int pressCellX, pressCellY;
     private boolean pressOnComponent;
     private boolean pressSelected;
+    private boolean pressOnSelectedWire;
     private boolean pressCtrl;
 
     private DragMode dragMode = DragMode.NONE;
@@ -251,7 +253,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     drawCopyGhost(guiGraphics, dispDx, dispDy);
                 }
             }
-            if (isMultiSelected() || dragMode != DragMode.NONE) {
+            if (isMultiSelected() || hasSelectionBox() || dragMode != DragMode.NONE) {
                 if (dragMode == DragMode.MOVE) {
                     drawSelBoxOutline(guiGraphics, selBoxX + dispDx, selBoxY + dispDy, selBoxW, selBoxH);
                 } else {
@@ -432,6 +434,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
         return selectedCells.size() > 1;
     }
 
+    /** 是否存在框选区域（可能只包含导线，此时 selectedCells 为空）。 */
+    public boolean hasSelectionBox() {
+        return boxSelectionActive && selBoxW > 0 && selBoxH > 0;
+    }
+
     public int getSelectionVersion() {
         return selectionVersion;
     }
@@ -465,12 +472,32 @@ public class CircuitDiagramPanel extends AbstractWidget {
         return bw > 0 && bh > 0 && x >= bx && x < bx + bw && y >= by && y < by + bh;
     }
 
+    /** 当前选框内是否至少有一格导线。 */
+    private boolean hasWireInBox(CircuitDiagram diagram) {
+        if (diagram == null || selBoxW <= 0 || selBoxH <= 0) {
+            return false;
+        }
+        for (Map.Entry<Long, CircuitDiagram.Chunk> entry : diagram.chunks.entrySet()) {
+            CircuitDiagram.Chunk chunk = entry.getValue();
+            for (int i = 0; i < 16; i++) {
+                for (int j = 0; j < 16; j++) {
+                    CircuitDiagram.Wire wire = chunk.wires[i][j];
+                    if (wire != null && insideBox(wire.x, wire.y, selBoxX, selBoxY, selBoxW, selBoxH)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private void bumpSelection() {
         selectionVersion++;
     }
 
     private void clearSelection() {
         selectedCells.clear();
+        boxSelectionActive = false;
         selBoxW = 0;
         selBoxH = 0;
         setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
@@ -482,6 +509,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
      */
     private void setSelectionSingle(int gx, int gy) {
         selectedCells.clear();
+        boxSelectionActive = false;
         selectedCells.add(cellKey(gx, gy));
         setSelected(gx, gy);
         updateSelBox();
@@ -497,13 +525,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     /**
      * 根据当前选中元件的包围盒刷新选框。
+     * 若当前是框选，则保留原拖拽矩形并与元件范围取并集，避免选框收缩后忽略外侧导线。
      */
     private void updateSelBox() {
-        if (selectedCells.isEmpty()) {
-            selBoxW = 0;
-            selBoxH = 0;
-            return;
-        }
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
         CircuitDiagram diagram = getDiagram();
@@ -521,9 +545,17 @@ public class CircuitDiagramPanel extends AbstractWidget {
             }
         }
         if (minX == Integer.MAX_VALUE) {
-            selBoxW = 0;
-            selBoxH = 0;
+            if (!boxSelectionActive) {
+                selBoxW = 0;
+                selBoxH = 0;
+            }
             return;
+        }
+        if (boxSelectionActive && selBoxW > 0 && selBoxH > 0) {
+            minX = Math.min(minX, selBoxX);
+            minY = Math.min(minY, selBoxY);
+            maxX = Math.max(maxX, selBoxX + selBoxW - 1);
+            maxY = Math.max(maxY, selBoxY + selBoxH - 1);
         }
         setSelBox(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
@@ -791,8 +823,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
             if (wasSelected) {
                 if (selectedCells.isEmpty()) {
                     setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
-                    selBoxW = 0;
-                    selBoxH = 0;
+                    if (!boxSelectionActive || !hasWireInBox(editor)) {
+                        selBoxW = 0;
+                        selBoxH = 0;
+                        boxSelectionActive = false;
+                    }
                 } else {
                     updateSelBox();
                 }
@@ -1661,6 +1696,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
             pressCellY = gy;
             pressOnComponent = under != null;
             pressSelected = under != null && isSelected(under.x, under.y);
+            CircuitDiagram pressDiagram = getDiagram();
+            pressOnSelectedWire = hasSelectionBox()
+                    && insideBox(gx, gy, selBoxX, selBoxY, selBoxW, selBoxH)
+                    && pressDiagram != null
+                    && wireAt(pressDiagram, gx, gy) != null;
             pressCtrl = Screen.hasControlDown();
             dragMode = DragMode.NONE;
             dispDx = 0;
@@ -1783,22 +1823,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (isReadOnly()) {
             return;
         }
-        if (pressOnComponent && pressCtrl) {
+        boolean groupPress = (pressOnComponent && (pressCtrl || pressSelected)) || pressOnSelectedWire;
+        if (groupPress) {
             beginGroupDrag();
             if (dragComps.isEmpty() && dragWires.isEmpty()) {
                 dragMode = DragMode.NONE;
                 return;
             }
-            dragMode = DragMode.COPY;
-            dispDx = 0;
-            dispDy = 0;
-        } else if (pressOnComponent && pressSelected) {
-            beginGroupDrag();
-            if (dragComps.isEmpty() && dragWires.isEmpty()) {
-                dragMode = DragMode.NONE;
-                return;
-            }
-            dragMode = DragMode.MOVE;
+            dragMode = pressCtrl ? DragMode.COPY : DragMode.MOVE;
             dispDx = 0;
             dispDy = 0;
         } else {
@@ -2015,6 +2047,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         dragComps.clear();
         dragWires.clear();
         dragOwnedCells.clear();
+        pressOnSelectedWire = false;
         dispDx = 0;
         dispDy = 0;
         boxSelX1 = 0;
@@ -2049,7 +2082,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             nc.y = c.y + dy;
             editor.setBlock(nc.x, nc.y, nc, force);
         }
-        playSound(COMPONENT_MOVE_SOUND);
+        playSound(dragComps.isEmpty() ? WIRE_PLACE_SOUND : COMPONENT_MOVE_SOUND);
         commitDiagram(stack, editor);
         selectedCells.clear();
         for (Long key : dragSelected) {
@@ -2070,12 +2103,15 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         CircuitDiagram editor = diagram.copy();
         boolean force = Screen.hasShiftDown();
+        boolean copiedAny = false;
         List<CircuitDiagram.Component> copies = new ArrayList<>();
         for (CircuitDiagram.Wire w : dragWires) {
             CircuitDiagram.Wire nw = new CircuitDiagram.Wire(w.north, w.east, w.south, w.west, w.copperBitWidth, w.goldBitWidth);
             nw.x = w.x + dx;
             nw.y = w.y + dy;
-            editor.setBlock(nw.x, nw.y, nw, force);
+            if (editor.setBlock(nw.x, nw.y, nw, force)) {
+                copiedAny = true;
+            }
         }
         for (CircuitDiagram.Component c : dragComps) {
             CircuitDiagram.Component nc = c.copy();
@@ -2083,12 +2119,13 @@ public class CircuitDiagramPanel extends AbstractWidget {
             nc.y = c.y + dy;
             if (editor.setBlock(nc.x, nc.y, nc, force)) {
                 copies.add(nc);
+                copiedAny = true;
             }
         }
-        if (copies.isEmpty()) {
+        if (!copiedAny) {
             return;
         }
-        playSound(COMPONENT_PLACE_SOUND);
+        playSound(copies.isEmpty() ? WIRE_PLACE_SOUND : COMPONENT_PLACE_SOUND);
         commitDiagram(stack, editor);
         selectedCells.clear();
         for (CircuitDiagram.Component nc : copies) {
@@ -2138,20 +2175,27 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 }
             }
         }
-        if (selectedCells.isEmpty()) {
-            setSelected(Integer.MIN_VALUE, Integer.MIN_VALUE);
-            selBoxW = 0;
-            selBoxH = 0;
-        } else {
-            updateSelBox();
-            syncSelectionAnchor();
+
+        // 保留拖拽矩形；若选中的元件超出矩形，则与元件范围取并集，而不是收缩到元件最小矩形。
+        setSelBox(minX, minY, maxX - minX + 1, maxY - minY + 1);
+        if (selectedCells.isEmpty() && (diagram == null || !hasWireInBox(diagram))) {
+            clearSelection();
+            clearDragState();
+            bumpSelection();
+            return;
         }
+        boxSelectionActive = true;
+        if (!selectedCells.isEmpty()) {
+            updateSelBox();
+        }
+        syncSelectionAnchor();
         clearDragState();
         bumpSelection();
     }
 
     public void deleteSelection() {
-        if (isReadOnly() || selectedCells.isEmpty()) {
+        boolean hasBox = hasSelectionBox();
+        if (isReadOnly() || (selectedCells.isEmpty() && !hasBox)) {
             return;
         }
         ItemStack stack = menu.slots.get(36).getItem();
@@ -2162,7 +2206,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         CircuitDiagram editor = diagram.copy();
         boolean removedComp = false;
         boolean removedWire = false;
-        if (selectedCells.size() == 1) {
+        if (!hasBox && selectedCells.size() == 1) {
             Long key = selectedCells.iterator().next();
             CircuitDiagram.Block b = editor.getBlock(cellXOf(key), cellYOf(key));
             if (b != null) {
@@ -2174,6 +2218,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 }
             }
         } else {
+            // 框选：删除选中的元件（selectedCells），以及选框内的所有导线。
             for (Long key : selectedCells) {
                 CircuitDiagram.Block b = editor.getBlock(cellXOf(key), cellYOf(key));
                 if (b != null) {
