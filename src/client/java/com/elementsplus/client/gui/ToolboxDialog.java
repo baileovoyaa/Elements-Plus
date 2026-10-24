@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * 模态对话框：全屏半透明遮罩 + 主面板窗体。由 Screen 直接渲染与分发输入。
@@ -30,6 +31,8 @@ public class ToolboxDialog {
     private final Component title;
     @Nullable
     private final Component message;
+    @Nullable
+    private final Predicate<String> numberValidator;
     private final Callback callback;
 
     @Nullable
@@ -43,9 +46,18 @@ public class ToolboxDialog {
 
     public ToolboxDialog(Mode mode, Component title, @Nullable Component message, @Nullable String initialValue,
                          Font font, int screenWidth, int screenHeight, Callback callback) {
+        this(mode, title, message, initialValue, font, screenWidth, screenHeight, callback, null, null, 0);
+    }
+
+    public ToolboxDialog(Mode mode, Component title, @Nullable Component message, @Nullable String initialValue,
+                         Font font, int screenWidth, int screenHeight, Callback callback,
+                         @Nullable Predicate<String> numberFilter,
+                         @Nullable Predicate<String> numberValidator,
+                         int numberMaxLength) {
         this.mode = mode;
         this.title = title;
         this.message = message;
+        this.numberValidator = numberValidator;
         this.callback = callback;
         this.winW = 220;
         this.winH = (mode == Mode.RENAME || mode == Mode.NUMBER) ? 96 : 88;
@@ -65,8 +77,10 @@ public class ToolboxDialog {
             this.editBox.setFocused(true);
         } else if (mode == Mode.NUMBER) {
             this.editBox = new EditBox(font, winX + 20, winY + 40, winW - 40, 16, Component.empty());
-            this.editBox.setMaxLength(3);
-            this.editBox.setFilter(s -> s.chars().allMatch(c -> c >= '0' && c <= '9'));
+            this.editBox.setMaxLength(numberMaxLength > 0 ? numberMaxLength : 3);
+            this.editBox.setFilter(numberFilter != null
+                    ? numberFilter
+                    : s -> s.chars().allMatch(c -> c >= '0' && c <= '9'));
             String value = initialValue == null ? "" : initialValue;
             this.editBox.setValue(value);
             this.editBox.setCursorPosition(value.length());
@@ -78,8 +92,11 @@ public class ToolboxDialog {
         return editBox != null ? editBox.getValue() : "";
     }
 
-    /** NUMBER 模式：文本非空且为 0~255 的整数。 */
+    /** NUMBER 模式：默认要求文本为 0~255 的整数；传入自定义校验器时由校验器决定。 */
     public boolean isNumberValid() {
+        if (numberValidator != null) {
+            return numberValidator.test(getText().trim());
+        }
         try {
             int v = Integer.parseInt(getText().trim());
             return v >= 0 && v <= 255;
@@ -101,6 +118,9 @@ public class ToolboxDialog {
 
         if (editBox != null) {
             editBox.render(g, mouseX, mouseY, partialTick);
+            if (mode == Mode.NUMBER && message != null) {
+                g.drawCenteredString(font, message, winX + winW / 2, winY + 58, 0xFFA0A0A0);
+            }
         } else if (mode == Mode.DELETE_CONFIRM) {
             List<net.minecraft.util.FormattedCharSequence> lines = font.split(message, winW - 20);
             int ly = winY + 32;

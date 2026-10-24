@@ -5,6 +5,7 @@ import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.client.ElementsPlusClient;
 import com.elementsplus.client.config.ClientConfig;
+import com.elementsplus.client.config.NumberFormat;
 import com.elementsplus.client.gui.ButtonGroup;
 import com.elementsplus.core.circuit.ChipManufacture;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
@@ -310,6 +311,25 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             ClientConfig.get().save();
         }));
 
+        // 数字格式：总线 / 信号强度
+        toolbarWidget.addChild(new ToolbarSeparator(toolbarX += 16 + 5, 2, 1, 14));
+        toolbarWidget.addChild(new IconButton(toolbarX += 5, 1, 16, 16,
+                numberFormatIcon(true, ClientConfig.get().digitalNumberFormat), button -> {
+            NumberFormat current = ClientConfig.get().digitalNumberFormat;
+            NumberFormat next = Screen.hasShiftDown() ? current.previous() : current.next();
+            ClientConfig.get().digitalNumberFormat = next;
+            ClientConfig.get().save();
+            ((IconButton) button).icon = numberFormatIcon(true, next);
+        }));
+        toolbarWidget.addChild(new IconButton(toolbarX += 16, 1, 16, 16,
+                numberFormatIcon(false, ClientConfig.get().analogNumberFormat), button -> {
+            NumberFormat current = ClientConfig.get().analogNumberFormat;
+            NumberFormat next = Screen.hasShiftDown() ? current.previous() : current.next();
+            ClientConfig.get().analogNumberFormat = next;
+            ClientConfig.get().save();
+            ((IconButton) button).icon = numberFormatIcon(false, next);
+        }));
+
         // 检查模式
         toolbarWidget.addChild(new ToolbarSeparator(toolbarX += 16 + 5, 2, 1, 14));
         toolbarWidget.addChild(inspectButton = new IconButton(toolbarX += 5, 1, 16, 16,
@@ -437,16 +457,23 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 });
     }
 
+    private static ResourceLocation numberFormatIcon(boolean digital, NumberFormat format) {
+        return ElementsPlus.id(format.iconPath(digital));
+    }
+
     private void openInput8ValueDialog(CircuitDiagram.Component component) {
         int initial = circuitPanel.getInput8Value(component);
+        NumberFormat format = ClientConfig.get().digitalNumberFormat;
         toolboxDialog = new ToolboxDialog(ToolboxDialog.Mode.NUMBER,
                 Component.translatable("gui.elements-plus.lithography_machine.input_8_value_title"),
-                null, String.valueOf(initial), this.font, this.width, this.height,
+                Component.translatable("gui.elements-plus.lithography_machine.input_8_value_range",
+                        format.rangeTextDigital()),
+                format.formatDigital(initial), this.font, this.width, this.height,
                 new ToolboxDialog.Callback() {
                     @Override
                     public void onOk(ToolboxDialog dialog) {
                         try {
-                            int value = Integer.parseInt(dialog.getText().trim());
+                            int value = format.parseDigital(dialog.getText());
                             circuitPanel.applyInput8Value(component, value);
                         } catch (NumberFormatException ignored) {
                         } finally {
@@ -458,7 +485,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                     public void onCancel() {
                         toolboxDialog = null;
                     }
-                });
+                },
+                format::acceptsPartial,
+                format::isValidText,
+                format.inputMaxLength());
     }
 
     private void openDeleteConfirmDialog(int groupIndex) {

@@ -265,7 +265,8 @@
   "gui.elements-plus.lithography_machine.bit_width_mismatch": "位宽不匹配",
   "gui.elements-plus.lithography_machine.multiple_selected": "已选中多个元件",
   "gui.elements-plus.lithography_machine.empty_label": "（空）",
-  "gui.elements-plus.lithography_machine.input_8_value_title": "输入 0~255 的值",
+  "gui.elements-plus.lithography_machine.input_8_value_title": "输入 8 位值",
+  "gui.elements-plus.lithography_machine.input_8_value_range": "范围：%s",
 
   "gui.elements-plus.toolbox.group.input_output": "输入输出",
   "gui.elements-plus.toolbox.group.bus": "总线",

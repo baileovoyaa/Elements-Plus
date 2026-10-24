@@ -266,7 +266,8 @@
   "gui.elements-plus.lithography_machine.bit_width_mismatch": "Bit width mismatch",
   "gui.elements-plus.lithography_machine.multiple_selected": "Multiple selected",
   "gui.elements-plus.lithography_machine.empty_label": "(empty)",
-  "gui.elements-plus.lithography_machine.input_8_value_title": "Enter a value from 0 to 255",
+  "gui.elements-plus.lithography_machine.input_8_value_title": "Enter an 8-bit value",
+  "gui.elements-plus.lithography_machine.input_8_value_range": "Range: %s",
 
   "gui.elements-plus.toolbox.group.input_output": "Input & Output",
   "gui.elements-plus.toolbox.group.bus": "Bus",

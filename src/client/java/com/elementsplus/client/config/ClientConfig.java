@@ -18,6 +18,10 @@ public class ClientConfig {
     public boolean muted = false;
     /** 光刻机设计页“检查”模式：开启后悬停元件/导线显示详细信息。 */
     public boolean inspect = false;
+    /** 8 位总线的数字显示格式。 */
+    public NumberFormat digitalNumberFormat = NumberFormat.UNSIGNED;
+    /** 1 位信号强度的数字显示格式。 */
+    public NumberFormat analogNumberFormat = NumberFormat.UNSIGNED;
 
     private ClientConfig() {
     }
@@ -34,6 +38,12 @@ public class ClientConfig {
                     INSTANCE.darkMode = loaded.darkMode;
                     INSTANCE.muted = loaded.muted;
                     INSTANCE.inspect = loaded.inspect;
+                    if (loaded.digitalNumberFormat != null) {
+                        INSTANCE.digitalNumberFormat = loaded.digitalNumberFormat;
+                    }
+                    if (loaded.analogNumberFormat != null) {
+                        INSTANCE.analogNumberFormat = loaded.analogNumberFormat;
+                    }
                 }
             } catch (IOException | com.google.gson.JsonSyntaxException e) {
                 // Keep defaults on failure

@@ -3,6 +3,8 @@ package com.elementsplus.client.gui;
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
+import com.elementsplus.client.config.ClientConfig;
+import com.elementsplus.client.config.NumberFormat;
 import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
@@ -1585,14 +1587,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (dx == 0 && dy == 0) {
             if (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.OUTPUT) {
                 int value = simulator != null ? simulator.getComponentValue(component.x, component.y) : 0;
-                String text = String.valueOf(value);
+                String text = ClientConfig.get().analogNumberFormat.formatAnalog(value);
                 guiGraphics.drawString(font, Component.nullToEmpty(text),
                         (int) Math.round((left + right) / 2.0 - font.width(text) / 2.0),
                         (int) Math.round((top + bottom) / 2.0 - 4),
                         0xFFFFFFFF);
             } else if (component.component == BuiltinCircuitComponents.INPUT_8 || component.component == BuiltinCircuitComponents.OUTPUT_8) {
                 int value = simulator != null ? simulator.getComponentBusValue(component.x, component.y) : 0;
-                String text = String.valueOf(value);
+                String text = ClientConfig.get().digitalNumberFormat.formatDigital(value);
                 guiGraphics.drawString(font, Component.nullToEmpty(text),
                         (int) Math.round((left + right) / 2.0 - font.width(text) / 2.0),
                         (int) Math.round((top + bottom) / 2.0 - 4),
@@ -2904,8 +2906,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     /**
-     * 值格式化：8 位总线显示 {@code 十进制(通道0 ... 通道7)}（全 0 只显示 0），
-     * 1 位信号只显示强度。总线用总线颜色，1 位用灰色。
+     * 值格式化：8 位总线显示 {@code 总线值(通道0 ... 通道7)}（全 0 只显示总线值），
+     * 1 位信号只显示强度。总线值使用总线数字格式，通道强度使用信号强度格式。
      */
     private Component formatLanes(int[] lanes) {
         if (lanes != null && lanes.length >= 8) {
@@ -2915,17 +2917,20 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     packed |= 1 << b;
                 }
             }
+            NumberFormat digitalFormat = ClientConfig.get().digitalNumberFormat;
+            NumberFormat analogFormat = ClientConfig.get().analogNumberFormat;
+            String busText = digitalFormat.formatDigital(packed);
             String text;
             if (packed == 0) {
-                text = "0";
+                text = busText;
             } else {
                 StringBuilder sb = new StringBuilder();
-                sb.append(packed).append('(');
+                sb.append(busText).append('(');
                 for (int b = 0; b < 8; b++) {
                     if (b > 0) {
                         sb.append(' ');
                     }
-                    sb.append(lanes[b] & 0xF);
+                    sb.append(analogFormat.formatAnalog(lanes[b] & 0xF));
                 }
                 sb.append(')');
                 text = sb.toString();
@@ -2934,7 +2939,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     .withStyle(style -> style.withColor(TextColor.fromRgb(COLOR_TEXT_BUS)));
         }
         int value = lanes == null || lanes.length == 0 ? 0 : lanes[0] & 0xF;
-        return Component.literal(String.valueOf(value))
+        return Component.literal(ClientConfig.get().analogNumberFormat.formatAnalog(value))
                 .withStyle(style -> style.withColor(TextColor.fromRgb(COLOR_TEXT_1BIT)));
     }
 
