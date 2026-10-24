@@ -174,6 +174,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 Math.max(1, imageWidth - 180), Math.max(1, imageHeight - 55)));
         circuitPanel.setSimulator(simulator);
         circuitPanel.setOnInput8DoubleClick(this::openInput8ValueDialog);
+        circuitPanel.setOnPickComponent(component -> this.onPickup(component.component));
+        circuitPanel.setOnPickWire(this::onPickWire);
 
         // 属性面板
         this.addRenderableWidget(attributeWidget = new ScrollPanelWidget(leftPos + imageWidth - 5 - 79, topPos + 25, 79, imageHeight - 30, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
@@ -396,6 +398,26 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
             circuitPanel.setVirtualWire(null);
             circuitPanel.setVirtualComponent(component);
+        }
+    }
+
+    /** 中键拾取导线：切换虚拟导线工具，并同步位宽按钮。 */
+    private void onPickWire(CircuitDiagram.Wire.WireMaterial material, int pickedBitWidth) {
+        if (!menu.getCarried().isEmpty() || circuitPanel.isReadOnly()) {
+            return;
+        }
+        circuitPanel.setVirtualComponent(null);
+        circuitPanel.setVirtualWire(material);
+        setBitWidth(pickedBitWidth);
+    }
+
+    private void setBitWidth(int width) {
+        bitWidth = width > 1 ? 8 : 1;
+        if (bitWidthButton != null) {
+            bitWidthButton.setMessage(Component.nullToEmpty(String.valueOf(bitWidth)));
+        }
+        if (circuitPanel != null) {
+            circuitPanel.setWireBitWidth(bitWidth);
         }
     }
 

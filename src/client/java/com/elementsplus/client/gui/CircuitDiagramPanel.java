@@ -49,6 +49,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
@@ -158,6 +159,21 @@ public class CircuitDiagramPanel extends AbstractWidget {
         this.onInput8DoubleClick = consumer;
     }
 
+    private Consumer<CircuitDiagram.Component> onPickComponent = component -> {
+    };
+    private BiConsumer<CircuitDiagram.Wire.WireMaterial, Integer> onPickWire = (material, bitWidth) -> {
+    };
+
+    /** 中键拾取元件时的回调（由宿主 Screen 切换虚拟元件工具）。 */
+    public void setOnPickComponent(Consumer<CircuitDiagram.Component> consumer) {
+        this.onPickComponent = consumer;
+    }
+
+    /** 中键拾取导线时的回调：线材与位宽（由宿主 Screen 切换虚拟导线工具）。 */
+    public void setOnPickWire(BiConsumer<CircuitDiagram.Wire.WireMaterial, Integer> consumer) {
+        this.onPickWire = consumer;
+    }
+
     private enum DragMode {
         NONE, MOVE, COPY, BOX_SELECT
     }
@@ -184,6 +200,14 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private boolean pressSelected;
     private boolean pressOnSelectedWire;
     private boolean pressCtrl;
+
+    // 中键拾取：按下时记录候选，松开时若未拖动才执行。
+    private boolean middlePickActive;
+    private boolean middlePickDragged;
+    private double middlePickStartX, middlePickStartY;
+    private CircuitDiagram.Component middlePickComponent;
+    private CircuitDiagram.Wire.WireMaterial middlePickWireMaterial;
+    private int middlePickWireBitWidth = 1;
 
     private DragMode dragMode = DragMode.NONE;
     private final Set<Long> dragSelected = new HashSet<>();
@@ -254,6 +278,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
             lastEraseX = Integer.MIN_VALUE;
             lastEraseY = Integer.MIN_VALUE;
             endHistoryTransaction();
+        }
+        // 中键在控件外松开时补一次拾取/结束平移。
+        if (dragging && !isMiddleMouseDown()) {
+            dragging = false;
+            finishMiddlePick(mouseX, mouseY);
         }
 
         if (this.lastMouseX == null) {
@@ -1975,6 +2004,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (button == 2) {
             dragging = true;
+            beginMiddlePick(mouseX, mouseY);
             return true;
         }
         if (button == 0) {
@@ -2076,6 +2106,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (button == 2) {
             dragging = false;
+            finishMiddlePick(mouseX, mouseY);
         }
         if (button == 1) {
             erasing = false;
@@ -2098,6 +2129,70 @@ public class CircuitDiagramPanel extends AbstractWidget {
         return this.active && this.visible;
     }
 
+    /**
+     * 中键按下时记录拾取候选；中键本身仍用于平移视图。
+     * 真正的拾取在松开时执行，按下后拖动超过阈值则取消。
+     */
+    private void beginMiddlePick(double mouseX, double mouseY) {
+        middlePickActive = false;
+        middlePickDragged = false;
+        middlePickComponent = null;
+        middlePickWireMaterial = null;
+        middlePickWireBitWidth = 1;
+        middlePickStartX = mouseX;
+        middlePickStartY = mouseY;
+        if (isReadOnly() || !menu.getCarried().isEmpty()
+                || pressActive || draggingWire != null || erasing) {
+            return;
+        }
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return;
+        }
+        int gx = cellX(mouseX);
+        int gy = cellY(mouseY);
+        CircuitDiagram.Block block = diagram.getBlock(gx, gy);
+        if (block instanceof CircuitDiagram.Component component) {
+            middlePickComponent = component;
+            middlePickActive = true;
+        } else if (block instanceof CircuitDiagram.Wire wire) {
+            Direction side = nearestWireSide(wire, mouseX, mouseY, gx, gy);
+            if (side == null) {
+                return;
+            }
+            CircuitDiagram.Wire.WireMaterial material = materialOf(wire, side);
+            if (material == null) {
+                return;
+            }
+            middlePickWireMaterial = material;
+            middlePickWireBitWidth = wire.getBitWidth(material);
+            middlePickActive = true;
+        }
+    }
+
+    private void finishMiddlePick(double mouseX, double mouseY) {
+        boolean active = middlePickActive;
+        boolean dragged = middlePickDragged
+                || Math.hypot(mouseX - middlePickStartX, mouseY - middlePickStartY) >= DRAG_THRESHOLD;
+        CircuitDiagram.Component component = middlePickComponent;
+        CircuitDiagram.Wire.WireMaterial material = middlePickWireMaterial;
+        int bitWidth = middlePickWireBitWidth;
+        middlePickActive = false;
+        middlePickDragged = false;
+        middlePickComponent = null;
+        middlePickWireMaterial = null;
+        middlePickWireBitWidth = 1;
+        if (!active || dragged || !contains(mouseX, mouseY)
+                || !activeSupplier.getAsBoolean() || isReadOnly() || !menu.getCarried().isEmpty()) {
+            return;
+        }
+        if (component != null) {
+            onPickComponent.accept(component);
+        } else if (material != null) {
+            onPickWire.accept(material, bitWidth);
+        }
+    }
+
     public void mouseMoveDelta(double mouseX, double mouseY, double dx, double dy) {
         if (pressActive) {
             if (dragMode == DragMode.NONE) {
@@ -2112,6 +2207,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 boxSelX2 = cellX(mouseX);
                 boxSelY2 = cellY(mouseY);
             }
+        }
+        if (middlePickActive && !middlePickDragged
+                && Math.hypot(mouseX - middlePickStartX, mouseY - middlePickStartY) >= DRAG_THRESHOLD) {
+            middlePickDragged = true;
         }
         if (dragging) {
             offsetX -= dx / zoom;
@@ -2138,6 +2237,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private boolean isLeftMouseDown() {
         return GLFW.glfwGetMouseButton(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT)
+                == GLFW.GLFW_PRESS;
+    }
+
+    private boolean isMiddleMouseDown() {
+        return GLFW.glfwGetMouseButton(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_MIDDLE)
                 == GLFW.GLFW_PRESS;
     }
 
