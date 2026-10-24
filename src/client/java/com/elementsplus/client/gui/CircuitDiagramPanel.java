@@ -108,6 +108,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private double zoom = DEFAULT_ZOOM;
     private boolean dragging;
     private boolean erasing;
+    private int lastEraseX = Integer.MIN_VALUE;
+    private int lastEraseY = Integer.MIN_VALUE;
 
     private Direction rotation = Direction.NORTH;
     private boolean placeMirrored = false;
@@ -769,7 +771,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         commitDiagram(stack, editor);
     }
 
-    private void tryErase(int gx, int gy) {
+    private void tryErase(int gx, int gy, double mouseX, double mouseY) {
         ItemStack stack = menu.slots.get(36).getItem();
         CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
         if (diagram == null) {
@@ -777,6 +779,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         CircuitDiagram.Block block = diagram.getBlock(gx, gy);
         if (block == null) {
+            return;
+        }
+        if (block instanceof CircuitDiagram.Wire && Screen.hasShiftDown()) {
+            eraseWireNet(stack, diagram, gx, gy, mouseX, mouseY);
             return;
         }
         CircuitDiagram editor = diagram.copy();
@@ -800,6 +806,121 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         editor.setBlock(gx, gy, null);
         commitDiagram(stack, editor);
+    }
+
+    /**
+     * Shift+右键导线：沿同线材、同位宽的连接关系删除整个线网。
+     * 同一格可能有铜线/金线（甚至不同位宽）交叉，按鼠标最近的导线侧决定要删除的网络。
+     */
+    private void eraseWireNet(ItemStack stack, CircuitDiagram diagram, int gx, int gy, double mouseX, double mouseY) {
+        CircuitDiagram.Block startBlock = diagram.getBlock(gx, gy);
+        if (!(startBlock instanceof CircuitDiagram.Wire startWire)) {
+            return;
+        }
+        Direction startSide = nearestWireSide(startWire, mouseX, mouseY, gx, gy);
+        if (startSide == null) {
+            return;
+        }
+        CircuitDiagram.Wire.WireMaterial material = materialOf(startWire, startSide);
+        if (material == null) {
+            return;
+        }
+        int bitWidth = startWire.getBitWidth(material);
+        CircuitDiagram editor = diagram.copy();
+
+        Set<Long> visited = new HashSet<>();
+        List<Long> queue = new ArrayList<>();
+        long startKey = cellKey(gx, gy);
+        visited.add(startKey);
+        queue.add(startKey);
+        for (int i = 0; i < queue.size(); i++) {
+            long key = queue.get(i);
+            int x = cellXOf(key);
+            int y = cellYOf(key);
+            CircuitDiagram.Wire wire = wireAt(editor, x, y);
+            if (wire == null || !wire.hasMaterial(material) || wire.getBitWidth(material) != bitWidth) {
+                continue;
+            }
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                if (materialOf(wire, d) != material) {
+                    continue;
+                }
+                int nx = x + d.getStepX();
+                int ny = y + d.getStepZ();
+                CircuitDiagram.Wire neighbor = wireAt(editor, nx, ny);
+                if (neighbor == null
+                        || neighbor.getBitWidth(material) != bitWidth
+                        || materialOf(neighbor, d.getOpposite()) != material) {
+                    continue;
+                }
+                long neighborKey = cellKey(nx, ny);
+                if (visited.add(neighborKey)) {
+                    queue.add(neighborKey);
+                }
+            }
+        }
+
+        boolean removed = false;
+        for (long key : visited) {
+            int x = cellXOf(key);
+            int y = cellYOf(key);
+            CircuitDiagram.Wire wire = wireAt(editor, x, y);
+            if (wire == null) {
+                continue;
+            }
+            if (wire.north == material) {
+                wire.north = null;
+                removed = true;
+            }
+            if (wire.east == material) {
+                wire.east = null;
+                removed = true;
+            }
+            if (wire.south == material) {
+                wire.south = null;
+                removed = true;
+            }
+            if (wire.west == material) {
+                wire.west = null;
+                removed = true;
+            }
+            if (wire.north == null && wire.east == null && wire.south == null && wire.west == null) {
+                editor.setBlock(x, y, null);
+            }
+        }
+        if (!removed) {
+            return;
+        }
+        playSound(WIRE_ERASE_SOUND);
+        commitDiagram(stack, editor);
+    }
+
+    private static CircuitDiagram.Wire wireAt(CircuitDiagram diagram, int x, int y) {
+        CircuitDiagram.Block block = diagram.getBlock(x, y);
+        return block instanceof CircuitDiagram.Wire wire ? wire : null;
+    }
+
+    /**
+     * 根据右键位置选择该格中距离鼠标最近的、实际有导线的方向。
+     */
+    private Direction nearestWireSide(CircuitDiagram.Wire wire, double mouseX, double mouseY, int gx, int gy) {
+        double centerX = getX() + (gx + 0.5 - offsetX) * zoom;
+        double centerY = getY() + (gy + 0.5 - offsetY) * zoom;
+        double dx = mouseX - centerX;
+        double dy = mouseY - centerY;
+        Direction best = null;
+        double bestDot = Double.NEGATIVE_INFINITY;
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            if (materialOf(wire, d) == null) {
+                continue;
+            }
+            double dot = dx * d.getStepX() + dy * d.getStepZ();
+            if (dot > bestDot) {
+                bestDot = dot;
+                best = d;
+            }
+        }
+        return best;
     }
 
     /**
@@ -1547,6 +1668,21 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return true;
         }
         if (button == 1) {
+            // Shift+右键导线优先进入整网擦除，即使当前仍选中了导线/元件工具。
+            if (Screen.hasShiftDown() && !isReadOnly()) {
+                CircuitDiagram diagram = getDiagram();
+                if (diagram != null) {
+                    int gx = cellX(mouseX);
+                    int gy = cellY(mouseY);
+                    if (diagram.getBlock(gx, gy) instanceof CircuitDiagram.Wire) {
+                        erasing = true;
+                        lastEraseX = gx;
+                        lastEraseY = gy;
+                        tryErase(gx, gy, mouseX, mouseY);
+                        return true;
+                    }
+                }
+            }
             if (virtualComponent != null) {
                 virtualComponent = null;
                 return true;
@@ -1559,8 +1695,12 @@ public class CircuitDiagramPanel extends AbstractWidget {
             if (!carried.isEmpty()) {
                 ClientPlayNetworking.send(new ReturnCarriedPayload());
             } else if (!isReadOnly()) {
+                int gx = cellX(mouseX);
+                int gy = cellY(mouseY);
                 erasing = true;
-                tryErase(cellX(mouseX), cellY(mouseY));
+                lastEraseX = gx;
+                lastEraseY = gy;
+                tryErase(gx, gy, mouseX, mouseY);
             }
             return true;
         }
@@ -1579,6 +1719,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (button == 1) {
             erasing = false;
+            lastEraseX = Integer.MIN_VALUE;
+            lastEraseY = Integer.MIN_VALUE;
         }
         if (button == 0) {
             if (draggingWire != null && straightWireDrag) {
@@ -1615,7 +1757,13 @@ public class CircuitDiagramPanel extends AbstractWidget {
             clampPan();
         }
         if (erasing) {
-            tryErase(cellX(mouseX), cellY(mouseY));
+            int eraseX = cellX(mouseX);
+            int eraseY = cellY(mouseY);
+            if (eraseX != lastEraseX || eraseY != lastEraseY) {
+                lastEraseX = eraseX;
+                lastEraseY = eraseY;
+                tryErase(eraseX, eraseY, mouseX, mouseY);
+            }
         }
         if (draggingWire != null) {
             if (straightWireDrag) {
