@@ -152,7 +152,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             }
         };
 
-        this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.leftPos + 5, inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23, 79, 18, Component.nullToEmpty("物品栏")) {
+        this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.leftPos + 5, inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23, 79, 18, Component.translatable("gui.elements-plus.lithography_machine.inventory")) {
             @Override
             public void onClick(double d, double e) {
                 super.onClick(d, e);

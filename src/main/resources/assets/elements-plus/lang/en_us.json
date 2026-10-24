@@ -50,6 +50,7 @@
   "container.elements-plus.lithography_machine": "Lithography Machine",
   "gui.elements-plus.lithography_machine.design": "Design",
   "gui.elements-plus.lithography_machine.manufacture": "Manufacture",
+  "gui.elements-plus.lithography_machine.inventory": "Inventory",
   "gui.elements-plus.lithography_machine.copy_compiled": "Copy Compilation Status",
 
   "key.categories.elements-plus": "Elements Plus",
@@ -329,6 +330,8 @@
   "item.elements-plus.computer": "Computer",
   "item.elements-plus.waste_bottle": "Waste Bottle",
   "item.elements-plus.circuit_diagram": "Circuit Diagram",
+  "item.elements-plus.creative_component": "Creative Mode [%s] Component",
+  "item.elements-plus.creative_component.empty": "Creative Mode Component",
 
   "tooltip.elements-plus.circuit_diagram.scale": "Scale: %s",
   "circuit_diagram.scale.small": "Small",

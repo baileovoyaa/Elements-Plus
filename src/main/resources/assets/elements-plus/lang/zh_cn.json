@@ -51,6 +51,7 @@
   "container.elements-plus.lithography_machine": "光刻机",
   "gui.elements-plus.lithography_machine.design": "设计",
   "gui.elements-plus.lithography_machine.manufacture": "制造",
+  "gui.elements-plus.lithography_machine.inventory": "物品栏",
   "gui.elements-plus.lithography_machine.copy_compiled": "复制编译状态",
 
   "key.categories.elements-plus": "元素++",
@@ -328,6 +329,8 @@
   "item.elements-plus.computer": "电脑",
   "item.elements-plus.waste_bottle": "废液瓶",
   "item.elements-plus.circuit_diagram": "电路图",
+  "item.elements-plus.creative_component": "创造模式[%s]元件",
+  "item.elements-plus.creative_component.empty": "创造模式元件",
 
   "tooltip.elements-plus.circuit_diagram.scale": "规模：%s",
   "circuit_diagram.scale.small": "小",

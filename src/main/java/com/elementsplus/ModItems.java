@@ -219,9 +219,9 @@ public class ModItems {
         public @NotNull Component getName(ItemStack itemStack) {
             CircuitComponent circuitComponent = BuiltinCircuitComponents.byId(itemStack.get(ModDataComponents.EQUIVALENT_COMPONENT));
             if (circuitComponent != null) {
-                return Component.translatable("创造模式[%s]元件", circuitComponent.getName().copy().withStyle(style -> style.withColor(0xFFD700))).withStyle(ChatFormatting.LIGHT_PURPLE);
+                return Component.translatable("item.elements-plus.creative_component", circuitComponent.getName().copy().withStyle(style -> style.withColor(0xFFD700))).withStyle(ChatFormatting.LIGHT_PURPLE);
             } else {
-                return Component.translatable("创造模式元件").withStyle(ChatFormatting.LIGHT_PURPLE);
+                return Component.translatable("item.elements-plus.creative_component.empty").withStyle(ChatFormatting.LIGHT_PURPLE);
             }
         }
     }, "creative_component");
