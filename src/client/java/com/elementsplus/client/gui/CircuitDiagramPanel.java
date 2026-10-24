@@ -118,6 +118,12 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private CircuitDiagram.Wire.WireMaterial draggingWire;
     private int lastWireX;
     private int lastWireY;
+    private boolean straightWireDrag;
+    private int straightWireStartX;
+    private int straightWireStartY;
+    private int straightWireEndX;
+    private int straightWireEndY;
+    private boolean suppressWireSound;
 
     private int selectedX = Integer.MIN_VALUE;
     private int selectedY = Integer.MIN_VALUE;
@@ -204,6 +210,13 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
         if ((pressActive || dragMode != DragMode.NONE) && !isLeftMouseDown()) {
             finalizePress(lastMouseX != null ? lastMouseX : mouseX, lastMouseY != null ? lastMouseY : mouseY);
+        }
+        // 鼠标在控件外松开时可能收不到 mouseReleased，补一次直线导线的提交。
+        if (straightWireDrag && draggingWire != null && !isLeftMouseDown()) {
+            updateStraightWireDrag(cellX(mouseX), cellY(mouseY));
+            commitStraightWire();
+            draggingWire = null;
+            straightWireDrag = false;
         }
 
         if (this.lastMouseX == null) {
@@ -828,16 +841,37 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (material == null) {
             return;
         }
-        int gx = cellX(mouseX);
-        int gy = cellY(mouseY);
-        if (!inBounds(gx, gy)) {
-            return;
+        int color = wirePlaceBitWidth == 8 ? COLOR_BUS_8 : wireColor(material);
+        color = (color & 0x00FFFFFF) | 0x80000000;
+        int size = Math.max(2, (int) Math.round(zoom * 0.4));
+        int gx;
+        int gy;
+        if (straightWireDrag) {
+            if (!inBounds(straightWireStartX, straightWireStartY)) {
+                return;
+            }
+            gx = straightWireEndX;
+            gy = straightWireEndY;
+            if (!inBounds(gx, gy)) {
+                return;
+            }
+            if (gx != straightWireStartX || gy != straightWireStartY) {
+                double startX = getX() + (straightWireStartX + 0.5 - offsetX) * zoom;
+                double startY = getY() + (straightWireStartY + 0.5 - offsetY) * zoom;
+                double endX = getX() + (gx + 0.5 - offsetX) * zoom;
+                double endY = getY() + (gy + 0.5 - offsetY) * zoom;
+                // 与导线虚影点使用相同的线宽和半透明颜色。
+                drawSegment(guiGraphics, startX, startY, endX, endY, Math.max(1, size / 2), color);
+            }
+        } else {
+            gx = cellX(mouseX);
+            gy = cellY(mouseY);
+            if (!inBounds(gx, gy)) {
+                return;
+            }
         }
         double centerX = getX() + (gx + 0.5 - offsetX) * zoom;
         double centerY = getY() + (gy + 0.5 - offsetY) * zoom;
-        int size = Math.max(2, (int) Math.round(zoom * 0.4));
-        int color = wirePlaceBitWidth == 8 ? COLOR_BUS_8 : wireColor(material);
-        color = (color & 0x00FFFFFF) | 0x80000000;
         guiGraphics.fill(
                 (int) Math.floor(centerX - size / 2.0),
                 (int) Math.floor(centerY - size / 2.0),
@@ -865,6 +899,62 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         lastWireX = toX;
         lastWireY = toY;
+    }
+
+    private void updateStraightWireDrag(int toX, int toY) {
+        int size = boundsSize();
+        if (size > 0) {
+            toX = Mth.clamp(toX, 0, size - 1);
+            toY = Mth.clamp(toY, 0, size - 1);
+        }
+        int dx = toX - straightWireStartX;
+        int dy = toY - straightWireStartY;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            straightWireEndX = toX;
+            straightWireEndY = straightWireStartY;
+        } else {
+            straightWireEndX = straightWireStartX;
+            straightWireEndY = toY;
+        }
+    }
+
+    private void commitStraightWire() {
+        if (draggingWire == null
+                || (straightWireStartX == straightWireEndX && straightWireStartY == straightWireEndY)
+                || !inBounds(straightWireStartX, straightWireStartY)
+                || !inBounds(straightWireEndX, straightWireEndY)) {
+            return;
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return;
+        }
+        CircuitDiagram editor = diagram.copy();
+        boolean previousSuppress = suppressWireSound;
+        suppressWireSound = true;
+        try {
+            int x = straightWireStartX;
+            int y = straightWireStartY;
+            while (x != straightWireEndX || y != straightWireEndY) {
+                int dx = Integer.signum(straightWireEndX - x);
+                int dy = Integer.signum(straightWireEndY - y);
+                if (dx != 0 && dy != 0) {
+                    if (Math.abs(straightWireEndX - x) >= Math.abs(straightWireEndY - y)) {
+                        dy = 0;
+                    } else {
+                        dx = 0;
+                    }
+                }
+                applyConnection(editor, x, y, x + dx, y + dy, draggingWire);
+                x += dx;
+                y += dy;
+            }
+        } finally {
+            suppressWireSound = previousSuppress;
+        }
+        playSound(WIRE_PLACE_SOUND);
+        commitDiagram(stack, editor);
     }
 
     private void commitConnection(int fromX, int fromY, int toX, int toY, CircuitDiagram.Wire.WireMaterial material) {
@@ -914,7 +1004,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         } else {
             return;
         }
-        playSound(WIRE_PLACE_SOUND);
+        if (!suppressWireSound) {
+            playSound(WIRE_PLACE_SOUND);
+        }
         // 位宽按材质分别记录：仅在该材质首次接入本格时写入当前放置位宽，
         // 这样 8 位铜线与 1 位金线可以在同一格内共存。
         boolean newMaterial = material != null && !wire.hasMaterial(material);
@@ -1419,8 +1511,16 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     CircuitDiagram.Wire.WireMaterial wire = wireMaterial();
                     if (wire != null) {
                         draggingWire = wire;
-                        lastWireX = cellX(mouseX);
-                        lastWireY = cellY(mouseY);
+                        straightWireDrag = Screen.hasControlDown();
+                        if (straightWireDrag) {
+                            straightWireStartX = cellX(mouseX);
+                            straightWireStartY = cellY(mouseY);
+                            straightWireEndX = straightWireStartX;
+                            straightWireEndY = straightWireStartY;
+                        } else {
+                            lastWireX = cellX(mouseX);
+                            lastWireY = cellY(mouseY);
+                        }
                     } else {
                         CircuitComponent component = activeComponent();
                         if (component != null) {
@@ -1481,7 +1581,12 @@ public class CircuitDiagramPanel extends AbstractWidget {
             erasing = false;
         }
         if (button == 0) {
+            if (draggingWire != null && straightWireDrag) {
+                updateStraightWireDrag(cellX(mouseX), cellY(mouseY));
+                commitStraightWire();
+            }
             draggingWire = null;
+            straightWireDrag = false;
             if (pressActive || dragMode != DragMode.NONE) {
                 finalizePress((int) mouseX, (int) mouseY);
             }
@@ -1513,7 +1618,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
             tryErase(cellX(mouseX), cellY(mouseY));
         }
         if (draggingWire != null) {
-            stepWireDrag(cellX(mouseX), cellY(mouseY));
+            if (straightWireDrag) {
+                updateStraightWireDrag(cellX(mouseX), cellY(mouseY));
+            } else {
+                stepWireDrag(cellX(mouseX), cellY(mouseY));
+            }
         }
     }
 
