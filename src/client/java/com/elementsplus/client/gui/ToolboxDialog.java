@@ -176,7 +176,7 @@ public class ToolboxDialog {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (editBox != null) {
             if (editBox.keyPressed(keyCode, scanCode, modifiers)) return true;
-            if (keyCode == GLFW.GLFW_KEY_ENTER) {
+            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
                 if (mode == Mode.RENAME) {
                     if (!getText().trim().isEmpty()) {
                         callback.onOk(this);
