@@ -417,7 +417,7 @@ public class BuiltinExperimentChapters {
             ),
             ch.text(2,
                     line(0, style(GOLD)),
-                    line(1, style(GOLD))
+                    line(1, style(GOLD), style(GOLD))
             ),
             ch.experiments(BuiltinExperiments.MULTIPLIER_LITE, BuiltinExperiments.MULTIPLIER),
             ch.text(1),
