@@ -22,6 +22,12 @@ public interface ExperimentHost {
     void setErrorLines(List<Component> lines);
 
     /**
+     * 设置失败测例的结构化数值，供客户端按本地数字格式渲染。
+     */
+    default void setFailureInfo(ExperimentFailureInfo info) {
+    }
+
+    /**
      * 报告某个测例的结果。
      *
      * @param index 测例索引

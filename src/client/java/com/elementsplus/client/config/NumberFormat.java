@@ -1,5 +1,9 @@
 package com.elementsplus.client.config;
 
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextColor;
+
 import java.util.Locale;
 
 /**
@@ -43,6 +47,53 @@ public enum NumberFormat {
             case COMPLEMENT -> Integer.toString(v >= 8 ? v - 16 : v);
             case HEX -> Integer.toHexString(v).toUpperCase(Locale.ROOT);
         };
+    }
+
+    /** 与光刻机“检查”提示一致：8 位总线数值颜色。 */
+    private static final int COLOR_LANES_BUS = 0xFF00FF;
+    /** 与光刻机“检查”提示一致：1 位信号强度颜色。 */
+    private static final int COLOR_LANES_SIGNAL = 0xAAAAAA;
+
+    /**
+     * 按光刻机“检查”提示的规则格式化一组通道：
+     * 8 通道显示为「总线值(通道7 ... 通道0)」，从高位到低位，1 通道显示信号强度。
+     * 总线值使用当前总线格式，通道值/信号强度使用当前信号强度格式。
+     */
+    public static String formatLanes(int[] lanes) {
+        NumberFormat digitalFormat = ClientConfig.get().digitalNumberFormat;
+        NumberFormat analogFormat = ClientConfig.get().analogNumberFormat;
+        if (lanes != null && lanes.length >= 8) {
+            int packed = 0;
+            for (int b = 0; b < 8; b++) {
+                if ((lanes[b] & 0xF) != 0) {
+                    packed |= 1 << b;
+                }
+            }
+            String busText = digitalFormat.formatDigital(packed);
+            if (packed == 0) {
+                return busText;
+            }
+            StringBuilder sb = new StringBuilder(busText).append('(');
+            for (int b = 7; b >= 0; b--) {
+                if (b < 7) {
+                    sb.append(' ');
+                }
+                sb.append(analogFormat.formatAnalog(lanes[b] & 0xF));
+            }
+            return sb.append(')').toString();
+        }
+        int value = lanes == null || lanes.length == 0 ? 0 : lanes[0] & 0xF;
+        return analogFormat.formatAnalog(value);
+    }
+
+    /**
+     * 与光刻机“检查”提示相同的带颜色通道文本：
+     * 8 位总线使用总线颜色，1 位信号使用信号强度颜色。
+     */
+    public static MutableComponent formatLanesComponent(int[] lanes) {
+        int color = lanes != null && lanes.length >= 8 ? COLOR_LANES_BUS : COLOR_LANES_SIGNAL;
+        return Component.literal(formatLanes(lanes))
+                .withStyle(style -> style.withColor(TextColor.fromRgb(color)));
     }
 
     /** 8 位总线输入的范围提示。 */

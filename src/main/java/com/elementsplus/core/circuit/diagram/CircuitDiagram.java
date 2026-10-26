@@ -436,6 +436,8 @@ public class CircuitDiagram {
                     builder.add(config.key, ops.createFloat(input.instance.getFloat(config.key)));
                 } else if (config instanceof CircuitComponentInstance.StringConfig) {
                     builder.add(config.key, ops.createString(input.instance.getString(config.key)));
+                } else if (config instanceof CircuitComponentInstance.BooleanConfig) {
+                    builder.add(config.key, ops.createBoolean(input.instance.getBoolean(config.key)));
                 }
             }
             return builder.build(prefix);
@@ -464,6 +466,8 @@ public class CircuitDiagram {
                         getField(Codec.FLOAT, ops, map, config.key).ifPresent(v -> instance.setFloat(config.key, v));
                     } else if (config instanceof CircuitComponentInstance.StringConfig) {
                         getField(Codec.STRING, ops, map, config.key).ifPresent(v -> instance.setString(config.key, v));
+                    } else if (config instanceof CircuitComponentInstance.BooleanConfig) {
+                        getField(Codec.BOOL, ops, map, config.key).ifPresent(v -> instance.setBoolean(config.key, v));
                     }
                 }
                 Component component = new Component(circuitComponent, direction.orElse(Direction.NORTH), instance);
@@ -586,6 +590,8 @@ public class CircuitDiagram {
                         buf.writeFloat(component.instance.getFloat(config.key));
                     } else if (config instanceof CircuitComponentInstance.StringConfig) {
                         buf.writeUtf(component.instance.getString(config.key));
+                    } else if (config instanceof CircuitComponentInstance.BooleanConfig) {
+                        buf.writeBoolean(component.instance.getBoolean(config.key));
                     }
                 }
             }
@@ -632,6 +638,8 @@ public class CircuitDiagram {
                         instance.setFloat(config.key, buf.readFloat());
                     } else if (config instanceof CircuitComponentInstance.StringConfig) {
                         instance.setString(config.key, buf.readUtf());
+                    } else if (config instanceof CircuitComponentInstance.BooleanConfig) {
+                        instance.setBoolean(config.key, buf.readBoolean());
                     }
                 }
                 Component component = new Component(circuitComponent, direction, instance);

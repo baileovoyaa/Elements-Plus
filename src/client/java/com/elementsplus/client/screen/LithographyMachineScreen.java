@@ -173,7 +173,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 leftPos + 10 + 80, topPos + 49,
                 Math.max(1, imageWidth - 180), Math.max(1, imageHeight - 55)));
         circuitPanel.setSimulator(simulator);
-        circuitPanel.setOnInput8DoubleClick(this::openInput8ValueDialog);
+        circuitPanel.setOnNumberDoubleClick(this::openNumberValueDialog);
         circuitPanel.setOnPickComponent(component -> this.onPickup(component.component));
         circuitPanel.setOnPickWire(this::onPickWire);
 
@@ -479,12 +479,35 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 });
     }
 
-    private static ResourceLocation numberFormatIcon(boolean digital, NumberFormat format) {
+    protected static ResourceLocation numberFormatIcon(boolean digital, NumberFormat format) {
         return ElementsPlus.id(format.iconPath(digital));
     }
 
-    private void openInput8ValueDialog(CircuitDiagram.Component component) {
-        int initial = circuitPanel.getInput8Value(component);
+    private void openNumberValueDialog(CircuitDiagram.Component component) {
+        // 锁定的电路图只允许预览修改输入元件；常量/掩码不是输入输出元件，不应弹窗。
+        if (circuitPanel.isReadOnly()
+                && (component.component == BuiltinCircuitComponents.CONST_8
+                || component.component == BuiltinCircuitComponents.MASK_8
+                || component.component == BuiltinCircuitComponents.CONST_ANALOG_8)) {
+            return;
+        }
+        if (component.component == BuiltinCircuitComponents.CONST_ANALOG_8) {
+            openConstAnalogValueDialog(component);
+        } else {
+            openBusValueDialog(component);
+        }
+    }
+
+    private void openBusValueDialog(CircuitDiagram.Component component) {
+        int initial;
+        if (component.component == BuiltinCircuitComponents.INPUT_8) {
+            initial = circuitPanel.getInput8Value(component);
+        } else if (component.component == BuiltinCircuitComponents.CONST_8
+                || component.component == BuiltinCircuitComponents.MASK_8) {
+            initial = circuitPanel.getConstantBusValue(component);
+        } else {
+            return;
+        }
         NumberFormat format = ClientConfig.get().digitalNumberFormat;
         toolboxDialog = new ToolboxDialog(ToolboxDialog.Mode.NUMBER,
                 Component.translatable("gui.elements-plus.lithography_machine.input_8_value_title"),
@@ -496,7 +519,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                     public void onOk(ToolboxDialog dialog) {
                         try {
                             int value = format.parseDigital(dialog.getText());
-                            circuitPanel.applyInput8Value(component, value);
+                            applyBusValue(component, value);
                         } catch (NumberFormatException ignored) {
                         } finally {
                             toolboxDialog = null;
@@ -511,6 +534,101 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 format::acceptsPartial,
                 format::isValidText,
                 format.inputMaxLength());
+    }
+
+    private void applyBusValue(CircuitDiagram.Component component, int value) {
+        if (component.component == BuiltinCircuitComponents.INPUT_8) {
+            circuitPanel.applyInput8Value(component, value);
+        } else if (component.component == BuiltinCircuitComponents.CONST_8
+                || component.component == BuiltinCircuitComponents.MASK_8) {
+            circuitPanel.applyConstantBusValue(component, value);
+        }
+    }
+
+    private void openConstAnalogValueDialog(CircuitDiagram.Component component) {
+        String initial = formatAnalogChannels(circuitPanel.getConstantAnalogLanes(component));
+        toolboxDialog = new ToolboxDialog(ToolboxDialog.Mode.NUMBER,
+                Component.translatable("gui.elements-plus.lithography_machine.const_analog_value_title"),
+                Component.translatable("gui.elements-plus.lithography_machine.const_analog_value_range"),
+                initial, this.font, this.width, this.height,
+                new ToolboxDialog.Callback() {
+                    @Override
+                    public void onOk(ToolboxDialog dialog) {
+                        try {
+                            int[] lanes = parseAnalogChannels(dialog.getText());
+                            if (lanes != null) {
+                                circuitPanel.applyConstantAnalogLanes(component, lanes);
+                            }
+                        } finally {
+                            toolboxDialog = null;
+                        }
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        toolboxDialog = null;
+                    }
+                },
+                LithographyMachineScreen::acceptsAnalogChannels,
+                LithographyMachineScreen::isValidAnalogChannels,
+                31);
+    }
+
+    /** 模拟常量输入框的文本：从高位到低位，以空格分隔。 */
+    private static String formatAnalogChannels(int[] lanes) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 7; i >= 0; i--) {
+            if (!sb.isEmpty()) {
+                sb.append(' ');
+            }
+            sb.append(lanes != null && i < lanes.length ? lanes[i] & 0xF : 0);
+        }
+        return sb.toString();
+    }
+
+    /** 解析高位到低位的 8 个通道强度，返回低到高的数组；非法时返回 null。 */
+    private static int[] parseAnalogChannels(String text) {
+        if (text == null) {
+            return null;
+        }
+        String trimmed = text.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        String[] parts = trimmed.split("[\\s,]+");
+        if (parts.length != 8) {
+            return null;
+        }
+        int[] lanes = new int[8];
+        for (int i = 0; i < parts.length; i++) {
+            try {
+                int value = Integer.parseInt(parts[i]);
+                if (value < 0 || value > 15) {
+                    return null;
+                }
+                lanes[7 - i] = value;
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return lanes;
+    }
+
+    private static boolean acceptsAnalogChannels(String text) {
+        if (text == null || text.length() > 31) {
+            return false;
+        }
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if ((c < '0' || c > '9') && c != ' ' && c != ',') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isValidAnalogChannels(String text) {
+        return parseAnalogChannels(text) != null;
     }
 
     private void openDeleteConfirmDialog(int groupIndex) {
@@ -953,6 +1071,35 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         int y = 22;
         attributeEditBox = null;
         for (CircuitComponentInstance.Config config : attrComponent.instance.getConfigs()) {
+            if (config instanceof CircuitComponentInstance.BooleanConfig booleanConfig) {
+                attributeWidget.addChild(new AbstractWidget(4, y, attributeWidget.getWidth() - 28, 10, Component.empty()) {
+                    @Override
+                    protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                        guiGraphics.drawString(font, booleanConfig.name, this.getX(), this.getY(), 0xFFFFFFFF, false);
+                    }
+
+                    @Override
+                    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+                    }
+
+                    @Override
+                    public boolean mouseDragged(double d, double e, int i, double f, double g) {
+                        return false;
+                    }
+                });
+                CheckBox checkBox = attributeWidget.addChild(new CheckBox(attributeWidget.getWidth() - 21, y - 1) {
+                    @Override
+                    public void onClick(double d, double e) {
+                        super.onClick(d, e);
+                        attrComponent.instance.setBoolean(booleanConfig.key, this.checked);
+                        commitAttributes();
+                    }
+                });
+                checkBox.checked = attrComponent.instance.getBoolean(booleanConfig.key);
+                checkBox.active = !readOnly;
+                y += 16;
+                continue;
+            }
             if (config instanceof CircuitComponentInstance.StringConfig stringConfig) {
                 attributeWidget.addChild(new AbstractWidget(4, y, attributeWidget.getWidth() - 4, 9, Component.empty()) {
                     @Override

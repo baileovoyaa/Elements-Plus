@@ -2,6 +2,8 @@ package com.elementsplus.client.screen;
 
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.blocks.entity.ExperimentStatus;
+import com.elementsplus.client.config.ClientConfig;
+import com.elementsplus.client.config.NumberFormat;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.core.experiment.*;
 import com.elementsplus.menu.ExperimentTableMenu;
@@ -59,6 +61,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     private float currentProgress = 0f;
     private final List<Integer> currentTestResults = new ArrayList<>();
     private final List<Component> statusTooltipLines = new ArrayList<>();
+    private ExperimentFailureInfo failureInfo = null;
     private String resultsExperimentName = null;
     private final List<TestCaseWidget> testCaseWidgets = new ArrayList<>();
 
@@ -213,6 +216,14 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.addRenderableWidget(statusButton = new IconButton(leftPos + imageWidth - 22, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/experiment_table/idle.png"), (button) -> {
         }));
 
+        // 数字格式按钮
+        this.addRenderableWidget(new IconButton(leftPos + imageWidth - 22 - 18, topPos + 2, 16, 16,
+                LithographyMachineScreen.numberFormatIcon(true, ClientConfig.get().digitalNumberFormat),
+                button -> cycleNumberFormat((IconButton) button, true)));
+        this.addRenderableWidget(new IconButton(leftPos + imageWidth - 22, topPos + 2, 16, 16,
+                LithographyMachineScreen.numberFormatIcon(false, ClientConfig.get().analogNumberFormat),
+                button -> cycleNumberFormat((IconButton) button, false)));
+
         updateCurrentExperimentDisplay();
         updateStatusButton();
         updateProgressBar();
@@ -323,7 +334,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         updateCurrentExperimentDisplay();
     }
 
-    public void onStatusUpdate(BlockPos pos, ExperimentStatus status, boolean paused, String experimentName, float progress, List<Integer> testResults, List<String> tooltipJson) {
+    public void onStatusUpdate(BlockPos pos, ExperimentStatus status, boolean paused, String experimentName, float progress, List<Integer> testResults, List<String> tooltipJson, ExperimentFailureInfo failureInfo) {
         if (tablePos == null || !pos.equals(tablePos)) {
             return;
         }
@@ -333,9 +344,14 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.resultsExperimentName = experimentName;
         this.currentTestResults.clear();
         this.currentTestResults.addAll(testResults);
+        this.failureInfo = failureInfo;
         this.statusTooltipLines.clear();
-        for (String json : tooltipJson) {
-            statusTooltipLines.add(decodeTooltip(json));
+        if (failureInfo != null) {
+            statusTooltipLines.addAll(buildFailureTooltipLines(failureInfo));
+        } else {
+            for (String json : tooltipJson) {
+                statusTooltipLines.add(decodeTooltip(json));
+            }
         }
         if (status == ExperimentStatus.BUSY && experimentName != null) {
             BaseExperiment running = BuiltinExperiments.byId(experimentName);
@@ -357,6 +373,65 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             // 忽略，回退为原始文本
         }
         return Component.literal(json);
+    }
+
+    private void cycleNumberFormat(IconButton button, boolean digital) {
+        NumberFormat current = digital
+                ? ClientConfig.get().digitalNumberFormat
+                : ClientConfig.get().analogNumberFormat;
+        NumberFormat next = Screen.hasShiftDown() ? current.previous() : current.next();
+        if (digital) {
+            ClientConfig.get().digitalNumberFormat = next;
+        } else {
+            ClientConfig.get().analogNumberFormat = next;
+        }
+        ClientConfig.get().save();
+        button.icon = LithographyMachineScreen.numberFormatIcon(digital, next);
+        refreshFailureTooltip();
+    }
+
+    /** 数字格式切换后，按当前格式重建失败测例信息。 */
+    private void refreshFailureTooltip() {
+        if (failureInfo != null) {
+            statusTooltipLines.clear();
+            statusTooltipLines.addAll(buildFailureTooltipLines(failureInfo));
+        }
+        updateStatusButton();
+    }
+
+    private List<Component> buildFailureTooltipLines(ExperimentFailureInfo failure) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.translatable("experiment.elements-plus.testfail.header"));
+        lines.add(Component.translatable("experiment.elements-plus.testfail.input", formatPins(failure.inputs())));
+        lines.add(Component.translatable("experiment.elements-plus.testfail.expected", formatPins(failure.expected())));
+        lines.add(Component.translatable("experiment.elements-plus.testfail.actual", formatPins(failure.actual())));
+        return lines;
+    }
+
+    private static Component formatPins(List<ExperimentFailureInfo.Pin> pins) {
+        if (pins == null) {
+            return Component.empty();
+        }
+        MutableComponent result = Component.empty();
+        boolean first = true;
+        for (ExperimentFailureInfo.Pin pin : pins) {
+            if (pin == null) {
+                continue;
+            }
+            if (!first) {
+                result.append(Component.literal(", "));
+            }
+            first = false;
+            String label = pin.label() == null ? "" : pin.label();
+            result.append(Component.literal(label + "="));
+            byte[] values = pin.values();
+            int[] lanes = new int[values == null ? 0 : values.length];
+            for (int i = 0; i < lanes.length; i++) {
+                lanes[i] = values[i] & 0xF;
+            }
+            result.append(NumberFormat.formatLanesComponent(lanes));
+        }
+        return result;
     }
 
     private void updateStatusButton() {

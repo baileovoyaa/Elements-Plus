@@ -295,17 +295,32 @@ public class BuiltinExperimentChapters {
             ch.experiments(BuiltinExperiments.FULL_ADDER)
     ), Set.of(ADVANCED_GATE)));
 
-    public static final ExperimentChapter MULTI_BIT_ADDER = register(chapter("multi_bit_adder", null, ch -> List.of(
-            ch.text(5,
-                    line(1, style(BLUE)),
+    public static final ExperimentChapter BUS = register(chapter("bus", null, ch -> List.of(
+            ch.text(6,
+                    line(0, style(BLUE)),
                     line(3, style(GOLD), style(GOLD), style(GOLD), style(GOLD))
             ),
             ch.text(3,
                     line(1, style(GOLD)),
                     line(2, style(GOLD))
             ),
-            ch.experiments(BuiltinExperiments.ADDER_8)
+            ch.experiments(BuiltinExperiments.CONST_8, BuiltinExperiments.MASK_8),
+            ch.text(1),
+            ch.text(2,
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.CONST_ANALOG_8).optional(),
+            ch.text(1)
     ), Set.of(ONE_BIT_ADDER)));
+
+    public static final ExperimentChapter MULTI_BIT_ADDER = register(chapter("multi_bit_adder", null, ch -> List.of(
+            ch.text(1),
+            ch.text(3,
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.ADDER_8)
+    ), Set.of(BUS)));
 
     public static final ExperimentChapter BITWISE_OPERATOR = register(chapter("bitwise_operator", null, ch -> List.of(
             ch.text(3,
@@ -334,6 +349,23 @@ public class BuiltinExperimentChapters {
                     BuiltinExperiments.XOR_GATE_8,
                     BuiltinExperiments.XNOR_GATE_8
             ).optional()
+    ), Set.of(MULTI_BIT_ADDER)));
+
+    public static final ExperimentChapter COMPARATOR = register(chapter("comparator", null, ch -> List.of(
+            ch.text(3,
+                    line(0, style(GOLD)),
+                    line(2, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.COMPARATOR),
+            ch.text(2,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.COMPARATOR_8),
+            ch.text(2,
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.COMPARATOR_ANALOG).optional()
     ), Set.of(MULTI_BIT_ADDER)));
 
     public static final ExperimentChapter MULTI_BIT_SUBTRACT = register(chapter("multi_bit_subtract", null, ch -> List.of(
@@ -383,14 +415,17 @@ public class BuiltinExperimentChapters {
                     line(1, style(GOLD)),
                     line(2, style(GOLD))
             ),
-            ch.text(1, line(0, style(GOLD), style(ITALIC, RED))),
-            ch.experiments(BuiltinExperiments.MULTIPLIER),
+            ch.text(2,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.MULTIPLIER_LITE, BuiltinExperiments.MULTIPLIER),
             ch.text(1),
             ch.text(2,
                     line(0, style(BLUE)),
                     line(1, style(BOLD))
             ),
-            ch.text(2, line(0, style(GOLD), style(ITALIC, RED))),
+            ch.text(2, line(0, style(GOLD))),
             ch.experiments(BuiltinExperiments.DIVIDER).optional()
     ), Set.of(BITWISE_SHIFTER)));
 

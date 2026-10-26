@@ -5,6 +5,7 @@ import com.elementsplus.core.experiment.BaseExperiment;
 import com.elementsplus.core.experiment.BuiltinExperimentChapters;
 import com.elementsplus.core.experiment.BuiltinExperiments;
 import com.elementsplus.core.experiment.ExperimentChapter;
+import com.elementsplus.core.experiment.ExperimentFailureInfo;
 import com.elementsplus.core.experiment.ExperimentHost;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
@@ -57,6 +58,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     private float progress = 0f;
     private final List<Integer> testResults = new ArrayList<>();
     private final List<Component> tooltipLines = new ArrayList<>();
+    private ExperimentFailureInfo failureInfo = null;
     private ItemStack startedStack = null;
 
     public ExperimentTableBlockEntity(BlockPos blockPos, BlockState blockState) {
@@ -231,6 +233,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
                 testResults.add(-1);
             }
             tooltipLines.clear();
+            failureInfo = null;
         } else {
             status = ExperimentStatus.ERROR;
             paused = false;
@@ -243,6 +246,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             tooltipLines.clear();
             tooltipLines.add(Component.translatable("experiment.elements-plus.precheck.header"));
             tooltipLines.addAll(reasons);
+            failureInfo = null;
         }
         this.setChanged();
         syncStatus();
@@ -282,6 +286,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         progress = 0f;
         testResults.clear();
         tooltipLines.clear();
+        failureInfo = null;
         startedStack = null;
         this.setChanged();
     }
@@ -294,6 +299,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         paused = false;
         if (success) {
             status = ExperimentStatus.SUCCESS;
+            failureInfo = null;
             level.playSound(null, getBlockPos(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
             progress = 1f;
             BaseExperiment experiment = activeExperiment;
@@ -327,6 +333,13 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         if (lines != null) {
             tooltipLines.addAll(lines);
         }
+        failureInfo = null;
+        this.setChanged();
+    }
+
+    @Override
+    public void setFailureInfo(ExperimentFailureInfo info) {
+        this.failureInfo = info;
         this.setChanged();
     }
 
@@ -382,7 +395,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
                 activeExperiment != null ? activeExperiment.getName() : null,
                 progress,
                 new ArrayList<>(testResults),
-                tooltipJson
+                tooltipJson,
+                failureInfo
         );
     }
 

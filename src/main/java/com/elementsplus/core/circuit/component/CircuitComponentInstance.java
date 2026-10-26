@@ -18,20 +18,25 @@ public interface CircuitComponentInstance {
 
     String getString(String key);
 
+    boolean getBoolean(String key);
+
     void setInt(String key, int value);
 
     void setFloat(String key, float value);
 
     void setString(String key, String value);
 
+    void setBoolean(String key, boolean value);
+
     boolean hasConfig(String key);
 
-    /** 当前值（Integer / Float / String） */
+    /** 当前值（Integer / Float / String / Boolean） */
     default Object getValue(String key) {
         for (Config config : getConfigs()) {
             if (config.key.equals(key)) {
                 if (config instanceof IntConfig) return getInt(key);
                 if (config instanceof FloatConfig) return getFloat(key);
+                if (config instanceof BooleanConfig) return getBoolean(key);
                 return getString(key);
             }
         }
@@ -94,6 +99,15 @@ public interface CircuitComponentInstance {
             super(key, name, description);
             this.defaultValue = defaultValue;
             this.maxLength = Math.max(1, maxLength);
+        }
+    }
+
+    class BooleanConfig extends Config {
+        public final boolean defaultValue;
+
+        public BooleanConfig(String key, Component name, Component description, boolean defaultValue) {
+            super(key, name, description);
+            this.defaultValue = defaultValue;
         }
     }
 }

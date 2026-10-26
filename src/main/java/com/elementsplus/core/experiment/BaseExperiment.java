@@ -67,6 +67,15 @@ public abstract class BaseExperiment {
                 host.setErrorLines(lines);
             }
         }
+
+        /**
+         * 设置失败测例的结构化数值，供客户端按本地数字格式渲染。
+         */
+        public void setFailureInfo(ExperimentFailureInfo info) {
+            if (host != null) {
+                host.setFailureInfo(info);
+            }
+        }
     }
 
     /**

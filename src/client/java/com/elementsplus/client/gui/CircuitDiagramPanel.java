@@ -10,6 +10,8 @@ import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.CircuitComponent.PinType;
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
+import com.elementsplus.core.circuit.component.Const8ComponentInstance;
+import com.elementsplus.core.circuit.component.ConstAnalog8ComponentInstance;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
@@ -86,8 +88,6 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     /** 检查 tooltip 文本颜色（RGB）。 */
     private static final int COLOR_TEXT_NAME = 0xFFD700;
-    private static final int COLOR_TEXT_BUS = 0xFF00FF;
-    private static final int COLOR_TEXT_1BIT = 0xAAAAAA;
     private static final int COLOR_TEXT_COPPER = 0xB06030;
     private static final int COLOR_TEXT_GOLD = 0xFFD700;
 
@@ -151,12 +151,12 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private long lastInputClickTime = 0;
     private CircuitDiagram.Component lastInputClicked;
 
-    private Consumer<CircuitDiagram.Component> onInput8DoubleClick = component -> {
+    private Consumer<CircuitDiagram.Component> onNumberDoubleClick = component -> {
     };
 
-    /** 双击「8位输入」元件时的回调（由宿主 Screen 弹数值对话框）。 */
-    public void setOnInput8DoubleClick(Consumer<CircuitDiagram.Component> consumer) {
-        this.onInput8DoubleClick = consumer;
+    /** 双击可输入数值的元件（8位输入、常量、掩码等）时的回调（由宿主 Screen 弹对话框）。 */
+    public void setOnNumberDoubleClick(Consumer<CircuitDiagram.Component> consumer) {
+        this.onNumberDoubleClick = consumer;
     }
 
     private Consumer<CircuitDiagram.Component> onPickComponent = component -> {
@@ -206,6 +206,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private boolean middlePickDragged;
     private double middlePickStartX, middlePickStartY;
     private CircuitDiagram.Component middlePickComponent;
+    private Direction middlePickDirection = Direction.NORTH;
+    private boolean middlePickMirrored;
     private CircuitDiagram.Wire.WireMaterial middlePickWireMaterial;
     private int middlePickWireBitWidth = 1;
 
@@ -634,13 +636,17 @@ public class CircuitDiagramPanel extends AbstractWidget {
         CircuitDiagram.Block block = diagram.getBlock(gx, gy);
         if (block instanceof CircuitDiagram.Component component) {
             setSelectionSingle(component.x, component.y);
-            if (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.INPUT_8) {
+            if (component.component == BuiltinCircuitComponents.INPUT
+                    || component.component == BuiltinCircuitComponents.INPUT_8
+                    || component.component == BuiltinCircuitComponents.CONST_8
+                    || component.component == BuiltinCircuitComponents.MASK_8
+                    || component.component == BuiltinCircuitComponents.CONST_ANALOG_8) {
                 long now = Util.getMillis();
                 if (lastInputClicked == component && now - lastInputClickTime <= 300) {
                     if (component.component == BuiltinCircuitComponents.INPUT) {
                         toggleInputSignal(component);
                     } else {
-                        onInput8DoubleClick.accept(component);
+                        onNumberDoubleClick.accept(component);
                     }
                     lastInputClicked = null;
                     lastInputClickTime = 0;
@@ -712,6 +718,57 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     /** 把 0~255 值写入「8位输入」元件：只读模式仅改预览副本，编辑模式写回物品并提交。 */
     public void applyInput8Value(CircuitDiagram.Component component, int value) {
+        editComponentInstance(component, instance -> {
+            if (instance instanceof Input8ComponentInstance in8) {
+                in8.setValue(value);
+            }
+        });
+    }
+
+    /** 界面当前展示的电路图中 8 位常量/掩码的 0~255 值。 */
+    public int getConstantBusValue(CircuitDiagram.Component component) {
+        CircuitDiagram diagram = getDiagram();
+        if (diagram == null) {
+            return 0;
+        }
+        CircuitDiagram.Block b = diagram.getBlock(component.x, component.y);
+        if (b instanceof CircuitDiagram.Component ec && ec.instance instanceof Const8ComponentInstance bits) {
+            return bits.getValue();
+        }
+        return 0;
+    }
+
+    /** 把 0~255 值写入 8 位常量/掩码。 */
+    public void applyConstantBusValue(CircuitDiagram.Component component, int value) {
+        editComponentInstance(component, instance -> {
+            if (instance instanceof Const8ComponentInstance bits) {
+                bits.setValue(value);
+            }
+        });
+    }
+
+    /** 界面当前展示的电路图中 8 位模拟常量的通道值（低到高）。 */
+    public int[] getConstantAnalogLanes(CircuitDiagram.Component component) {
+        CircuitDiagram diagram = getDiagram();
+        if (diagram != null) {
+            CircuitDiagram.Block b = diagram.getBlock(component.x, component.y);
+            if (b instanceof CircuitDiagram.Component ec && ec.instance instanceof ConstAnalog8ComponentInstance analog) {
+                return analog.getLanes();
+            }
+        }
+        return new int[8];
+    }
+
+    /** 写入 8 位模拟常量的通道值（低到高）。 */
+    public void applyConstantAnalogLanes(CircuitDiagram.Component component, int[] lanes) {
+        editComponentInstance(component, instance -> {
+            if (instance instanceof ConstAnalog8ComponentInstance analog) {
+                analog.setLanes(lanes);
+            }
+        });
+    }
+
+    private void editComponentInstance(CircuitDiagram.Component component, Consumer<CircuitComponentInstance> instanceEditor) {
         if (isReadOnly()) {
             ensurePreview();
             CircuitDiagram diagram = getDiagram();
@@ -719,8 +776,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
                 return;
             }
             CircuitDiagram.Block b = diagram.getBlock(component.x, component.y);
-            if (b instanceof CircuitDiagram.Component ec && ec.instance instanceof Input8ComponentInstance in8) {
-                in8.setValue(value);
+            if (b instanceof CircuitDiagram.Component ec && ec.instance != null) {
+                instanceEditor.accept(ec.instance);
             }
             setSelectionSingle(component.x, component.y);
             simulationDirty = true;
@@ -733,8 +790,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         CircuitDiagram editor = diagram.copy();
         CircuitDiagram.Block b = editor.getBlock(component.x, component.y);
-        if (b instanceof CircuitDiagram.Component ec && ec.instance instanceof Input8ComponentInstance in8) {
-            in8.setValue(value);
+        if (b instanceof CircuitDiagram.Component ec && ec.instance != null) {
+            instanceEditor.accept(ec.instance);
         }
         setSelectionSingle(component.x, component.y);
         commitDiagram(stack, editor);
@@ -1231,8 +1288,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
                         } else if (config instanceof CircuitComponentInstance.StringConfig) {
                             buf.writeByte(2);
                             buf.writeUtf(component.instance.getString(config.key));
-                        } else {
+                        } else if (config instanceof CircuitComponentInstance.BooleanConfig) {
                             buf.writeByte(3);
+                            buf.writeBoolean(component.instance.getBoolean(config.key));
+                        } else {
+                            buf.writeByte(4);
                         }
                     }
                 }
@@ -2137,6 +2197,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
         middlePickActive = false;
         middlePickDragged = false;
         middlePickComponent = null;
+        middlePickDirection = Direction.NORTH;
+        middlePickMirrored = false;
         middlePickWireMaterial = null;
         middlePickWireBitWidth = 1;
         middlePickStartX = mouseX;
@@ -2154,6 +2216,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
         CircuitDiagram.Block block = diagram.getBlock(gx, gy);
         if (block instanceof CircuitDiagram.Component component) {
             middlePickComponent = component;
+            middlePickDirection = component.direction != null ? component.direction : Direction.NORTH;
+            middlePickMirrored = component.mirrored;
             middlePickActive = true;
         } else if (block instanceof CircuitDiagram.Wire wire) {
             Direction side = nearestWireSide(wire, mouseX, mouseY, gx, gy);
@@ -2175,11 +2239,15 @@ public class CircuitDiagramPanel extends AbstractWidget {
         boolean dragged = middlePickDragged
                 || Math.hypot(mouseX - middlePickStartX, mouseY - middlePickStartY) >= DRAG_THRESHOLD;
         CircuitDiagram.Component component = middlePickComponent;
+        Direction direction = middlePickDirection;
+        boolean mirrored = middlePickMirrored;
         CircuitDiagram.Wire.WireMaterial material = middlePickWireMaterial;
         int bitWidth = middlePickWireBitWidth;
         middlePickActive = false;
         middlePickDragged = false;
         middlePickComponent = null;
+        middlePickDirection = Direction.NORTH;
+        middlePickMirrored = false;
         middlePickWireMaterial = null;
         middlePickWireBitWidth = 1;
         if (!active || dragged || !contains(mouseX, mouseY)
@@ -2187,6 +2255,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return;
         }
         if (component != null) {
+            rotation = direction;
+            placeMirrored = mirrored;
             onPickComponent.accept(component);
         } else if (material != null) {
             onPickWire.accept(material, bitWidth);
@@ -3010,41 +3080,12 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     /**
-     * 值格式化：8 位总线显示 {@code 总线值(通道0 ... 通道7)}（全 0 只显示总线值），
-     * 1 位信号只显示强度。总线值使用总线数字格式，通道强度使用信号强度格式。
+     * 值格式化：8 位总线显示 {@code 总线值(通道7 ... 通道0)}（高位到低位，全 0 只显示总线值），
+     * 1 位信号只显示强度。格式化与颜色规则与实验桌失败测例共用
+     * {@link NumberFormat#formatLanesComponent(int[])}。
      */
     private Component formatLanes(int[] lanes) {
-        if (lanes != null && lanes.length >= 8) {
-            int packed = 0;
-            for (int b = 0; b < 8; b++) {
-                if ((lanes[b] & 0xF) != 0) {
-                    packed |= 1 << b;
-                }
-            }
-            NumberFormat digitalFormat = ClientConfig.get().digitalNumberFormat;
-            NumberFormat analogFormat = ClientConfig.get().analogNumberFormat;
-            String busText = digitalFormat.formatDigital(packed);
-            String text;
-            if (packed == 0) {
-                text = busText;
-            } else {
-                StringBuilder sb = new StringBuilder();
-                sb.append(busText).append('(');
-                for (int b = 0; b < 8; b++) {
-                    if (b > 0) {
-                        sb.append(' ');
-                    }
-                    sb.append(analogFormat.formatAnalog(lanes[b] & 0xF));
-                }
-                sb.append(')');
-                text = sb.toString();
-            }
-            return Component.literal(text)
-                    .withStyle(style -> style.withColor(TextColor.fromRgb(COLOR_TEXT_BUS)));
-        }
-        int value = lanes == null || lanes.length == 0 ? 0 : lanes[0] & 0xF;
-        return Component.literal(ClientConfig.get().analogNumberFormat.formatAnalog(value))
-                .withStyle(style -> style.withColor(TextColor.fromRgb(COLOR_TEXT_1BIT)));
+        return NumberFormat.formatLanesComponent(lanes);
     }
 
     private static long pinKey(Direction side, int offset) {

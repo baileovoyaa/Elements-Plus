@@ -153,6 +153,120 @@ public class BuiltinExperiments {
         return lanes;
     }
 
+    // ================= 总线常量/掩码 =================
+    private static final int BUS_CONST_DEFAULT = 123;
+    private static final int[] BUS_ANALOG_DEFAULT_LANES = {6, 4, 2, 0, 9, 11, 13, 15};
+
+    /** 按位掩码生成 8 通道：置位通道输出给定强度，其余为 0。 */
+    private static byte[] maskLanes(int mask, int strength) {
+        byte[] lanes = new byte[8];
+        if (strength == 0) {
+            return lanes;
+        }
+        for (int b = 0; b < 8; b++) {
+            if (((mask >> b) & 1) != 0) {
+                lanes[b] = (byte) (strength & 0xF);
+            }
+        }
+        return lanes;
+    }
+
+    private static byte[] analogLanes(int... lanes) {
+        byte[] result = new byte[8];
+        for (int b = 0; b < 8 && b < lanes.length; b++) {
+            result[b] = (byte) (lanes[b] & 0xF);
+        }
+        return result;
+    }
+
+    public static final CircuitExperiment CONST_8 = register("const_8", BuiltinCircuitComponents.CONST_8.getIcon(),
+            new CircuitExperiment(List.of(new ConstantCombinationalTestCase(
+                    Map.of(),
+                    Map.of("Y", new PinValue(maskLanes(BUS_CONST_DEFAULT, 15))))), BuiltinCircuitComponents.CONST_8));
+
+    public static final CircuitExperiment MASK_8 = register("mask_8", BuiltinCircuitComponents.MASK_8.getIcon(),
+            new CircuitExperiment(IntStream.of(0, 1, 8, 15)
+                    .mapToObj(a -> (TestCase) new ConstantCombinationalTestCase(
+                            Map.of("A", new PinValue(a)),
+                            Map.of("Y", new PinValue(maskLanes(BUS_CONST_DEFAULT, a)))))
+                    .toList(), BuiltinCircuitComponents.MASK_8));
+
+    public static final CircuitExperiment CONST_ANALOG_8 = register("const_analog_8", BuiltinCircuitComponents.CONST_ANALOG_8.getIcon(),
+            new CircuitExperiment(List.of(new ConstantCombinationalTestCase(
+                    Map.of(),
+                    Map.of("Y", new PinValue(analogLanes(BUS_ANALOG_DEFAULT_LANES))))), BuiltinCircuitComponents.CONST_ANALOG_8));
+
+    // ================= 比较器 =================
+    private static final int[] COMPARATOR_8_VALUES = {0, 1, 2, 3, 15, 16, 127, 255};
+    private static final int[] COMPARATOR_1_VALUES = {0, 1, 8, 15};
+    private static final int[] COMPARATOR_I_VALUES = {0, 1, 15};
+
+    private static Map<String, PinValue> comparatorOutputs(int comparison, int i0, int i1) {
+        return Map.of(
+                "Y0", new PinValue((comparison < 0) ? 15 : (comparison == 0 && i0 != 0 ? 15 : 0)),
+                "Y1", new PinValue((comparison > 0) ? 15 : (comparison == 0 && i1 != 0 ? 15 : 0)));
+    }
+
+    private static List<TestCase> buildComparatorTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int a : COMPARATOR_1_VALUES) {
+            for (int b : COMPARATOR_1_VALUES) {
+                for (int i0 : COMPARATOR_I_VALUES) {
+                    for (int i1 : COMPARATOR_I_VALUES) {
+                        tests.add(new ConstantCombinationalTestCase(
+                                Map.of("A", new PinValue(a), "B", new PinValue(b),
+                                        "I0", new PinValue(i0), "I1", new PinValue(i1)),
+                                comparatorOutputs(Integer.compare(a != 0 ? 1 : 0, b != 0 ? 1 : 0), i0, i1)));
+                    }
+                }
+            }
+        }
+        return tests;
+    }
+
+    private static List<TestCase> buildComparator8Tests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int a : COMPARATOR_8_VALUES) {
+            for (int b : COMPARATOR_8_VALUES) {
+                for (int i0 : COMPARATOR_I_VALUES) {
+                    for (int i1 : COMPARATOR_I_VALUES) {
+                        tests.add(new ConstantCombinationalTestCase(
+                                Map.of("A", new PinValue(pin8(a)), "B", new PinValue(pin8(b)),
+                                        "I0", new PinValue(i0), "I1", new PinValue(i1)),
+                                comparatorOutputs(Integer.compare(a, b), i0, i1)));
+                    }
+                }
+            }
+        }
+        return tests;
+    }
+
+    private static List<TestCase> buildComparatorAnalogTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int a : COMPARATOR_1_VALUES) {
+            for (int b : COMPARATOR_1_VALUES) {
+                for (int i0 : COMPARATOR_I_VALUES) {
+                    for (int i1 : COMPARATOR_I_VALUES) {
+                        tests.add(new ConstantCombinationalTestCase(
+                                Map.of("A", new PinValue(a), "B", new PinValue(b),
+                                        "I0", new PinValue(i0), "I1", new PinValue(i1)),
+                                comparatorOutputs(Integer.compare(a, b), i0, i1)));
+                    }
+                }
+            }
+        }
+        return tests;
+    }
+
+    public static final CircuitExperiment COMPARATOR = register("comparator", BuiltinCircuitComponents.COMPARATOR.getIcon(),
+            new CircuitExperiment(buildComparatorTests(), BuiltinCircuitComponents.COMPARATOR));
+
+    public static final CircuitExperiment COMPARATOR_8 = register("comparator_8", BuiltinCircuitComponents.COMPARATOR_8.getIcon(),
+            new CircuitExperiment(buildComparator8Tests(), BuiltinCircuitComponents.COMPARATOR_8));
+
+    public static final CircuitExperiment COMPARATOR_ANALOG = register("comparator_analog", BuiltinCircuitComponents.COMPARATOR_ANALOG.getIcon(),
+            new CircuitExperiment(buildComparatorAnalogTests(), BuiltinCircuitComponents.COMPARATOR_ANALOG));
+
     private static RandomizedCombinationalTestCase adder8Case(int a, int b, int c) {
         int sum = a + b + c;
         return new RandomizedCombinationalTestCase(
@@ -481,6 +595,27 @@ public class BuiltinExperiments {
         return tests;
     }
 
+    private static RandomizedCombinationalTestCase multiplierLiteCase(int a, int b) {
+        int product = a * b;
+        return new RandomizedCombinationalTestCase(
+                Map.of("A", new PinValue(pin8(a)), "B", new PinValue(pin8(b))),
+                Map.of("Y0", new PinValue(pin8(product & 0xFF))));
+    }
+
+    private static List<TestCase> buildMultiplierLiteTests() {
+        List<TestCase> tests = new ArrayList<>();
+        Set<Integer> seen = new LinkedHashSet<>();
+        for (int a : ARITH_GRID_VALUES) {
+            for (int b : ARITH_GRID_VALUES) {
+                if (seen.add((a << 8) | b)) tests.add(multiplierLiteCase(a, b));
+            }
+        }
+        for (int[] pair : SPECIAL_PRODUCT_PAIRS) {
+            if (seen.add((pair[0] << 8) | pair[1])) tests.add(multiplierLiteCase(pair[0], pair[1]));
+        }
+        return tests;
+    }
+
     private static RandomizedCombinationalTestCase dividerCase(int a, int b) {
         int q = b == 0 ? 0 : a / b;
         int r = b == 0 ? 0 : a % b;
@@ -594,6 +729,9 @@ public class BuiltinExperiments {
         }
         return tests;
     }
+
+    public static final CircuitExperiment MULTIPLIER_LITE = register("multiplier_lite", BuiltinCircuitComponents.MULTIPLIER_LITE.getIcon(),
+            new CircuitExperiment(buildMultiplierLiteTests(), BuiltinCircuitComponents.MULTIPLIER_LITE));
 
     public static final CircuitExperiment MULTIPLIER = register("multiplier", BuiltinCircuitComponents.MULTIPLIER.getIcon(),
             new CircuitExperiment(buildMultiplierTests(), BuiltinCircuitComponents.MULTIPLIER));

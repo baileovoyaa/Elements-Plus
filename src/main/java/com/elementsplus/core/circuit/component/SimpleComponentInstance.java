@@ -29,6 +29,11 @@ public class SimpleComponentInstance implements CircuitComponentInstance {
     }
 
     @Override
+    public boolean getBoolean(String key) {
+        return false;
+    }
+
+    @Override
     public void setInt(String key, int value) {
     }
 
@@ -38,6 +43,10 @@ public class SimpleComponentInstance implements CircuitComponentInstance {
 
     @Override
     public void setString(String key, String value) {
+    }
+
+    @Override
+    public void setBoolean(String key, boolean value) {
     }
 
     @Override

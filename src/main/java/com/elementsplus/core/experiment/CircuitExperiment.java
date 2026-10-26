@@ -243,6 +243,8 @@ public class CircuitExperiment extends BaseExperiment {
             // 将失败测例的输入写回电路图（对应输入元件修改信号值，无关输入置0），便于之后在光刻机中检查失败逻辑
             writeBackFailedInputs(context, inputs);
             context.setErrorLines(buildFailureLines(combinationalTestCase, inputs, outputs));
+            Map<String, PinValue> expectedOutputs = testExpectedOutputs(combinationalTestCase);
+            context.setFailureInfo(ExperimentFailureInfo.of(inputs, expectedOutputs, outputs));
             context.complete(false);
             return false;
         }

@@ -18,6 +18,8 @@ public abstract class AbstractComponentInstance implements CircuitComponentInsta
                 values.put(fc.key, fc.defaultValue);
             } else if (config instanceof StringConfig sc) {
                 values.put(sc.key, sc.defaultValue);
+            } else if (config instanceof BooleanConfig bc) {
+                values.put(bc.key, bc.defaultValue);
             }
         }
     }
@@ -65,6 +67,17 @@ public abstract class AbstractComponentInstance implements CircuitComponentInsta
 
     @Override
     public void setString(String key, String value) {
+        values.put(key, value);
+    }
+
+    @Override
+    public boolean getBoolean(String key) {
+        Object v = values.get(key);
+        return v instanceof Boolean b ? b : false;
+    }
+
+    @Override
+    public void setBoolean(String key, boolean value) {
         values.put(key, value);
     }
 

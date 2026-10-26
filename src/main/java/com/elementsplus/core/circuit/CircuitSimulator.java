@@ -2,6 +2,8 @@ package com.elementsplus.core.circuit;
 
 import com.elementsplus.core.circuit.CircuitComponent.PinType;
 import com.elementsplus.core.circuit.component.CapacitorComponentInstance;
+import com.elementsplus.core.circuit.component.Const8ComponentInstance;
+import com.elementsplus.core.circuit.component.ConstAnalog8ComponentInstance;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.component.ResistorComponentInstance;
@@ -1071,6 +1073,52 @@ public class CircuitSimulator {
             v |= intToTuple(sum & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
             v |= ((long) ((((sum >> 8) & 1) * 15) & 0xF)) << outputSlot(cc, Direction.SOUTH, 0).bitStart();
             return v;
+        } else if (cc == BuiltinCircuitComponents.CONST_8 || cc == BuiltinCircuitComponents.MASK_8) {
+            // 8 位常量/掩码：位为 1 的通道输出 15；掩码则输出输入 A 的强度。
+            int strength = 15;
+            if (cc == BuiltinCircuitComponents.MASK_8) {
+                strength = (int) inPort(node, 0) & 0xF;
+                if (strength == 0) {
+                    return 0L;
+                }
+            }
+            int mask = ((Const8ComponentInstance) component.instance).getValue();
+            long tuple = 0L;
+            for (int b = 0; b < 8; b++) {
+                if (((mask >> b) & 1) != 0) {
+                    tuple |= (long) strength << (4 * b);
+                }
+            }
+            return tuple << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.CONST_ANALOG_8) {
+            ConstAnalog8ComponentInstance instance = (ConstAnalog8ComponentInstance) component.instance;
+            long tuple = 0L;
+            for (int b = 0; b < 8; b++) {
+                tuple |= (long) (instance.getLane(b) & 0xF) << (4 * b);
+            }
+            return tuple << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.COMPARATOR
+                || cc == BuiltinCircuitComponents.COMPARATOR_8
+                || cc == BuiltinCircuitComponents.COMPARATOR_ANALOG) {
+            int i0 = (int) inPort(node, 2) & 0xF;
+            int i1 = (int) inPort(node, 3) & 0xF;
+            int comparison;
+            if (cc == BuiltinCircuitComponents.COMPARATOR_8) {
+                comparison = Integer.compare(tupleToInt(inPort(node, 0)), tupleToInt(inPort(node, 1)));
+            } else if (cc == BuiltinCircuitComponents.COMPARATOR_ANALOG) {
+                comparison = Integer.compare((int) inPort(node, 0) & 0xF, (int) inPort(node, 1) & 0xF);
+            } else {
+                int a = inPort(node, 0) != 0 ? 1 : 0;
+                int b = inPort(node, 1) != 0 ? 1 : 0;
+                comparison = Integer.compare(a, b);
+            }
+            // A=B 时 I0/I1 按“非 0 即 15”直通，而不是透传模拟强度。
+            int y0 = comparison < 0 ? 15 : (comparison == 0 && i0 != 0 ? 15 : 0);
+            int y1 = comparison > 0 ? 15 : (comparison == 0 && i1 != 0 ? 15 : 0);
+            long v = 0L;
+            v |= (long) y0 << outputSlot(cc, Direction.SOUTH, 1).bitStart(); // Y0
+            v |= (long) y1 << outputSlot(cc, Direction.SOUTH, 0).bitStart(); // Y1
+            return v;
         } else if (cc == BuiltinCircuitComponents.BITWISE_AND
                 || cc == BuiltinCircuitComponents.BITWISE_OR
                 || cc == BuiltinCircuitComponents.BITWISE_XOR
@@ -1135,14 +1183,16 @@ public class CircuitSimulator {
                     : (rotate ? analogRotate(a, shift) : analogShift(a, shift));
             long t = analog ? shifted : amplifyTuple(shifted);
             return t << outputSlot(cc, Direction.EAST, 0).bitStart();
-        } else if (cc == BuiltinCircuitComponents.MULTIPLIER) {
-            // 8 位无符号乘法：Y0 为低 8 位，Y1 为高 8 位。
+        } else if (cc == BuiltinCircuitComponents.MULTIPLIER || cc == BuiltinCircuitComponents.MULTIPLIER_LITE) {
+            // 8 位无符号乘法：简单版只输出低 8 位，完整版再输出高 8 位。
             int a = tupleToInt(inPort(node, 0));
             int b = tupleToInt(inPort(node, 1));
             int product = a * b;
             long v = 0L;
             v |= intToTuple(product & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
-            v |= intToTuple((product >> 8) & 0xFF) << outputSlot(cc, Direction.EAST, 1).bitStart();
+            if (cc == BuiltinCircuitComponents.MULTIPLIER) {
+                v |= intToTuple((product >> 8) & 0xFF) << outputSlot(cc, Direction.EAST, 1).bitStart();
+            }
             return v;
         } else if (cc == BuiltinCircuitComponents.DIVIDER) {
             // 8 位无符号除法：Q 为整数商，R 为余数；除数为 0 时输出 0。
