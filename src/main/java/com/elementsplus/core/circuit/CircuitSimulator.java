@@ -52,7 +52,7 @@ public class CircuitSimulator {
     }
 
     private enum NodeKind {
-        NET, COMB, CAP, RES
+        NET, COMB, CAP, RES, SEQ
     }
 
     private enum DepKind {
@@ -114,6 +114,9 @@ public class CircuitSimulator {
 
     private final Map<Long, Integer> capQ = new HashMap<>();
     private final Map<Long, Integer> resPhase = new HashMap<>();
+    private final Map<Long, Integer> tffQ = new HashMap<>();
+    private final Map<Long, Integer> tffPrevClock = new HashMap<>();
+    private final List<Integer> tffNodes = new ArrayList<>();
 
     public void setDiagram(CircuitDiagram diagram) {
         this.diagram = diagram;
@@ -124,6 +127,8 @@ public class CircuitSimulator {
     public void reset() {
         capQ.clear();
         resPhase.clear();
+        tffQ.clear();
+        tffPrevClock.clear();
         evaluate();
     }
 
@@ -275,6 +280,9 @@ public class CircuitSimulator {
         comps.clear();
         capNodes.clear();
         resNodes.clear();
+        tffNodes.clear();
+        // 与电容状态一致：重建依赖图（如输入值变化触发）时保留触发器状态，
+        // 只有显式 reset() 才清空时序状态。
         wireNet.clear();
         compNodes.clear();
         wireValues.clear();
@@ -367,6 +375,10 @@ public class CircuitSimulator {
             } else if (cc == BuiltinCircuitComponents.RESONATOR) {
                 nodeKind[numNets + i] = NodeKind.RES;
                 resNodes.add(numNets + i);
+            } else if (cc == BuiltinCircuitComponents.TFF || cc == BuiltinCircuitComponents.TFF_PRIME) {
+                // 触发器是时序元件：输出只由内部状态决定，不应参与组合环检测。
+                nodeKind[numNets + i] = NodeKind.SEQ;
+                tffNodes.add(numNets + i);
             } else {
                 nodeKind[numNets + i] = NodeKind.COMB;
             }
@@ -415,8 +427,11 @@ public class CircuitSimulator {
                                     for (int b = 0; b < pinWidth; b++) {
                                         if (net != null) {
                                             lanes[b] = new Dep(net, DepKind.WHOLE, 4 * b);
-                                            if (kind != NodeKind.CAP) predSets[node].add(net);
-                                            else dSample = net;
+                                            if (kind == NodeKind.CAP) {
+                                                dSample = net;
+                                            } else if (kind != NodeKind.SEQ) {
+                                                predSets[node].add(net);
+                                            }
                                         }
                                     }
                                 } else {
@@ -434,8 +449,11 @@ public class CircuitSimulator {
                                         for (int b = 0; b < pinWidth; b++) {
                                             lanes[b] = new Dep(otherNode, DepKind.WHOLE,
                                                     slot.bitStart() + 4 * b);
-                                            if (kind != NodeKind.CAP) predSets[node].add(otherNode);
-                                            else dSample = otherNode;
+                                            if (kind == NodeKind.CAP) {
+                                                dSample = otherNode;
+                                            } else if (kind != NodeKind.SEQ) {
+                                                predSets[node].add(otherNode);
+                                            }
                                         }
                                     } else {
                                         mismatchCells.add(seamKey(pin.ex, pin.ey, pin.facing));
@@ -472,7 +490,9 @@ public class CircuitSimulator {
                                         mismatchCells.add(seamKey(pin.ex, pin.ey, pin.facing));
                                     } else {
                                         int otherNode = compNodes.get(key(other.x, other.y));
-                                        if (nodeKind[otherNode] != NodeKind.CAP) predSets[otherNode].add(node);
+                                        if (nodeKind[otherNode] != NodeKind.CAP && nodeKind[otherNode] != NodeKind.SEQ) {
+                                            predSets[otherNode].add(node);
+                                        }
                                     }
                                 }
                             }
@@ -909,6 +929,9 @@ public class CircuitSimulator {
             return tuple;
         } else if (cc == BuiltinCircuitComponents.OUTPUT_8) {
             return inPort(node, 0);
+        } else if (cc == BuiltinCircuitComponents.TFF || cc == BuiltinCircuitComponents.TFF_PRIME) {
+            return (long) tffQ.getOrDefault(key(component.x, component.y), 0)
+                    << outputSlot(cc, Direction.EAST, 0).bitStart();
         } else if (cc == BuiltinCircuitComponents.AMPLIFIER) {
             return inPort(node, 0) > 0 ? 15 : 0;
         } else if (cc == BuiltinCircuitComponents.AND_GATE) {
@@ -1099,12 +1122,15 @@ public class CircuitSimulator {
             return tuple << outputSlot(cc, Direction.EAST, 0).bitStart();
         } else if (cc == BuiltinCircuitComponents.COMPARATOR
                 || cc == BuiltinCircuitComponents.COMPARATOR_8
+                || cc == BuiltinCircuitComponents.COMPARATOR_SIGNED_8
                 || cc == BuiltinCircuitComponents.COMPARATOR_ANALOG) {
             int i0 = (int) inPort(node, 2) & 0xF;
             int i1 = (int) inPort(node, 3) & 0xF;
             int comparison;
             if (cc == BuiltinCircuitComponents.COMPARATOR_8) {
                 comparison = Integer.compare(tupleToInt(inPort(node, 0)), tupleToInt(inPort(node, 1)));
+            } else if (cc == BuiltinCircuitComponents.COMPARATOR_SIGNED_8) {
+                comparison = Integer.compare((byte) tupleToInt(inPort(node, 0)), (byte) tupleToInt(inPort(node, 1)));
             } else if (cc == BuiltinCircuitComponents.COMPARATOR_ANALOG) {
                 comparison = Integer.compare((int) inPort(node, 0) & 0xF, (int) inPort(node, 1) & 0xF);
             } else {
@@ -1315,6 +1341,25 @@ public class CircuitSimulator {
             int period = Math.max(1, instance.getHighDuration() + instance.getLowDuration());
             int phase = resPhase.getOrDefault(key(component.x, component.y), instance.getInitialPhase());
             resPhase.put(key(component.x, component.y), (phase + 1) % period);
+        }
+        for (int node : tffNodes) {
+            int idx = node - numNets;
+            Component component = comps.get(idx);
+            long stateKey = key(component.x, component.y);
+            int clock = (int) inPort(node, 0);
+            int q = tffQ.getOrDefault(stateKey, 0);
+            if (component.component == BuiltinCircuitComponents.TFF) {
+                if (clock != 0) {
+                    q = q == 0 ? 15 : 0;
+                }
+            } else {
+                int previous = tffPrevClock.getOrDefault(stateKey, 0);
+                if (clock != 0 && previous == 0) {
+                    q = q == 0 ? 15 : 0;
+                }
+                tffPrevClock.put(stateKey, clock != 0 ? 1 : 0);
+            }
+            tffQ.put(stateKey, q);
         }
 
         evaluate();

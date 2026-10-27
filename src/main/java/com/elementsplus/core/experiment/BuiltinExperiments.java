@@ -12,8 +12,10 @@ import java.util.stream.IntStream;
 
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.experiment.CircuitExperiment.ConstantCombinationalTestCase;
+import com.elementsplus.core.experiment.CircuitExperiment.ConstantSequentialTestCase;
 import com.elementsplus.core.experiment.CircuitExperiment.PinValue;
 import com.elementsplus.core.experiment.CircuitExperiment.RandomizedCombinationalTestCase;
+import com.elementsplus.core.experiment.CircuitExperiment.SequentialTick;
 import net.minecraft.resources.ResourceLocation;
 
 public class BuiltinExperiments {
@@ -153,6 +155,61 @@ public class BuiltinExperiments {
         return lanes;
     }
 
+    // ================= 时序逻辑：T / T' 触发器 =================
+
+    private static SequentialTick qTick(String inputName, int input, int expectedQ) {
+        return new SequentialTick(
+                Map.of(inputName, new PinValue(input)),
+                Map.of("Q", new PinValue(expectedQ)));
+    }
+
+    private static List<TestCase> buildTffTests() {
+        List<TestCase> tests = new ArrayList<>();
+        tests.add(buildTffTest(new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
+        tests.add(buildTffTest(new int[]{15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}));
+        tests.add(buildTffTest(new int[]{0, 15, 15, 15, 0, 15, 15, 0, 15, 0, 15, 15}));
+        return tests;
+    }
+
+    private static ConstantSequentialTestCase buildTffTest(int[] tValues) {
+        List<SequentialTick> ticks = new ArrayList<>();
+        int q = 0;
+        for (int t : tValues) {
+            if (t != 0) {
+                q = q == 0 ? 15 : 0;
+            }
+            ticks.add(qTick("T", t, q));
+        }
+        return new ConstantSequentialTestCase(ticks);
+    }
+
+    private static List<TestCase> buildTPrimeTests() {
+        List<TestCase> tests = new ArrayList<>();
+        tests.add(buildTPrimeTest(new int[]{0, 0, 15, 15, 0, 15, 15, 0, 15}));
+        tests.add(buildTPrimeTest(new int[]{15, 15, 15, 0, 15, 0, 15, 15, 0, 15, 15, 15}));
+        return tests;
+    }
+
+    private static ConstantSequentialTestCase buildTPrimeTest(int[] cValues) {
+        List<SequentialTick> ticks = new ArrayList<>();
+        int q = 0;
+        int previous = 0;
+        for (int c : cValues) {
+            if (c != 0 && previous == 0) {
+                q = q == 0 ? 15 : 0;
+            }
+            previous = c != 0 ? 1 : 0;
+            ticks.add(qTick("C", c, q));
+        }
+        return new ConstantSequentialTestCase(ticks);
+    }
+
+    public static final CircuitExperiment TFF = register("tff", BuiltinCircuitComponents.TFF.getIcon(),
+            new CircuitExperiment(buildTffTests(), BuiltinCircuitComponents.TFF));
+
+    public static final CircuitExperiment TFF_PRIME = register("tff_prime", BuiltinCircuitComponents.TFF_PRIME.getIcon(),
+            new CircuitExperiment(buildTPrimeTests(), BuiltinCircuitComponents.TFF_PRIME));
+
     // ================= 总线常量/掩码 =================
     private static final int BUS_CONST_DEFAULT = 123;
     private static final int[] BUS_ANALOG_DEFAULT_LANES = {6, 4, 2, 0, 9, 11, 13, 15};
@@ -200,6 +257,7 @@ public class BuiltinExperiments {
     private static final int[] COMPARATOR_8_VALUES = {0, 1, 2, 3, 15, 16, 127, 255};
     private static final int[] COMPARATOR_1_VALUES = {0, 1, 8, 15};
     private static final int[] COMPARATOR_I_VALUES = {0, 1, 15};
+    private static final int[] COMPARATOR_SIGNED_VALUES = {0, 1, 127, -128, -1};
 
     private static Map<String, PinValue> comparatorOutputs(int comparison, int i0, int i1) {
         return Map.of(
@@ -241,6 +299,23 @@ public class BuiltinExperiments {
         return tests;
     }
 
+    private static List<TestCase> buildComparatorSignedTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int a : COMPARATOR_SIGNED_VALUES) {
+            for (int b : COMPARATOR_SIGNED_VALUES) {
+                for (int i0 : COMPARATOR_I_VALUES) {
+                    for (int i1 : COMPARATOR_I_VALUES) {
+                        tests.add(new ConstantCombinationalTestCase(
+                                Map.of("A", new PinValue(pin8(a & 0xFF)), "B", new PinValue(pin8(b & 0xFF)),
+                                        "I0", new PinValue(i0), "I1", new PinValue(i1)),
+                                comparatorOutputs(Integer.compare(a, b), i0, i1)));
+                    }
+                }
+            }
+        }
+        return tests;
+    }
+
     private static List<TestCase> buildComparatorAnalogTests() {
         List<TestCase> tests = new ArrayList<>();
         for (int a : COMPARATOR_1_VALUES) {
@@ -263,6 +338,9 @@ public class BuiltinExperiments {
 
     public static final CircuitExperiment COMPARATOR_8 = register("comparator_8", BuiltinCircuitComponents.COMPARATOR_8.getIcon(),
             new CircuitExperiment(buildComparator8Tests(), BuiltinCircuitComponents.COMPARATOR_8));
+
+    public static final CircuitExperiment COMPARATOR_SIGNED_8 = register("comparator_signed_8", BuiltinCircuitComponents.COMPARATOR_SIGNED_8.getIcon(),
+            new CircuitExperiment(buildComparatorSignedTests(), BuiltinCircuitComponents.COMPARATOR_SIGNED_8));
 
     public static final CircuitExperiment COMPARATOR_ANALOG = register("comparator_analog", BuiltinCircuitComponents.COMPARATOR_ANALOG.getIcon(),
             new CircuitExperiment(buildComparatorAnalogTests(), BuiltinCircuitComponents.COMPARATOR_ANALOG));

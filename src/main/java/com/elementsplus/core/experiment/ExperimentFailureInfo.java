@@ -19,7 +19,7 @@ public record ExperimentFailureInfo(List<Pin> inputs, List<Pin> expected, List<P
         return new ExperimentFailureInfo(pins(inputs), pins(expected), pins(actual));
     }
 
-    private static List<Pin> pins(Map<String, CircuitExperiment.PinValue> values) {
+    public static List<Pin> pins(Map<String, CircuitExperiment.PinValue> values) {
         if (values == null || values.isEmpty()) {
             return List.of();
         }

@@ -156,6 +156,55 @@ public class CircuitExperiment extends BaseExperiment {
         }
     }
 
+    /** 时序测例的一帧：输入和该 tick 结束后的预期输出。 */
+    public static class SequentialTick {
+        public final Map<String, PinValue> inputs;
+        public final Map<String, PinValue> expectedOutputs;
+
+        public SequentialTick(Map<String, PinValue> inputs, Map<String, PinValue> expectedOutputs) {
+            this.inputs = inputs;
+            this.expectedOutputs = expectedOutputs;
+        }
+    }
+
+    /** 需要连续多个时钟 tick 的测例。每个测例开始时会创建全新的模拟器，状态互不延续。 */
+    public interface SequentialTestCase extends TestCase {
+        List<SequentialTick> getTicks();
+
+        default int getTickCount() {
+            return getTicks().size();
+        }
+    }
+
+    public static class ConstantSequentialTestCase implements SequentialTestCase {
+        public final List<SequentialTick> ticks;
+
+        public ConstantSequentialTestCase(List<SequentialTick> ticks) {
+            this.ticks = ticks;
+        }
+
+        @Override
+        public List<SequentialTick> getTicks() {
+            return ticks;
+        }
+    }
+
+    private static final class SequentialState {
+        final int testIndex;
+        final int totalTicks;
+        final CircuitDiagram diagram;
+        final CircuitSimulator simulator;
+        final List<SequentialFailureInfo.Row> rows = new ArrayList<>();
+        int tickIndex;
+
+        SequentialState(int testIndex, int totalTicks, CircuitDiagram diagram, CircuitSimulator simulator) {
+            this.testIndex = testIndex;
+            this.totalTicks = totalTicks;
+            this.diagram = diagram;
+            this.simulator = simulator;
+        }
+    }
+
     public List<TestCase> testCases;
     public Map<String, Integer> bitWidthsPrecheck;
     public CircuitComponent circuitComponent;
@@ -180,6 +229,25 @@ public class CircuitExperiment extends BaseExperiment {
                 Map<String, PinValue> expectedOutputs = testExpectedOutputs(combinationalTestCase);
                 if (expectedOutputs != null) {
                     expectedOutputs.forEach((pinName, pinValue) -> {
+                        neededOutputLabels.add(pinName);
+                        int bitWidth = pinValue.bitWidth;
+                        if (neededOutputWidths.containsKey(pinName) && neededOutputWidths.get(pinName) != bitWidth) {
+                            throw new IllegalStateException("Bit width ambiguous for output pin " + pinName);
+                        }
+                        neededOutputWidths.put(pinName, bitWidth);
+                    });
+                }
+            } else if (testCase instanceof SequentialTestCase sequentialTestCase) {
+                for (SequentialTick tick : sequentialTestCase.getTicks()) {
+                    tick.inputs.forEach((pinName, pinValue) -> {
+                        int bitWidth = pinValue.bitWidth;
+                        if (bitWidthsPrecheck.containsKey(pinName) && bitWidthsPrecheck.get(pinName) != bitWidth) {
+                            throw new IllegalStateException("Bit width ambiguous for pin " + pinName);
+                        }
+                        bitWidthsPrecheck.put(pinName, bitWidth);
+                        neededInputLabels.add(pinName);
+                    });
+                    tick.expectedOutputs.forEach((pinName, pinValue) -> {
                         neededOutputLabels.add(pinName);
                         int bitWidth = pinValue.bitWidth;
                         if (neededOutputWidths.containsKey(pinName) && neededOutputWidths.get(pinName) != bitWidth) {
@@ -223,8 +291,11 @@ public class CircuitExperiment extends BaseExperiment {
             return false;
         }
         TestCase testCase = testCases.get(index);
+        if (testCase instanceof SequentialTestCase sequentialTestCase) {
+            return tickSequential(context, index, sequentialTestCase);
+        }
         if (!(testCase instanceof CombinationalTestCase combinationalTestCase)) {
-            // 未来时序测例：本轮不处理，保持进行
+            // 未知测例类型：跳过。
             context.testIndex = index + 1;
             return true;
         }
@@ -259,6 +330,76 @@ public class CircuitExperiment extends BaseExperiment {
     }
 
     /**
+     * 时序测例：每个服务器 tick 推进一次时钟。一个测例内部状态连续，
+     * 切换到下一个测例时重新创建模拟器，确保测例之间互不影响。
+     */
+    private boolean tickSequential(Context context, int index, SequentialTestCase testCase) {
+        List<SequentialTick> ticks = testCase.getTicks();
+        if (ticks.isEmpty()) {
+            context.reportTestResult(index, true);
+            context.experimentState = null;
+            if (index == testCases.size() - 1) {
+                context.complete(true);
+            } else {
+                context.testIndex = index + 1;
+            }
+            return true;
+        }
+
+        CircuitDiagram source = context.getItemStack() != null
+                ? context.getItemStack().get(ModDataComponents.CIRCUIT_DIAGRAM)
+                : null;
+        if (source == null) {
+            return false;
+        }
+
+        SequentialState state = context.experimentState instanceof SequentialState s && s.testIndex == index
+                ? s : null;
+        if (state == null) {
+            CircuitDiagram diagram = source.copy();
+            CircuitSimulator simulator = new CircuitSimulator();
+            simulator.setDiagram(diagram);
+            state = new SequentialState(index, ticks.size(), diagram, simulator);
+            context.experimentState = state;
+        }
+
+        SequentialTick tick = ticks.get(state.tickIndex);
+        applyInputs(state.diagram, tick.inputs);
+        state.simulator.step();
+        Map<String, PinValue> outputs = collectOutputs(state.diagram, state.simulator);
+        state.rows.add(new SequentialFailureInfo.Row(
+                state.tickIndex,
+                ExperimentFailureInfo.pins(tick.inputs),
+                ExperimentFailureInfo.pins(tick.expectedOutputs),
+                ExperimentFailureInfo.pins(outputs)));
+
+        if (!tick.expectedOutputs.equals(outputs)) {
+            context.reportTestResult(index, false);
+            writeBackFailedInputs(context, tick.inputs);
+            context.setErrorLines(buildFailureLinesForTick(tick.inputs, tick.expectedOutputs, outputs));
+            context.setFailureInfo(ExperimentFailureInfo.of(tick.inputs, tick.expectedOutputs, outputs));
+            context.setSequentialFailureInfo(new SequentialFailureInfo(
+                    index, state.totalTicks, state.tickIndex, List.copyOf(state.rows)));
+            context.complete(false);
+            return false;
+        }
+
+        state.tickIndex++;
+        if (state.tickIndex < state.totalTicks) {
+            return true;
+        }
+
+        context.reportTestResult(index, true);
+        context.experimentState = null;
+        if (index == testCases.size() - 1) {
+            context.complete(true);
+            return true;
+        }
+        context.testIndex = index + 1;
+        return true;
+    }
+
+    /**
      * 随机测例在运行时对输入做随机化（服务端随机源）；恒定测例直接返回固定输入。
      */
     private Map<String, PinValue> buildRuntimeInputs(Context context, CombinationalTestCase testCase) {
@@ -284,7 +425,11 @@ public class CircuitExperiment extends BaseExperiment {
 
         CircuitSimulator simulator = new CircuitSimulator();
         simulator.setDiagram(diagram);
+        return collectOutputs(diagram, simulator);
+    }
 
+    /** 从已经求值完成的模拟器读取带标签的输出引脚值。 */
+    private static Map<String, PinValue> collectOutputs(CircuitDiagram diagram, CircuitSimulator simulator) {
         Map<String, PinValue> outputs = new LinkedHashMap<>();
         for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
             for (CircuitDiagram.Component comp : chunk.components) {
@@ -477,6 +622,17 @@ public class CircuitExperiment extends BaseExperiment {
             lines.add(Component.translatable("experiment.elements-plus.testfail.expected", formatPins(randomized.expectedOutputs)));
         }
         lines.add(Component.translatable("experiment.elements-plus.testfail.actual", formatPins(outputs)));
+        return lines;
+    }
+
+    private static List<Component> buildFailureLinesForTick(Map<String, PinValue> inputs,
+                                                            Map<String, PinValue> expected,
+                                                            Map<String, PinValue> actual) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.translatable("experiment.elements-plus.testfail.header"));
+        lines.add(Component.translatable("experiment.elements-plus.testfail.input", formatPins(inputs)));
+        lines.add(Component.translatable("experiment.elements-plus.testfail.expected", formatPins(expected)));
+        lines.add(Component.translatable("experiment.elements-plus.testfail.actual", formatPins(actual)));
         return lines;
     }
 

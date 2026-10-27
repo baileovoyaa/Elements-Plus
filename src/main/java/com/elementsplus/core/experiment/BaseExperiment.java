@@ -17,6 +17,11 @@ public abstract class BaseExperiment {
          * 当前执行的测例索引（由宿主维护）。
          */
         public int testIndex = 0;
+        /**
+         * 由具体实验使用的运行期状态（如时序测例的模拟器和 tick 进度），
+         * 由宿主在 tick 之间保存。
+         */
+        public Object experimentState;
 
         private final ExperimentHost host;
 
@@ -74,6 +79,13 @@ public abstract class BaseExperiment {
         public void setFailureInfo(ExperimentFailureInfo info) {
             if (host != null) {
                 host.setFailureInfo(info);
+            }
+        }
+
+        /** 设置时序测例的完整失败轨迹。 */
+        public void setSequentialFailureInfo(SequentialFailureInfo info) {
+            if (host != null) {
+                host.setSequentialFailureInfo(info);
             }
         }
     }

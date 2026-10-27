@@ -7,6 +7,7 @@ import com.elementsplus.core.experiment.BuiltinExperiments;
 import com.elementsplus.core.experiment.ExperimentChapter;
 import com.elementsplus.core.experiment.ExperimentFailureInfo;
 import com.elementsplus.core.experiment.ExperimentHost;
+import com.elementsplus.core.experiment.SequentialFailureInfo;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableStatusPayload;
@@ -59,6 +60,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     private final List<Integer> testResults = new ArrayList<>();
     private final List<Component> tooltipLines = new ArrayList<>();
     private ExperimentFailureInfo failureInfo = null;
+    private SequentialFailureInfo sequentialFailure = null;
+    private Object experimentState = null;
     private ItemStack startedStack = null;
 
     public ExperimentTableBlockEntity(BlockPos blockPos, BlockState blockState) {
@@ -184,8 +187,10 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         BaseExperiment.Context context = new BaseExperiment.Context(this, this, this.getItem(0));
         context.time = time;
         context.testIndex = testIndex;
+        context.experimentState = experimentState;
         boolean ok = experiment.tick(context);
         this.testIndex = context.testIndex;
+        this.experimentState = context.experimentState;
         this.time = context.time + 1;
         this.setChanged();
         if (ok) {
@@ -234,6 +239,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             }
             tooltipLines.clear();
             failureInfo = null;
+            sequentialFailure = null;
+            experimentState = null;
         } else {
             status = ExperimentStatus.ERROR;
             paused = false;
@@ -247,6 +254,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             tooltipLines.add(Component.translatable("experiment.elements-plus.precheck.header"));
             tooltipLines.addAll(reasons);
             failureInfo = null;
+            sequentialFailure = null;
+            experimentState = null;
         }
         this.setChanged();
         syncStatus();
@@ -287,6 +296,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         testResults.clear();
         tooltipLines.clear();
         failureInfo = null;
+        sequentialFailure = null;
+        experimentState = null;
         startedStack = null;
         this.setChanged();
     }
@@ -300,6 +311,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         if (success) {
             status = ExperimentStatus.SUCCESS;
             failureInfo = null;
+            sequentialFailure = null;
+            experimentState = null;
             level.playSound(null, getBlockPos(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
             progress = 1f;
             BaseExperiment experiment = activeExperiment;
@@ -334,12 +347,19 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             tooltipLines.addAll(lines);
         }
         failureInfo = null;
+        sequentialFailure = null;
         this.setChanged();
     }
 
     @Override
     public void setFailureInfo(ExperimentFailureInfo info) {
         this.failureInfo = info;
+        this.setChanged();
+    }
+
+    @Override
+    public void setSequentialFailureInfo(SequentialFailureInfo info) {
+        this.sequentialFailure = info;
         this.setChanged();
     }
 
@@ -396,7 +416,9 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
                 progress,
                 new ArrayList<>(testResults),
                 tooltipJson,
-                failureInfo
+                failureInfo,
+                status == ExperimentStatus.BUSY ? testIndex : -1,
+                sequentialFailure
         );
     }
 

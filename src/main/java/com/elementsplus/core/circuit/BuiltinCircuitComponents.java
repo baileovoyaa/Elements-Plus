@@ -364,6 +364,14 @@ public class BuiltinCircuitComponents {
         setPin(Direction.SOUTH, 1, PinType.OUTPUT, "Y0");
         setPin(Direction.SOUTH, 0, PinType.OUTPUT, "Y1");
     }});
+    public static final CircuitComponent COMPARATOR_SIGNED_8 = register(new CircuitComponent(ElementsPlus.id("comparator_signed_8"), Component.translatable("circuit.elements-plus.component.comparator_signed_8"), null, ElementsPlus.id("textures/circuit/comparator_signed_8.png"), 2, 2) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.WEST, 1, PinType.INPUT, "B", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "I0");
+        setPin(Direction.NORTH, 1, PinType.INPUT, "I1");
+        setPin(Direction.SOUTH, 1, PinType.OUTPUT, "Y0");
+        setPin(Direction.SOUTH, 0, PinType.OUTPUT, "Y1");
+    }});
     // 位运算器
     public static final CircuitComponent BITWISE_AND = register(new CircuitComponent(ElementsPlus.id("bitwise_and"), Component.translatable("circuit.elements-plus.component.bitwise_and"), null, ElementsPlus.id("textures/circuit/bitwise_and.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
@@ -481,9 +489,13 @@ public class BuiltinCircuitComponents {
         setPin(Direction.EAST, 1, PinType.OUTPUT, "Y1", 8);
         setPin(Direction.SOUTH, 0, PinType.OUTPUT, "CO");
     }});
-
+    // 触发器
     public static final CircuitComponent TFF = register(new CircuitComponent(ElementsPlus.id("tff"), Component.translatable("circuit.elements-plus.component.tff"), null, ElementsPlus.id("textures/circuit/tff.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT, "T");
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Q");
+    }});
+    public static final CircuitComponent TFF_PRIME = register(new CircuitComponent(ElementsPlus.id("tff_prime"), Component.translatable("circuit.elements-plus.component.tff_prime"), null, ElementsPlus.id("textures/circuit/tff_prime.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "C");
         setPin(Direction.EAST, 0, PinType.OUTPUT, "Q");
     }});
     public static final CircuitComponent REGISTER = register(new CircuitComponent(ElementsPlus.id("register"), Component.translatable("circuit.elements-plus.component.register"), null, ElementsPlus.id("textures/circuit/register.png"), 1, 1) {{

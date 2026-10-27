@@ -3,6 +3,7 @@ package com.elementsplus.network;
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.blocks.entity.ExperimentStatus;
 import com.elementsplus.core.experiment.ExperimentFailureInfo;
+import com.elementsplus.core.experiment.SequentialFailureInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -21,7 +22,9 @@ import java.util.List;
 public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status, boolean paused,
                                            @Nullable String experimentName, float progress,
                                            List<Integer> testResults, List<String> tooltipLines,
-                                           @Nullable ExperimentFailureInfo failureInfo) implements CustomPacketPayload {
+                                           @Nullable ExperimentFailureInfo failureInfo,
+                                           int currentTestIndex,
+                                           @Nullable SequentialFailureInfo sequentialFailure) implements CustomPacketPayload {
 
     public static final Type<ExperimentTableStatusPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, "experiment_table_status"));
     public static final StreamCodec<FriendlyByteBuf, ExperimentTableStatusPayload> STREAM_CODEC = StreamCodec.of(
@@ -34,6 +37,8 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                 buf.writeCollection(payload.testResults(), FriendlyByteBuf::writeVarInt);
                 buf.writeCollection(payload.tooltipLines(), FriendlyByteBuf::writeUtf);
                 writeFailureInfo(buf, payload.failureInfo());
+                buf.writeInt(payload.currentTestIndex());
+                writeSequentialFailure(buf, payload.sequentialFailure());
             },
             buf -> new ExperimentTableStatusPayload(
                     buf.readBlockPos(),
@@ -43,14 +48,48 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                     buf.readFloat(),
                     buf.readCollection(ArrayList::new, FriendlyByteBuf::readVarInt),
                     buf.readCollection(ArrayList::new, FriendlyByteBuf::readUtf),
-                    readFailureInfo(buf)
+                    readFailureInfo(buf),
+                    buf.readInt(),
+                    readSequentialFailure(buf)
             )
     );
 
     public ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status, boolean paused,
                                         @Nullable String experimentName, float progress,
                                         List<Integer> testResults, List<String> tooltipLines) {
-        this(pos, status, paused, experimentName, progress, testResults, tooltipLines, null);
+        this(pos, status, paused, experimentName, progress, testResults, tooltipLines, null, -1, null);
+    }
+
+    private static void writeSequentialFailure(FriendlyByteBuf buf, @Nullable SequentialFailureInfo info) {
+        buf.writeBoolean(info != null);
+        if (info == null) {
+            return;
+        }
+        buf.writeVarInt(info.testIndex());
+        buf.writeVarInt(info.totalTicks());
+        buf.writeVarInt(info.failedTick());
+        buf.writeCollection(info.rows(), (b, row) -> {
+            b.writeVarInt(row.tick());
+            writePins(b, row.inputs());
+            writePins(b, row.expected());
+            writePins(b, row.actual());
+        });
+    }
+
+    private static SequentialFailureInfo readSequentialFailure(FriendlyByteBuf buf) {
+        if (!buf.readBoolean()) {
+            return null;
+        }
+        int testIndex = buf.readVarInt();
+        int totalTicks = buf.readVarInt();
+        int failedTick = buf.readVarInt();
+        List<SequentialFailureInfo.Row> rows = buf.readCollection(ArrayList::new, b ->
+                new SequentialFailureInfo.Row(
+                        b.readVarInt(),
+                        readPins(b),
+                        readPins(b),
+                        readPins(b)));
+        return new SequentialFailureInfo(testIndex, totalTicks, failedTick, rows);
     }
 
     private static void writeFailureInfo(FriendlyByteBuf buf, @Nullable ExperimentFailureInfo info) {

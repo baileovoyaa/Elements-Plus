@@ -29,7 +29,7 @@ category: "用户文档"
 - [乘除器](multiplier-divider.md)
 - [多功能运算器（基础版）](alu-basic.md)
 - [多功能运算器（高级版）](alu-advanced.md)
-- 触发器
+- [触发器](flip-flop.md)
 - 一位寄存器
 - 多位寄存器
 - [模数转换器](analog-digital-converter.md)

@@ -27,6 +27,10 @@ public interface ExperimentHost {
     default void setFailureInfo(ExperimentFailureInfo info) {
     }
 
+    /** 设置时序测例的完整失败轨迹（逐 tick 数据）。 */
+    default void setSequentialFailureInfo(SequentialFailureInfo info) {
+    }
+
     /**
      * 报告某个测例的结果。
      *

@@ -363,6 +363,11 @@ public class BuiltinExperimentChapters {
             ),
             ch.experiments(BuiltinExperiments.COMPARATOR_8),
             ch.text(2,
+                    line(0, style(BLUE)),
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.COMPARATOR_SIGNED_8),
+            ch.text(2,
                     line(1, style(GOLD))
             ),
             ch.experiments(BuiltinExperiments.COMPARATOR_ANALOG).optional()
@@ -460,6 +465,25 @@ public class BuiltinExperimentChapters {
             ch.text(2, line(0, style(GOLD))),
             ch.experiments(BuiltinExperiments.ALU_ADVANCED)
     ), Set.of(ALU_BASIC, MULTIPLIER_DIVISOR)));
+
+    public static final ExperimentChapter FLIP_FLOP = register(chapter("flip_flop", null, ch -> List.of(
+            ch.text(9,
+                    line(0, style(BLUE)),
+                    line(1, style(BLUE), style(BLUE)),
+                    line(2, style(BLUE)),
+                    line(3, style(BLUE), style(BLUE)),
+                    line(4, style(GOLD)),
+                    line(7, style(GOLD)),
+                    line(8, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.TFF),
+            ch.text(1),
+            ch.text(2,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.TFF_PRIME).optional()
+    ), Set.of(ALU_BASIC)));
 
     public static ExperimentChapter register(ExperimentChapter experimentChapter) {
         BUILTIN_EXPERIMENT_CHAPTERS.add(experimentChapter);
