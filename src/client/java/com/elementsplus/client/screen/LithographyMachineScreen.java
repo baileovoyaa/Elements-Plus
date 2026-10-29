@@ -753,6 +753,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 return true;
             }
         }
+        if (keyCode == GLFW.GLFW_KEY_E) {
+            return false;  // 阻止默认关闭行为
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
@@ -786,8 +789,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         ItemStack diagramStack = menu.diagramSlot.getItem();
         ItemStack inputStack = menu.manufactureInputSlot.getItem();
         boolean showCopyCompiled = !diagramStack.isEmpty() && diagramStack.is(ModItems.CIRCUIT_DIAGRAM)
-                && diagramStack.has(ModDataComponents.EQUIVALENT_COMPONENT)
+                && com.elementsplus.core.circuit.CircuitItemData.isCompiled(diagramStack)
                 && !inputStack.isEmpty() && inputStack.is(ModItems.CIRCUIT_DIAGRAM)
+                && !com.elementsplus.core.circuit.CircuitItemData.isCompiled(inputStack)
                 && !inputStack.has(ModDataComponents.EQUIVALENT_COMPONENT);
         int x = 0;
         int y = 0;
@@ -809,11 +813,12 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         CircuitDiagram diagram = null;
         CircuitDiagram.Scale chipScale = null;
         if (!diagramStack.isEmpty() && diagramStack.is(ModItems.CIRCUIT_DIAGRAM)
-                && diagramStack.has(ModDataComponents.CIRCUIT_DIAGRAM)
-                && diagramStack.has(ModDataComponents.EQUIVALENT_COMPONENT)
+                && com.elementsplus.core.circuit.CircuitItemData.isCompiled(diagramStack)
                 && !inputStack.isEmpty()) {
             chipScale = ChipManufacture.emptyChipScale(inputStack);
-            diagram = diagramStack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+            com.elementsplus.core.circuit.storage.StoredCircuit record =
+                    com.elementsplus.core.circuit.CircuitItemData.stored(diagramStack);
+            diagram = record == null ? null : record.diagram();
             if (chipScale == null || diagram == null || !ChipManufacture.canHoldScale(chipScale, diagram.scale)) {
                 diagram = null;
                 chipScale = null;
@@ -909,12 +914,44 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                         tooltip = itemStack;
                     }
                 } else if (object instanceof CircuitComponent component) {
-                    ResourceLocation icon = component.getIcon();
-                    if (icon != null) {
-                        guiGraphics.blit(icon, getX() + 1, getY() + 1, 0, 0, 16, 16, 16, 16);
+                    if (component.isCustom()) {
+                        String text = component.getCustomIconText();
+                        if (text != null && !text.isBlank()) {
+                            guiGraphics.drawCenteredString(Minecraft.getInstance().font, Component.literal(text),
+                                    getX() + 9, getY() + 4, 0xFFFFFFFF);
+                        } else {
+                            net.minecraft.world.item.Item iconItem = component.getCustomIconItem() == null
+                                    ? null : net.minecraft.core.registries.BuiltInRegistries.ITEM.get(component.getCustomIconItem());
+                            if (iconItem == null && component.getCustomScale() != null) {
+                                iconItem = ChipManufacture.chipItemForScale(component.getCustomScale());
+                            }
+                            if (iconItem != null) {
+                                guiGraphics.renderFakeItem(new ItemStack(iconItem), getX() + 1, getY() + 1);
+                            }
+                        }
+                    } else {
+                        ResourceLocation icon = component.getIcon();
+                        if (icon != null) {
+                            guiGraphics.blit(icon, getX() + 1, getY() + 1, 0, 0, 16, 16, 16, 16);
+                        }
                     }
                     if (isHovered()) {
-                        tooltip = component;
+                        if (component.isCustom()) {
+                            MutableComponent lines = component.getName().copy();
+                            if (component.getDescription() != null) {
+                                lines.append(Component.literal("\n"))
+                                        .append(component.getDescription().copy().withStyle(ChatFormatting.GRAY));
+                            }
+                            lines.append(Component.translatable("tooltip.elements-plus.custom_component.uuid",
+                                            component.getCircuitId() == null ? "-" : component.getCircuitId().toString()))
+                                    .append(Component.translatable("tooltip.elements-plus.custom_component.author",
+                                            component.getCustomAuthorName() == null
+                                                    ? (component.getAuthor() == null ? "-" : component.getAuthor().toString())
+                                                    : component.getCustomAuthorName()));
+                            tooltip = lines;
+                        } else {
+                            tooltip = component;
+                        }
                     }
                 } else {
                     throw new IllegalArgumentException("Unknown object type: " + object);
@@ -1051,10 +1088,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         attributeWidget.addChild(new AbstractWidget(0, 1, attributeWidget.getWidth(), 20, Component.empty()) {
             @Override
             protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-                ResourceLocation icon = attrComponent.component.getIcon();
-                if (icon != null) {
-                    guiGraphics.blit(icon, this.getX() + 5, this.getY() + 1, 0, 0, 16, 16, 16, 16);
-                }
+                drawCircuitComponentIcon(guiGraphics, attrComponent.component, this.getX() + 5, this.getY() + 1);
                 guiGraphics.drawString(font, attrComponent.component.getName(), this.getX() + 22, this.getY() + 4, 0xFFFFFFFF, false);
             }
 
@@ -1267,16 +1301,38 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 guiGraphics.renderTooltip(this.font, itemStack, i, j);
             } else if (tooltip instanceof CircuitComponent component) {
                 guiGraphics.renderTooltip(this.font, component.getName().copy().withColor(0xFFD700), i, j);
+            } else if (tooltip instanceof Component component) {
+                guiGraphics.renderComponentTooltip(this.font, List.of(component), i, j);
             }
         }
     }
 
     private void drawVirtualCursor(GuiGraphics guiGraphics, CircuitComponent component, int mouseX, int mouseY) {
+        drawCircuitComponentIcon(guiGraphics, component, mouseX - 8, mouseY - 8);
+    }
+
+    private static void drawCircuitComponentIcon(GuiGraphics guiGraphics, CircuitComponent component, int x, int y) {
+        if (component.isCustom()) {
+            String text = component.getCustomIconText();
+            if (text != null && !text.isBlank()) {
+                guiGraphics.drawCenteredString(Minecraft.getInstance().font, Component.literal(text), x + 8, y + 4, 0xFFFFFFFF);
+                return;
+            }
+            net.minecraft.world.item.Item item = component.getCustomIconItem() == null ? null
+                    : net.minecraft.core.registries.BuiltInRegistries.ITEM.get(component.getCustomIconItem());
+            if (item == null && component.getCustomScale() != null) {
+                item = ChipManufacture.chipItemForScale(component.getCustomScale());
+            }
+            if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                guiGraphics.renderFakeItem(new ItemStack(item), x, y);
+            }
+            return;
+        }
         ResourceLocation icon = component.getIcon();
         if (icon != null) {
-            guiGraphics.blit(icon, mouseX - 8, mouseY - 8, 0, 0, 16, 16, 16, 16);
+            guiGraphics.blit(icon, x, y, 0, 0, 16, 16, 16, 16);
         } else {
-            guiGraphics.renderItem(new ItemStack(ModItems.SMALL_CHIP), mouseX - 8, mouseY - 8);
+            guiGraphics.renderItem(new ItemStack(ModItems.SMALL_CHIP), x, y);
         }
     }
 

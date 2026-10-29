@@ -2,7 +2,10 @@ package com.elementsplus;
 
 import com.elementsplus.blocks.entity.ExperimentTableBlockEntity;
 import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
+import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
+import com.elementsplus.core.circuit.storage.CircuitStorage;
+import com.elementsplus.core.circuit.storage.StoredCircuit;
 import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
 import com.elementsplus.core.experiment.BaseExperiment;
 import com.elementsplus.core.experiment.BuiltinExperimentChapters;
@@ -12,6 +15,8 @@ import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
 import com.elementsplus.network.CopyCompiledSettingPayload;
+import com.elementsplus.network.CircuitStorageSyncPayload;
+import com.elementsplus.network.CustomComponentCompilePayload;
 import com.elementsplus.network.ExperimentTableControlPayload;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableSelectionChangePayload;
@@ -39,6 +44,7 @@ import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -53,6 +59,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceKey;
@@ -73,6 +80,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.phys.HitResult;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,6 +103,12 @@ public class ElementsPlus implements ModInitializer {
         MetalCatalystRecipe.TYPE.toString();
         CrystallizerRecipe.TYPE.toString();
         ScaleUpgradeRecipe.TYPE_ID.toString();
+
+        ServerLifecycleEvents.SERVER_STARTED.register(CircuitStorage.get()::load);
+        PayloadTypeRegistry.playS2C().register(CircuitStorageSyncPayload.TYPE, CircuitStorageSyncPayload.STREAM_CODEC);
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                ServerPlayNetworking.send(handler.player,
+                        new CircuitStorageSyncPayload(CircuitStorage.get().ordered())));
 
         PayloadTypeRegistry.playC2S().register(ReturnCarriedPayload.TYPE, ReturnCarriedPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ReturnCarriedPayload.TYPE, (payload, context) ->
@@ -129,6 +143,15 @@ public class ElementsPlus implements ModInitializer {
                 context.server().execute(() -> {
                     if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
                         menu.setDesignTab(payload.designTab());
+                    }
+                }));
+
+        PayloadTypeRegistry.playC2S().register(CustomComponentCompilePayload.TYPE, CustomComponentCompilePayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(CustomComponentCompilePayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
+                        table.compileCustomComponent(payload, player);
                     }
                 }));
 
@@ -310,25 +333,44 @@ public class ElementsPlus implements ModInitializer {
         );
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            var experimentsCommand = Commands.literal("experiments")
+                    .then(Commands.literal("grant")
+                            .then(Commands.argument("players", EntityArgument.players())
+                                    .then(Commands.argument("experiment", StringArgumentType.greedyString())
+                                            .suggests(ElementsPlus::suggestExperiments)
+                                            .executes((source) -> setExperiments(source, true)))))
+                    .then(Commands.literal("revoke")
+                            .then(Commands.argument("players", EntityArgument.players())
+                                    .then(Commands.argument("experiment", StringArgumentType.greedyString())
+                                            .suggests(ElementsPlus::suggestExperiments)
+                                            .executes((source) -> setExperiments(source, false)))))
+                    .then(Commands.literal("list")
+                            .then(Commands.argument("player", EntityArgument.player())
+                                    .executes(ElementsPlus::listExperiments)));
+
+            var circuitCommand = Commands.literal("circuit")
+                    .then(Commands.literal("give")
+                            .then(Commands.argument("id", StringArgumentType.string())
+                                    .executes(ElementsPlus::giveCircuit)))
+                    .then(Commands.literal("list")
+                            .then(Commands.literal("all").executes(ElementsPlus::listAllCircuits))
+                            .then(Commands.literal("player")
+                                    .then(Commands.argument("player", EntityArgument.player())
+                                            .executes(ElementsPlus::listPlayerCircuits)))
+                            .then(Commands.literal("name")
+                                    .then(Commands.argument("name", StringArgumentType.greedyString())
+                                            .executes(ElementsPlus::listCircuitsByName)))
+                            .then(Commands.literal("id")
+                                    .then(Commands.argument("id", StringArgumentType.string())
+                                            .executes(ElementsPlus::showCircuitById))));
+
             dispatcher.register(Commands.literal("elements-plus").requires((source) -> source.hasPermission(2))
                     .then(Commands.literal("debug").executes((source) -> {
                         doSomething(source);
                         return 1;
                     }))
-                    .then(Commands.literal("experiments")
-                            .then(Commands.literal("grant")
-                                    .then(Commands.argument("players", EntityArgument.players())
-                                            .then(Commands.argument("experiment", StringArgumentType.greedyString())
-                                                    .suggests(ElementsPlus::suggestExperiments)
-                                                    .executes((source) -> setExperiments(source, true)))))
-                            .then(Commands.literal("revoke")
-                                    .then(Commands.argument("players", EntityArgument.players())
-                                            .then(Commands.argument("experiment", StringArgumentType.greedyString())
-                                                    .suggests(ElementsPlus::suggestExperiments)
-                                                    .executes((source) -> setExperiments(source, false)))))
-                            .then(Commands.literal("list")
-                                    .then(Commands.argument("player", EntityArgument.player())
-                                            .executes(ElementsPlus::listExperiments)))));
+                    .then(experimentsCommand)
+                    .then(circuitCommand));
         });
 
         // 修复延迟加载带来的数据回滚问题
@@ -410,6 +452,127 @@ public class ElementsPlus implements ModInitializer {
         source.getSource().sendSuccess(() -> Component.translatable("command.elements-plus.experiments.list",
                 player.getName(), line), false);
         return 1;
+    }
+
+    private static int giveCircuit(CommandContext<CommandSourceStack> source) {
+        String query = StringArgumentType.getString(source, "id");
+        StoredCircuit record = findCircuit(source, query);
+        if (record == null) {
+            return 0;
+        }
+        ServerPlayer player = source.getSource().getPlayer();
+        if (player == null) {
+            source.getSource().sendFailure(Component.translatable("command.elements-plus.circuit.player_only"));
+            return 0;
+        }
+        ItemStack stack = new ItemStack(ModItems.CIRCUIT_DIAGRAM);
+        stack.remove(ModDataComponents.CIRCUIT_DIAGRAM);
+        CircuitItemData.bindCompiled(stack, record);
+        if (!player.getInventory().add(stack)) {
+            player.drop(stack, false);
+        }
+        source.getSource().sendSuccess(() -> Component.translatable("command.elements-plus.circuit.given",
+                displayCircuitName(record), record.id().toString()), false);
+        return 1;
+    }
+
+    @Nullable
+    private static StoredCircuit findCircuit(CommandContext<CommandSourceStack> source, String query) {
+        try {
+            UUID id = UUID.fromString(query);
+            StoredCircuit exact = CircuitStorage.get().get(id);
+            if (exact != null) {
+                return exact;
+            }
+            source.getSource().sendFailure(Component.translatable("command.elements-plus.circuit.unknown_id", query));
+            return null;
+        } catch (IllegalArgumentException ignored) {
+            // 不是 UUID，按元件名查找。
+        }
+        List<StoredCircuit> matches = CircuitStorage.get().byName(query);
+        if (matches.isEmpty()) {
+            source.getSource().sendFailure(Component.translatable("command.elements-plus.circuit.unknown", query));
+            return null;
+        }
+        if (matches.size() > 1) {
+            source.getSource().sendFailure(Component.translatable("command.elements-plus.circuit.duplicate", query));
+            for (StoredCircuit match : matches) {
+                source.getSource().sendSuccess(() -> circuitEntry(source, match), false);
+            }
+            return null;
+        }
+        return matches.get(0);
+    }
+
+    private static int listAllCircuits(CommandContext<CommandSourceStack> source) {
+        return sendCircuitList(source, new ArrayList<>(CircuitStorage.get().all()));
+    }
+
+    private static int listPlayerCircuits(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {
+        ServerPlayer player = EntityArgument.getPlayer(source, "player");
+        List<StoredCircuit> list = CircuitStorage.get().all().stream()
+                .filter(record -> record.author().equals(player.getUUID()))
+                .toList();
+        return sendCircuitList(source, list);
+    }
+
+    private static int listCircuitsByName(CommandContext<CommandSourceStack> source) {
+        return sendCircuitList(source, CircuitStorage.get().byName(StringArgumentType.getString(source, "name")));
+    }
+
+    private static int showCircuitById(CommandContext<CommandSourceStack> source) {
+        String raw = StringArgumentType.getString(source, "id");
+        try {
+            StoredCircuit record = CircuitStorage.get().get(UUID.fromString(raw));
+            if (record == null) {
+                source.getSource().sendFailure(Component.translatable("command.elements-plus.circuit.unknown_id", raw));
+                return 0;
+            }
+            source.getSource().sendSuccess(() -> circuitInfo(source, record), false);
+            return 1;
+        } catch (IllegalArgumentException e) {
+            source.getSource().sendFailure(Component.translatable("command.elements-plus.circuit.invalid_id", raw));
+            return 0;
+        }
+    }
+
+    private static int sendCircuitList(CommandContext<CommandSourceStack> source, List<StoredCircuit> records) {
+        if (records.isEmpty()) {
+            source.getSource().sendSuccess(() -> Component.translatable("command.elements-plus.circuit.list_empty"), false);
+            return 0;
+        }
+        source.getSource().sendSuccess(() -> Component.translatable("command.elements-plus.circuit.list_header", records.size()), false);
+        for (StoredCircuit record : records) {
+            source.getSource().sendSuccess(() -> circuitEntry(source, record), false);
+        }
+        return records.size();
+    }
+
+    private static Component circuitEntry(CommandContext<CommandSourceStack> source, StoredCircuit record) {
+        String command = "/elements-plus circuit give " + record.id();
+        Component id = Component.literal(record.id().toString())
+                .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
+                        .withUnderlined(true));
+        return Component.translatable("command.elements-plus.circuit.entry",
+                displayCircuitName(record), record.displayAuthor(), id).withStyle(net.minecraft.ChatFormatting.GRAY);
+    }
+
+    private static Component circuitInfo(CommandContext<CommandSourceStack> source, StoredCircuit record) {
+        return Component.translatable("command.elements-plus.circuit.info",
+                displayCircuitName(record),
+                record.displayAuthor(),
+                record.id().toString(),
+                Component.translatable("circuit_diagram.scale." + record.diagram().scale.getSerializedName()));
+    }
+
+    private static Component displayCircuitName(StoredCircuit record) {
+        return CircuitStorage.get().displayName(record);
+    }
+
+    private static String authorName(CommandContext<CommandSourceStack> source, UUID author) {
+        MinecraftServer server = source.getSource().getServer();
+        ServerPlayer player = server == null ? null : server.getPlayerList().getPlayer(author);
+        return player == null ? author.toString() : player.getGameProfile().getName();
     }
 
     private static CompletableFuture<Suggestions> suggestExperiments(CommandContext<CommandSourceStack> source, SuggestionsBuilder builder) {

@@ -3,7 +3,7 @@ title: "实验章节索引"
 category: "用户文档"
 ---
 
-章节内容可以在实验桌内看到，这里列出了所有实验章节内容。
+章节内容可以在实验桌内看到，以下是所有实验章节内容。
 
 > [!NOTE]
 > 
@@ -29,12 +29,11 @@ category: "用户文档"
 - [乘除器](multiplier-divider.md)
 - [多功能运算器（基础版）](alu-basic.md)
 - [多功能运算器（高级版）](alu-advanced.md)
+- [自定义元件](custom-component.md)
 - [触发器](flip-flop.md)
-- 一位寄存器
-- 多位寄存器
+- [寄存器](register.md)
 - [模数转换器](analog-digital-converter.md)
-- 模拟计数器
-- 数字计数器
+- 计数器
 - 多字节存储器
 - 计算机架构-输入输出寄存器
 - 计算机架构-运算

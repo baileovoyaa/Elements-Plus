@@ -7,6 +7,8 @@ import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.gui.CircuitDiagramPanel;
 import com.elementsplus.client.screen.ExperimentTableScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
+import com.elementsplus.core.circuit.storage.CircuitStorage;
+import com.elementsplus.network.CircuitStorageSyncPayload;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableSelectionChangePayload;
 import com.elementsplus.network.ExperimentTableStatusPayload;
@@ -63,6 +65,10 @@ public class ElementsPlusClient implements ClientModInitializer {
                     if (equivalentComponent != null && equivalentComponent.isPresent()) {
                         return 1.0f;
                     }
+                    var compiledPatch = itemStack.getComponentsPatch().get(ModDataComponents.COMPILED_CIRCUIT);
+                    if (compiledPatch != null && compiledPatch.isPresent()) {
+                        return 1.0f;
+                    }
                     var circuitDiagramPatch = itemStack.getComponentsPatch().get(ModDataComponents.CIRCUIT_DIAGRAM);
                     if (circuitDiagramPatch != null && circuitDiagramPatch.isPresent()) {
                         return 0.5f;
@@ -70,6 +76,9 @@ public class ElementsPlusClient implements ClientModInitializer {
                     return 0.0F;
                 }
         );
+
+        ClientPlayNetworking.registerGlobalReceiver(CircuitStorageSyncPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> CircuitStorage.get().replaceAll(payload.circuits())));
 
         ClientPlayNetworking.registerGlobalReceiver(ToolboxSyncPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> applyToolbox(payload.toolbox())));
@@ -97,6 +106,8 @@ public class ElementsPlusClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
                 ClientPlayNetworking.send(new ToolboxRequestPayload()));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
+                CircuitStorage.get().clear());
     }
 
     /** 客户端缓存的元件列表。未收到服务端数据时显示默认工具箱。 */

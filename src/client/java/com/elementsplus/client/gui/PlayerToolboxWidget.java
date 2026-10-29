@@ -4,6 +4,10 @@ import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
+import com.elementsplus.core.circuit.CircuitComponentRegistry;
+import com.elementsplus.core.circuit.ChipManufacture;
+import com.elementsplus.core.circuit.CircuitItemData;
+import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.player.PlayerToolbox;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -15,6 +19,7 @@ import net.minecraft.client.gui.components.WidgetTooltipHolder;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -234,12 +239,12 @@ public class PlayerToolboxWidget extends AbstractWidget {
     private boolean hasRealCarried() {
         if (readOnly.getAsBoolean()) return false;
         ItemStack stack = carried.get();
-        return stack != null && !stack.isEmpty() && stack.get(ModDataComponents.EQUIVALENT_COMPONENT) != null;
+        return CircuitItemData.componentId(stack) != null;
     }
 
     private ResourceLocation carriedComponentId() {
         ItemStack stack = carried.get();
-        return stack == null ? null : stack.get(ModDataComponents.EQUIVALENT_COMPONENT);
+        return CircuitItemData.componentId(stack);
     }
 
     private PressTarget resolvePressTarget(double y) {
@@ -366,7 +371,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
 
     public void addGroupWithCarried() {
         ResourceLocation id = carriedComponentId();
-        if (id == null || BuiltinCircuitComponents.byId(id) == null) return;
+        if (id == null || CircuitComponentRegistry.byId(id) == null) return;
         toolbox.groups.add(new PlayerToolbox.Group(localized("gui.elements-plus.toolbox.new_group"), id));
         markChanged();
     }
@@ -396,7 +401,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
     private void pickupEntry(int groupIndex, int entryIndex) {
         PlayerToolbox.Group g = toolbox.groups.get(groupIndex);
         if (entryIndex < 0 || entryIndex >= g.components.size()) return;
-        CircuitComponent component = BuiltinCircuitComponents.byId(g.components.get(entryIndex));
+        CircuitComponent component = CircuitComponentRegistry.byId(g.components.get(entryIndex));
         if (component != null) listener.onPickup(component);
     }
 
@@ -404,7 +409,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
         ResourceLocation id = carriedComponentId();
         PlayerToolbox.Group g = toolbox.groups.get(groupIndex);
         if (id == null || g == null || g.isBuiltin()) return;
-        if (BuiltinCircuitComponents.byId(id) == null) return;
+        if (CircuitComponentRegistry.byId(id) == null) return;
         g.components.add(Math.min(entryPos, g.components.size()), id);
         markChanged();
     }
@@ -603,22 +608,15 @@ public class PlayerToolboxWidget extends AbstractWidget {
         if (!expanded) return;
         PlayerToolbox.Group group = toolbox.groups.get(i);
         for (int j = 0; j < group.components.size(); j++) {
-            CircuitComponent component = BuiltinCircuitComponents.byId(group.components.get(j));
+            CircuitComponent component = CircuitComponentRegistry.byId(group.components.get(j));
             if (component == null) continue;
             int ey = (int) screenY(top + HEADER_HEIGHT + j * ENTRY_HEIGHT);
             boolean hovered = smx >= x + 1 && smx < x + w - 1 && smy >= ey && smy < ey + ENTRY_HEIGHT;
             g.fill(x + 1, ey, x + w - 1, ey + ENTRY_HEIGHT, hovered ? 0xFFA0A0A0 : 0xFF808080);
             if (hovered) {
-                if (component.getDescription() != null) {
-                    tooltip.set(Tooltip.create(Component.translatable("%s\n%s", component.getName(), component.getDescription().copy().withStyle(ChatFormatting.GRAY))));
-                } else {
-                    tooltip.set(Tooltip.create(component.getName()));
-                }
+                tooltip.set(Tooltip.create(componentTooltip(component)));
             }
-            ResourceLocation icon = component.getIcon();
-            if (icon != null) {
-                g.blit(icon, x + 6, ey + 1, 0, 0, 16, 16, 16, 16);
-            }
+            drawToolboxIcon(g, component, x + 6, ey + 1);
             g.drawString(font, component.getName(), x + 24, ey + (ENTRY_HEIGHT - 9) / 2, 0xFFFFFFFF, false);
         }
     }
@@ -654,14 +652,61 @@ public class PlayerToolboxWidget extends AbstractWidget {
     private void renderEntryGhost(GuiGraphics g, int smx, int smy) {
         if (dragSourceGroup < 0 || dragSourceEntry < 0) return;
         ResourceLocation id = toolbox.groups.get(dragSourceGroup).components.get(dragSourceEntry);
-        CircuitComponent component = BuiltinCircuitComponents.byId(id);
+        CircuitComponent component = CircuitComponentRegistry.byId(id);
         if (component == null) return;
+        drawToolboxIcon(g, component, smx - 8, smy - 8);
+    }
+
+    private static Component componentTooltip(CircuitComponent component) {
+        MutableComponent result = component.getName().copy();
+        if (component.getDescription() != null) {
+            result.append(Component.literal("\n")).append(component.getDescription().copy().withStyle(ChatFormatting.GRAY));
+        }
+        if (component.isCustom()) {
+            if (component.getCircuitId() != null) {
+                result.append(Component.translatable("tooltip.elements-plus.custom_component.uuid",
+                        component.getCircuitId().toString()).withStyle(ChatFormatting.DARK_GRAY));
+            }
+            if (component.getAuthor() != null || component.getCustomAuthorName() != null) {
+                String author = component.getCustomAuthorName() != null
+                        ? component.getCustomAuthorName() : component.getAuthor().toString();
+                result.append(Component.translatable("tooltip.elements-plus.custom_component.author",
+                        author).withStyle(ChatFormatting.DARK_GRAY));
+            }
+            if (component.getCustomScale() != null) {
+                result.append(Component.translatable("tooltip.elements-plus.custom_component.scale",
+                        Component.translatable("circuit_diagram.scale." + component.getCustomScale().getSerializedName()))
+                        .withStyle(ChatFormatting.DARK_GRAY));
+            }
+        }
+        return result;
+    }
+
+    private static void drawToolboxIcon(GuiGraphics g, CircuitComponent component, int x, int y) {
+        if (component.isCustom()) {
+            String text = component.getCustomIconText();
+            if (text != null && !text.isBlank()) {
+                g.drawCenteredString(Minecraft.getInstance().font, Component.literal(text), x + 8, y + 4, 0xFFFFFFFF);
+                return;
+            }
+            net.minecraft.world.item.Item item = null;
+            if (component.getCustomIconItem() != null) {
+                item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(component.getCustomIconItem());
+            }
+            if (item == null && component.getCustomScale() != null) {
+                item = ChipManufacture.chipItemForScale(component.getCustomScale());
+            }
+            if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                g.renderFakeItem(new ItemStack(item), x, y);
+            }
+            return;
+        }
         ResourceLocation icon = component.getIcon();
         if (icon != null) {
-            g.blit(icon, smx - 8, smy - 8, 0, 0, 16, 16, 16, 16);
+            g.blit(icon, x, y, 0, 0, 16, 16, 16, 16);
         } else {
-            g.fill(smx - 8, smy - 8, smx + 8, smy + 8, 0xC0000000);
-            g.drawCenteredString(Minecraft.getInstance().font, component.getName(), smx, smy - 5, 0xFFFFFFFF);
+            g.fill(x, y, x + 16, y + 16, 0xC0000000);
+            g.drawCenteredString(Minecraft.getInstance().font, component.getName(), x + 8, y + 4, 0xFFFFFFFF);
         }
     }
 

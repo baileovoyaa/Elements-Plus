@@ -2,7 +2,11 @@ package com.elementsplus;
 
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
+import com.elementsplus.core.circuit.CircuitComponentRegistry;
+import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
+import com.elementsplus.core.circuit.storage.CircuitStorage;
+import com.elementsplus.core.circuit.storage.StoredCircuit;
 import com.elementsplus.item.ChipItem;
 import com.elementsplus.item.WrenchItem;
 import net.minecraft.ChatFormatting;
@@ -197,14 +201,33 @@ public class ModItems {
             .component(ModDataComponents.CIRCUIT_DIAGRAM, CircuitDiagram.EMPTY.copy())) {
         @Override
         public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> list, TooltipFlag tooltipFlag) {
+            StoredCircuit stored = CircuitItemData.stored(itemStack);
+            if (stored == null && CircuitItemData.compiledId(itemStack) != null) {
+                list.add(Component.literal(CircuitItemData.compiledId(itemStack).toString()).withStyle(ChatFormatting.DARK_GRAY));
+            }
+            if (stored != null) {
+                list.add(CircuitStorage.get().displayName(stored).copy()
+                        .withStyle(style -> style.withColor(0xFFD700)));
+                if (stored.custom() != null && stored.custom().description() != null
+                        && !stored.custom().description().isBlank()) {
+                    list.add(Component.literal(stored.custom().description()).withStyle(ChatFormatting.GRAY));
+                }
+                list.add(Component.translatable("tooltip.elements-plus.circuit.author", stored.displayAuthor())
+                        .withStyle(ChatFormatting.GRAY));
+                list.add(Component.literal(stored.id().toString()).withStyle(ChatFormatting.DARK_GRAY));
+                list.add(Component.translatable("tooltip.elements-plus.circuit_diagram.scale",
+                                Component.translatable("circuit_diagram.scale." + stored.diagram().scale.getSerializedName()))
+                        .withStyle(ChatFormatting.GRAY));
+                return;
+            }
             ResourceLocation id = itemStack.get(ModDataComponents.EQUIVALENT_COMPONENT);
             if (id != null) {
-                CircuitComponent component = BuiltinCircuitComponents.byId(id);
+                CircuitComponent component = CircuitComponentRegistry.byId(id);
                 if (component != null) {
                     list.add(component.getName().copy().withStyle(style -> style.withColor(0xFFD700)));
                 }
             }
-            CircuitDiagram diagram = itemStack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+            CircuitDiagram diagram = CircuitItemData.diagram(itemStack);
             if (diagram != null) {
                 list.add(Component.translatable("tooltip.elements-plus.circuit_diagram.scale",
                                 Component.translatable("circuit_diagram.scale." + diagram.scale.getSerializedName()))
@@ -217,7 +240,7 @@ public class ModItems {
     public static final Item CREATIVE_COMPONENT = register(new Item(new Item.Properties()) {
         @Override
         public @NotNull Component getName(ItemStack itemStack) {
-            CircuitComponent circuitComponent = BuiltinCircuitComponents.byId(itemStack.get(ModDataComponents.EQUIVALENT_COMPONENT));
+            CircuitComponent circuitComponent = CircuitComponentRegistry.byId(itemStack.get(ModDataComponents.EQUIVALENT_COMPONENT));
             if (circuitComponent != null) {
                 return Component.translatable("item.elements-plus.creative_component", circuitComponent.getName().copy().withStyle(style -> style.withColor(0xFFD700))).withStyle(ChatFormatting.LIGHT_PURPLE);
             } else {

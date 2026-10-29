@@ -1,7 +1,7 @@
 package com.elementsplus.core.circuit.diagram;
 
-import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
+import com.elementsplus.core.circuit.CircuitComponentRegistry;
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
@@ -450,7 +450,7 @@ public class CircuitDiagram {
                 if (id.isEmpty()) {
                     return DataResult.error(() -> "Component: missing or invalid 'id'");
                 }
-                CircuitComponent circuitComponent = BuiltinCircuitComponents.byId(id.get());
+                CircuitComponent circuitComponent = CircuitComponentRegistry.byId(id.get());
                 if (circuitComponent == null) {
                     return DataResult.error(() -> "Unknown circuit component id: " + id.get());
                 }
@@ -626,7 +626,7 @@ public class CircuitDiagram {
                 int y = buf.readVarInt();
                 Direction direction = Direction.values()[buf.readVarInt()];
                 boolean mirrored = buf.readBoolean();
-                CircuitComponent circuitComponent = BuiltinCircuitComponents.byId(ResourceLocation.STREAM_CODEC.decode(buf));
+                CircuitComponent circuitComponent = CircuitComponentRegistry.byId(ResourceLocation.STREAM_CODEC.decode(buf));
                 if (circuitComponent == null) {
                     throw new IllegalArgumentException("Unknown circuit component id");
                 }

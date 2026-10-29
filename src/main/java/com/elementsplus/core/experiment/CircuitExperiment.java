@@ -3,7 +3,10 @@ package com.elementsplus.core.experiment;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
+import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.CircuitSimulator;
+import com.elementsplus.core.circuit.storage.CircuitStorage;
+import com.elementsplus.core.circuit.storage.StoredCircuit;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.component.Output8ComponentInstance;
@@ -508,11 +511,11 @@ public class CircuitExperiment extends BaseExperiment {
         ItemStack stack = context.getItemStack();
         CircuitDiagram diagram = null;
         if (stack != null && !stack.isEmpty()) {
-            if (stack.has(ModDataComponents.EQUIVALENT_COMPONENT)) {
+            if (CircuitItemData.isCompiled(stack) || stack.has(ModDataComponents.EQUIVALENT_COMPONENT)) {
                 reasons.add(Component.translatable("experiment.elements-plus.precheck.has_equivalent"));
                 return reasons;
             }
-            diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+            diagram = CircuitItemData.diagram(stack);
         }
         if (diagram == null) {
             reasons.add(Component.translatable("experiment.elements-plus.precheck.not_diagram"));
@@ -659,11 +662,23 @@ public class CircuitExperiment extends BaseExperiment {
 
     @Override
     public void onComplete(Context ctx, boolean success) {
-        if (success && circuitComponent != null) {
-            ctx.setItemStack(itemStack -> {
-                itemStack.set(ModDataComponents.EQUIVALENT_COMPONENT, circuitComponent.getId());
-                return itemStack;
-            });
+        if (!success || circuitComponent == null) {
+            return;
         }
+        ItemStack stack = ctx.getItemStack();
+        CircuitDiagram diagram = stack == null ? null : stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return;
+        }
+        java.util.UUID author = ctx.playerUuid != null ? ctx.playerUuid : new java.util.UUID(0L, 0L);
+        String authorName = ctx.playerName == null || ctx.playerName.isBlank()
+                ? author.toString() : ctx.playerName;
+        StoredCircuit record = new StoredCircuit(java.util.UUID.randomUUID(), diagram.copy(),
+                circuitComponent.getId(), null, author, authorName);
+        CircuitStorage.get().put(record);
+        ctx.setItemStack(itemStack -> {
+            CircuitItemData.bindCompiled(itemStack, record);
+            return itemStack;
+        });
     }
 }

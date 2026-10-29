@@ -1,10 +1,13 @@
 package com.elementsplus.client.screen;
 
 import com.elementsplus.ElementsPlus;
+import com.elementsplus.ModItems;
 import com.elementsplus.blocks.entity.ExperimentStatus;
 import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.config.NumberFormat;
 import com.elementsplus.client.gui.*;
+import com.elementsplus.core.circuit.CircuitItemData;
+import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.experiment.*;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.network.ExperimentTableControlPayload;
@@ -24,6 +27,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.inventory.Slot;
 
 import java.util.ArrayList;
@@ -52,6 +56,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     public AbstractWidget currentExperimentWidget;
 
     public BlockPos tablePos;
+    /** 实验桌自身布局尺寸；layoutLeftPos/layoutImageWidth 由 AbstractContainerScreen 对外暴露给 JEI 等模组。 */
+    private int layoutLeftPos;
+    private int layoutImageWidth;
     private final Set<String> unlockedChapters = new HashSet<>();
     private final Set<String> completedExperiments = new HashSet<>();
     private List<ChapterEntryButton> chapterButtons = new ArrayList<>();
@@ -65,6 +72,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     private SequentialFailureInfo sequentialFailure = null;
     private int currentTestIndex = -1;
     private SequentialTestDataDialog sequentialDialog = null;
+    private CustomComponentConfigDialog customComponentDialog = null;
     private String resultsExperimentName = null;
     private final List<TestCaseWidget> testCaseWidgets = new ArrayList<>();
 
@@ -78,23 +86,23 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float f, int i, int j) {
-        GuiUtil.drawMainPanel(guiGraphics, leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF404040);
-        GuiUtil.drawMainPanel(guiGraphics, leftPos, topPos + 18, leftPos + imageWidth, topPos + imageHeight, 0xFFFFFFFF);
+        GuiUtil.drawMainPanel(guiGraphics, layoutLeftPos, topPos, layoutLeftPos + layoutImageWidth, topPos + imageHeight, 0xFF404040);
+        GuiUtil.drawMainPanel(guiGraphics, layoutLeftPos, topPos + 18, layoutLeftPos + layoutImageWidth, topPos + imageHeight, 0xFFFFFFFF);
         if (inventoryActive) {
-            GuiUtil.drawSubPanel(guiGraphics, leftPos + 5, topPos + imageHeight - 188, leftPos + 5 + 79, topPos + imageHeight - 5, 0xFFA0A0A0);
+            GuiUtil.drawSubPanel(guiGraphics, layoutLeftPos + 5, topPos + imageHeight - 188, layoutLeftPos + 5 + 79, topPos + imageHeight - 5, 0xFFA0A0A0);
         }
 
         if (collapseButtonInventory.active) {
             for (Slot slot : this.menu.slots) {
                 Point point = getSlotPosition(slot);
                 if (point != null) {
-                    GuiUtil.drawSlot(guiGraphics, this.leftPos + point.x() - 1, this.topPos + point.y() - 1);
+                    GuiUtil.drawSlot(guiGraphics, this.layoutLeftPos + point.x() - 1, this.topPos + point.y() - 1);
                 }
             }
         }
 
         Point point = getSlotPosition(this.menu.extraSlot);
-        GuiUtil.drawSlot(guiGraphics, this.leftPos + point.x() - 1, this.topPos + point.y() - 1);
+        GuiUtil.drawSlot(guiGraphics, this.layoutLeftPos + point.x() - 1, this.topPos + point.y() - 1);
 
         // 实验进行中：运行中显示 pause，暂停显示 play，按住 Shift 显示 stop
         if (status == ExperimentStatus.BUSY) {
@@ -110,6 +118,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     protected void init() {
         updateScreenSize();
         sequentialDialog = null;
+        customComponentDialog = null;
         super.init();
 
         slotPosition = new HashMap<>();
@@ -125,10 +134,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }
 
         this.titleLabelX = 6;
-        this.addRenderableWidget(tabButtonExperiment = new TabButton(this.leftPos + this.font.width(this.title) + 10, this.topPos, 50, 22, Component.translatable("gui.elements-plus.experiment_table.tab")));
+        this.addRenderableWidget(tabButtonExperiment = new TabButton(this.layoutLeftPos + this.font.width(this.title) + 10, this.topPos, 50, 22, Component.translatable("gui.elements-plus.experiment_table.tab")));
         tabButtonExperiment.active = true;
 
-        this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.leftPos + 5, inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23, 79, 18, Component.nullToEmpty("物品栏")) {
+        this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.layoutLeftPos + 5, inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23, 79, 18, Component.nullToEmpty("物品栏")) {
             @Override
             public void onClick(double d, double e) {
                 super.onClick(d, e);
@@ -139,11 +148,11 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         });
         collapseButtonInventory.active = inventoryActive;
 
-        this.addRenderableWidget(experimentWidget = new ScrollPanelWidget(this.leftPos + 5, this.topPos + 25, 79, imageHeight - 218, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        this.addRenderableWidget(experimentWidget = new ScrollPanelWidget(this.layoutLeftPos + 5, this.topPos + 25, 79, imageHeight - 218, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
         experimentWidget.setHeight(inventoryActive ? imageHeight - 218 : imageHeight - 53);
         experimentWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
 
-        this.addRenderableWidget(experimentChapterWidget = new ScrollPanelWidget(leftPos + 9 + 80, topPos + 48, Math.max(1, imageWidth - 95), Math.max(1, imageHeight - 195), GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        this.addRenderableWidget(experimentChapterWidget = new ScrollPanelWidget(layoutLeftPos + 9 + 80, topPos + 48, Math.max(1, layoutImageWidth - 95), Math.max(1, imageHeight - 195), GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
         experimentChapterWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
 
         List<ChapterEntryButton> chapterButtons = new ArrayList<>();
@@ -161,8 +170,8 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
         ClientPlayNetworking.send(new ExperimentTableDataRequestPayload());
 
-        this.addRenderableWidget(testCasePanelWidget = new ScrollPanelWidget(leftPos + 9 + 80, topPos + imageHeight - 125, Math.max(1, imageWidth - 95), 120, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
-        this.addRenderableWidget(collapseButtonTestCases = new CollapseButton(this.leftPos + 89, testCasesActive ? this.topPos + this.imageHeight - 142 : this.topPos + this.imageHeight - 23, imageWidth - 95, 18, Component.nullToEmpty("测例信息")) {
+        this.addRenderableWidget(testCasePanelWidget = new ScrollPanelWidget(layoutLeftPos + 9 + 80, topPos + imageHeight - 125, Math.max(1, layoutImageWidth - 95), 120, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
+        this.addRenderableWidget(collapseButtonTestCases = new CollapseButton(this.layoutLeftPos + 89, testCasesActive ? this.topPos + this.imageHeight - 142 : this.topPos + this.imageHeight - 23, layoutImageWidth - 95, 18, Component.nullToEmpty("测例信息")) {
             @Override
             public void onClick(double d, double e) {
                 super.onClick(d, e);
@@ -175,7 +184,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         collapseButtonTestCases.active = testCasesActive;
 
         // 当前实验（宽度可变）
-        this.addRenderableWidget(currentExperimentWidget = new AbstractWidget(leftPos + 110, topPos + 26, 0, 16, Component.empty()) {
+        this.addRenderableWidget(currentExperimentWidget = new AbstractWidget(layoutLeftPos + 110, topPos + 26, 0, 16, Component.empty()) {
 
             @Override
             protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
@@ -208,6 +217,8 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                         ? ExperimentTableControlPayload.Action.STOP
                         : (tablePaused ? ExperimentTableControlPayload.Action.RESUME : ExperimentTableControlPayload.Action.PAUSE);
                 ClientPlayNetworking.send(new ExperimentTableControlPayload(tablePos, action, null));
+            } else if (selectedExperiment == BuiltinExperiments.CUSTOM_COMPONENT) {
+                openCustomComponentDialog();
             } else if (selectedExperiment != null) {
                 ClientPlayNetworking.send(new ExperimentTableControlPayload(tablePos, ExperimentTableControlPayload.Action.START, selectedExperiment.getName()));
             }
@@ -217,24 +228,52 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.addRenderableWidget(progressBar = new ProgressBar(0, topPos + 26, 0, 16));
 
         // 实验状态
-        this.addRenderableWidget(statusButton = new IconButton(leftPos + imageWidth - 22, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/experiment_table/idle.png"), (button) -> {
+        this.addRenderableWidget(statusButton = new IconButton(layoutLeftPos + layoutImageWidth - 22, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/experiment_table/idle.png"), (button) -> {
             if (status == ExperimentStatus.ERROR && sequentialFailure != null) {
-                sequentialDialog = new SequentialTestDataDialog(sequentialFailure, font, width, height,
-                        () -> sequentialDialog = null);
+                SequentialTestDataDialog dialog = new SequentialTestDataDialog(sequentialFailure, font, width, height,
+                        () -> {
+                            sequentialDialog = null;
+                            restoreLayoutBounds();
+                        });
+                sequentialDialog = dialog;
+                applyModalBounds(dialog.getWindowX(), dialog.getWindowWidth());
             }
         }));
 
         // 数字格式按钮
-        this.addRenderableWidget(new IconButton(leftPos + imageWidth - 22 - 18, topPos + 2, 16, 16,
+        this.addRenderableWidget(new IconButton(layoutLeftPos + layoutImageWidth - 22 - 18, topPos + 2, 16, 16,
                 LithographyMachineScreen.numberFormatIcon(true, ClientConfig.get().digitalNumberFormat),
                 button -> cycleNumberFormat((IconButton) button, true)));
-        this.addRenderableWidget(new IconButton(leftPos + imageWidth - 22, topPos + 2, 16, 16,
+        this.addRenderableWidget(new IconButton(layoutLeftPos + layoutImageWidth - 22, topPos + 2, 16, 16,
                 LithographyMachineScreen.numberFormatIcon(false, ClientConfig.get().analogNumberFormat),
                 button -> cycleNumberFormat((IconButton) button, false)));
 
         updateCurrentExperimentDisplay();
         updateStatusButton();
         updateProgressBar();
+    }
+
+    private void openCustomComponentDialog() {
+        if (tablePos == null) {
+            return;
+        }
+        ItemStack stack = menu.slots.get(0).getItem();
+        if (stack.isEmpty() || !stack.is(ModItems.CIRCUIT_DIAGRAM) || CircuitItemData.isCompiled(stack)
+                || stack.has(com.elementsplus.ModDataComponents.EQUIVALENT_COMPONENT)) {
+            return;
+        }
+        CircuitDiagram diagram = stack.get(com.elementsplus.ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) {
+            return;
+        }
+        CustomComponentConfigDialog dialog = new CustomComponentConfigDialog(tablePos, diagram, font, width, height,
+                payload -> ClientPlayNetworking.send(payload),
+                () -> {
+                    customComponentDialog = null;
+                    restoreLayoutBounds();
+                });
+        customComponentDialog = dialog;
+        applyModalBounds(dialog.getWindowX(), dialog.getWindowWidth());
     }
 
     public static class ProgressBar extends AbstractWidget {
@@ -299,9 +338,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         } else {
             currentExperimentWidget.setWidth(Math.min(12 + (selectedExperiment.getIcon() != null ? 16 : 0) + font.width(selectedExperiment.getDisplayName()), CURRENT_EXPERIMENT_MAX_WIDTH));
         }
-        startExperimentButton.setX(leftPos + currentExperimentWidget.getWidth() + 114);
-        progressBar.setX(leftPos + currentExperimentWidget.getWidth() + 114 + 16 + 5);
-        progressBar.setWidth(imageWidth - currentExperimentWidget.getWidth() - 162);
+        startExperimentButton.setX(layoutLeftPos + currentExperimentWidget.getWidth() + 114);
+        progressBar.setX(layoutLeftPos + currentExperimentWidget.getWidth() + 114 + 16 + 5);
+        progressBar.setWidth(layoutImageWidth - currentExperimentWidget.getWidth() - 162);
         testCasePanelWidget.clearChildren();
         testCaseWidgets.clear();
         if (selectedExperiment instanceof CircuitExperiment circuitExperiment) {
@@ -360,12 +399,14 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.currentTestResults.addAll(testResults);
         this.failureInfo = failureInfo;
         this.currentTestIndex = currentTestIndex;
-        if (this.sequentialFailure != sequentialFailure) {
+        if (this.sequentialFailure != sequentialFailure && this.sequentialDialog != null) {
             this.sequentialDialog = null;
+            restoreLayoutBounds();
         }
         this.sequentialFailure = sequentialFailure;
-        if (status != ExperimentStatus.ERROR || sequentialFailure == null) {
+        if ((status != ExperimentStatus.ERROR || sequentialFailure == null) && this.sequentialDialog != null) {
             this.sequentialDialog = null;
+            restoreLayoutBounds();
         }
         this.statusTooltipLines.clear();
         if (failureInfo != null) {
@@ -693,10 +734,26 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     private void updateScreenSize() {
-        this.imageWidth = Math.clamp(this.width - 80, 220, 300);
+        this.layoutImageWidth = Math.clamp(this.width - 80, 220, 300);
         this.imageHeight = Math.max(230, this.height - 40);
         this.topPos = this.height / 2 - this.imageHeight / 2;
-        this.leftPos = this.width / 2 - this.imageWidth / 2;
+        this.layoutLeftPos = this.width / 2 - this.layoutImageWidth / 2;
+        // 仅供外部模组（JEI 等）读取；实验桌内部布局使用 layout* 字段。
+        this.imageWidth = this.layoutImageWidth;
+        this.leftPos = this.layoutLeftPos;
+    }
+
+    private void applyModalBounds(int x, int width) {
+        // 保持 leftPos 与实验桌布局一致，避免标题和槽位因 JEI 避让而整体左移。
+        // 只扩大对外 imageWidth，让 JEI 把侧边栏放到弹窗右侧。
+        this.leftPos = this.layoutLeftPos;
+        int right = Math.max(this.layoutLeftPos + this.layoutImageWidth, x + width);
+        this.imageWidth = Math.max(this.layoutImageWidth, right - this.layoutLeftPos);
+    }
+
+    private void restoreLayoutBounds() {
+        this.leftPos = this.layoutLeftPos;
+        this.imageWidth = this.layoutImageWidth;
     }
 
     @Override
@@ -749,6 +806,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (customComponentDialog != null) {
+            return customComponentDialog.mouseClicked(mouseX, mouseY, button);
+        }
         if (sequentialDialog != null) {
             return sequentialDialog.mouseClicked(mouseX, mouseY, button);
         }
@@ -756,7 +816,18 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (customComponentDialog != null) {
+            return customComponentDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (customComponentDialog != null) {
+            return customComponentDialog.mouseReleased(mouseX, mouseY, button);
+        }
         if (sequentialDialog != null) {
             return true;
         }
@@ -765,6 +836,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (customComponentDialog != null) {
+            return customComponentDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        }
         if (sequentialDialog != null) {
             return sequentialDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
@@ -773,6 +847,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (customComponentDialog != null) {
+            return customComponentDialog.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (sequentialDialog != null) {
             return sequentialDialog.keyPressed(keyCode, scanCode, modifiers);
         }
@@ -781,6 +858,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     public boolean charTyped(char c, int modifiers) {
+        if (customComponentDialog != null) {
+            return customComponentDialog.charTyped(c, modifiers);
+        }
         if (sequentialDialog != null) {
             return sequentialDialog.charTyped(c, modifiers);
         }
@@ -793,6 +873,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.renderTooltip(guiGraphics, mouseX, mouseY);
         if (sequentialDialog != null) {
             sequentialDialog.render(guiGraphics, mouseX, mouseY, f);
+        }
+        if (customComponentDialog != null) {
+            customComponentDialog.render(guiGraphics, mouseX, mouseY, f);
         }
     }
 }

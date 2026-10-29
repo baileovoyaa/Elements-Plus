@@ -6,12 +6,15 @@ import com.elementsplus.core.circuit.component.Const8ComponentInstance;
 import com.elementsplus.core.circuit.component.ConstAnalog8ComponentInstance;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
+import com.elementsplus.core.circuit.component.Output8ComponentInstance;
+import com.elementsplus.core.circuit.component.OutputComponentInstance;
 import com.elementsplus.core.circuit.component.ResistorComponentInstance;
 import com.elementsplus.core.circuit.component.ResonatorComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram.Component;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram.Wire;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram.Wire.WireMaterial;
+import com.elementsplus.core.circuit.storage.StoredCircuit;
 import net.minecraft.core.Direction;
 
 import java.util.ArrayList;
@@ -117,6 +120,23 @@ public class CircuitSimulator {
     private final Map<Long, Integer> tffQ = new HashMap<>();
     private final Map<Long, Integer> tffPrevClock = new HashMap<>();
     private final List<Integer> tffNodes = new ArrayList<>();
+    private final Map<Long, Long> registerQ = new HashMap<>();
+    private final List<Integer> registerNodes = new ArrayList<>();
+    private final Map<Long, CustomRuntime> customRuntimes = new HashMap<>();
+
+    private static final class CustomRuntime {
+        final CustomCircuitComponent component;
+        final CircuitDiagram diagram;
+        final CircuitSimulator simulator;
+        final boolean stateful;
+
+        CustomRuntime(CustomCircuitComponent component, CircuitDiagram diagram, CircuitSimulator simulator) {
+            this.component = component;
+            this.diagram = diagram;
+            this.simulator = simulator;
+            this.stateful = simulator.hasSequential();
+        }
+    }
 
     public void setDiagram(CircuitDiagram diagram) {
         this.diagram = diagram;
@@ -129,6 +149,10 @@ public class CircuitSimulator {
         resPhase.clear();
         tffQ.clear();
         tffPrevClock.clear();
+        registerQ.clear();
+        for (CustomRuntime runtime : customRuntimes.values()) {
+            runtime.simulator.reset();
+        }
         evaluate();
     }
 
@@ -281,7 +305,8 @@ public class CircuitSimulator {
         capNodes.clear();
         resNodes.clear();
         tffNodes.clear();
-        // 与电容状态一致：重建依赖图（如输入值变化触发）时保留触发器状态，
+        registerNodes.clear();
+        // 与电容状态一致：重建依赖图（如输入值变化触发）时保留触发器和寄存器状态，
         // 只有显式 reset() 才清空时序状态。
         wireNet.clear();
         compNodes.clear();
@@ -379,6 +404,14 @@ public class CircuitSimulator {
                 // 触发器是时序元件：输出只由内部状态决定，不应参与组合环检测。
                 nodeKind[numNets + i] = NodeKind.SEQ;
                 tffNodes.add(numNets + i);
+            } else if (cc == BuiltinCircuitComponents.REGISTER || cc == BuiltinCircuitComponents.REGISTER_8
+                    || cc == BuiltinCircuitComponents.REGISTER_ANALOG) {
+                // 寄存器同样只在时钟步进时更新内部状态。
+                nodeKind[numNets + i] = NodeKind.SEQ;
+                registerNodes.add(numNets + i);
+            } else if (cc instanceof CustomCircuitComponent custom) {
+                CustomRuntime runtime = customRuntime(comps.get(i), custom);
+                nodeKind[numNets + i] = runtime.stateful ? NodeKind.SEQ : NodeKind.COMB;
             } else {
                 nodeKind[numNets + i] = NodeKind.COMB;
             }
@@ -903,8 +936,95 @@ public class CircuitSimulator {
         return d == null ? 0L : depValue(d);
     }
 
+    private CustomRuntime customRuntime(Component component, CustomCircuitComponent custom) {
+        long stateKey = key(component.x, component.y);
+        CustomRuntime existing = customRuntimes.get(stateKey);
+        if (existing != null && existing.component == custom) {
+            return existing;
+        }
+        CircuitDiagram source = custom.getCustomCircuit();
+        CircuitDiagram diagram = source == null ? new CircuitDiagram() : source.copy();
+        CircuitSimulator simulator = new CircuitSimulator();
+        simulator.setDiagram(diagram);
+        CustomRuntime runtime = new CustomRuntime(custom, diagram, simulator);
+        customRuntimes.put(stateKey, runtime);
+        return runtime;
+    }
+
+    private boolean hasSequential() {
+        for (NodeKind kind : nodeKind) {
+            if (kind == NodeKind.SEQ || kind == NodeKind.CAP || kind == NodeKind.RES) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private long evalCustom(CustomRuntime runtime, int node) {
+        CustomCircuitComponent custom = runtime.component;
+        Map<String, Long> inputValues = new HashMap<>();
+        for (StoredCircuit.PinBinding pin : custom.getRecord().custom().pins()) {
+            if (pin.type() == PinType.INPUT) {
+                inputValues.put(pin.label(), inPort(node, inputPortIndex(custom, pin.side(), pin.offset())));
+            }
+        }
+        applyCustomInputs(runtime.diagram, inputValues);
+        runtime.simulator.evaluate();
+
+        long result = 0L;
+        for (StoredCircuit.PinBinding pin : custom.getRecord().custom().pins()) {
+            if (pin.type() != PinType.OUTPUT) {
+                continue;
+            }
+            long value = readCustomOutput(runtime.diagram, runtime.simulator, pin.label());
+            result |= value << outputSlot(custom, pin.side(), pin.offset()).bitStart();
+        }
+        return result;
+    }
+
+    private static void applyCustomInputs(CircuitDiagram diagram, Map<String, Long> inputValues) {
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (Component component : chunk.components) {
+                if (component.component == BuiltinCircuitComponents.INPUT
+                        && component.instance instanceof InputComponentInstance input) {
+                    String label = input.getLabel();
+                    long value = "VCC".equals(label) ? 15L : inputValues.getOrDefault(label, 0L);
+                    input.setSignal((int) (value & 0xF));
+                } else if (component.component == BuiltinCircuitComponents.INPUT_8
+                        && component.instance instanceof Input8ComponentInstance input8) {
+                    long value = inputValues.getOrDefault(input8.getLabel(), 0L);
+                    for (int b = 0; b < 8; b++) {
+                        input8.setBit(b, (int) ((value >> (4 * b)) & 0xF));
+                    }
+                }
+            }
+        }
+    }
+
+    private static long readCustomOutput(CircuitDiagram diagram, CircuitSimulator simulator, String label) {
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (Component component : chunk.components) {
+                if (component.component == BuiltinCircuitComponents.OUTPUT
+                        && component.instance instanceof OutputComponentInstance output
+                        && label.equals(output.getLabel())) {
+                    return simulator.getComponentValue(component.x, component.y);
+                }
+                if (component.component == BuiltinCircuitComponents.OUTPUT_8
+                        && component.instance instanceof Output8ComponentInstance output8
+                        && label.equals(output8.getLabel())) {
+                    return simulator.getComponentValue(component.x, component.y);
+                }
+            }
+        }
+        return 0L;
+    }
+
     private long evalCombinational(Component component, int node) {
         CircuitComponent cc = component.component;
+        CustomRuntime runtime = customRuntimes.get(key(component.x, component.y));
+        if (runtime != null && runtime.component == component.component) {
+            return evalCustom(runtime, node);
+        }
         if (cc == BuiltinCircuitComponents.TRANSISTOR) {
             int west = (int) inPort(node, 0);
             int south = (int) inPort(node, 1);
@@ -932,6 +1052,15 @@ public class CircuitSimulator {
         } else if (cc == BuiltinCircuitComponents.TFF || cc == BuiltinCircuitComponents.TFF_PRIME) {
             return (long) tffQ.getOrDefault(key(component.x, component.y), 0)
                     << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.REGISTER || cc == BuiltinCircuitComponents.REGISTER_8
+                || cc == BuiltinCircuitComponents.REGISTER_ANALOG) {
+            return registerQ.getOrDefault(key(component.x, component.y), 0L)
+                    << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.ADC) {
+            return intToTuple((int) inPort(node, 0) & 0xF)
+                    << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.DAC) {
+            return tupleToInt(inPort(node, 0)) & 0xF;
         } else if (cc == BuiltinCircuitComponents.AMPLIFIER) {
             return inPort(node, 0) > 0 ? 15 : 0;
         } else if (cc == BuiltinCircuitComponents.AND_GATE) {
@@ -1360,6 +1489,27 @@ public class CircuitSimulator {
                 tffPrevClock.put(stateKey, clock != 0 ? 1 : 0);
             }
             tffQ.put(stateKey, q);
+        }
+        for (int node : registerNodes) {
+            int idx = node - numNets;
+            Component component = comps.get(idx);
+            long stateKey = key(component.x, component.y);
+            if (inPort(node, 1) != 0) {
+                long value;
+                if (component.component == BuiltinCircuitComponents.REGISTER) {
+                    value = inPort(node, 0) != 0 ? 15 : 0;
+                } else if (component.component == BuiltinCircuitComponents.REGISTER_ANALOG) {
+                    value = inPort(node, 0) & 0xF;
+                } else {
+                    value = amplifyTuple(inPort(node, 0));
+                }
+                registerQ.put(stateKey, value);
+            }
+        }
+        for (CustomRuntime runtime : customRuntimes.values()) {
+            if (runtime.stateful) {
+                runtime.simulator.step();
+            }
         }
 
         evaluate();

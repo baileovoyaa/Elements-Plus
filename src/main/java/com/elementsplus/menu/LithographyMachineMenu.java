@@ -5,7 +5,9 @@ import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.ModMenuTypes;
 import com.elementsplus.core.circuit.ChipManufacture;
+import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
+import com.elementsplus.core.circuit.storage.StoredCircuit;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -100,8 +102,9 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
      */
     private boolean isCopyEligible(ItemStack diagram, ItemStack input) {
         return !diagram.isEmpty() && diagram.is(ModItems.CIRCUIT_DIAGRAM)
-                && diagram.has(ModDataComponents.CIRCUIT_DIAGRAM)
+                && (CircuitItemData.isCompiled(diagram) || CircuitItemData.diagram(diagram) != null)
                 && !input.isEmpty() && input.is(ModItems.CIRCUIT_DIAGRAM)
+                && !CircuitItemData.isCompiled(input)
                 && !input.has(ModDataComponents.EQUIVALENT_COMPONENT);
     }
 
@@ -111,11 +114,13 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         }
         ItemStack output = input.copy();
         output.setCount(1);
-        output.set(ModDataComponents.CIRCUIT_DIAGRAM, diagram.get(ModDataComponents.CIRCUIT_DIAGRAM).copy());
-        if (copyCompiled && diagram.has(ModDataComponents.EQUIVALENT_COMPONENT)) {
-            output.set(ModDataComponents.EQUIVALENT_COMPONENT, diagram.get(ModDataComponents.EQUIVALENT_COMPONENT));
-        } else {
-            output.remove(ModDataComponents.EQUIVALENT_COMPONENT);
+        output.remove(ModDataComponents.COMPILED_CIRCUIT);
+        output.remove(ModDataComponents.EQUIVALENT_COMPONENT);
+        CircuitDiagram source = CircuitItemData.diagram(diagram);
+        if (CircuitItemData.isCompiled(diagram) && copyCompiled) {
+            CircuitItemData.copyCompiledReference(diagram, output);
+        } else if (source != null) {
+            output.set(ModDataComponents.CIRCUIT_DIAGRAM, source.copy());
         }
         return output;
     }
@@ -124,17 +129,16 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
      * 制造分支前提：diagram 槽的电路图带 EQUIVALENT_COMPONENT，输入槽放空芯片，且空芯片规模能容纳电路图规模。
      */
     private boolean isManufactureEligible(ItemStack diagram, ItemStack input) {
-        if (diagram.isEmpty() || !diagram.is(ModItems.CIRCUIT_DIAGRAM)
-                || !diagram.has(ModDataComponents.CIRCUIT_DIAGRAM)
-                || !diagram.has(ModDataComponents.EQUIVALENT_COMPONENT)) {
+        if (diagram.isEmpty() || !diagram.is(ModItems.CIRCUIT_DIAGRAM) || !CircuitItemData.isCompiled(diagram)) {
             return false;
         }
         CircuitDiagram.Scale chipScale = ChipManufacture.emptyChipScale(input);
         if (chipScale == null) {
             return false;
         }
-        CircuitDiagram circuit = diagram.get(ModDataComponents.CIRCUIT_DIAGRAM);
-        return circuit != null && ChipManufacture.canHoldScale(chipScale, circuit.scale);
+        StoredCircuit record = CircuitItemData.stored(diagram);
+        return record != null && record.componentId() != null
+                && ChipManufacture.canHoldScale(chipScale, record.diagram().scale);
     }
 
     /**
@@ -193,9 +197,10 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
      * 取出 chip 的扣料由 {@link #consumeManufactureForTake()} 负责，此处只做幂等预期维护。
      */
     private void updateChipResult(ItemStack diagram, ItemStack input) {
-        CircuitDiagram circuit = diagram.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        StoredCircuit record = CircuitItemData.stored(diagram);
+        CircuitDiagram circuit = record == null ? null : record.diagram();
         CircuitDiagram.Scale chipScale = ChipManufacture.emptyChipScale(input);
-        ResourceLocation equiv = diagram.get(ModDataComponents.EQUIVALENT_COMPONENT);
+        ResourceLocation equiv = record == null ? null : record.componentId();
         if (circuit == null || chipScale == null || equiv == null
                 || !ChipManufacture.canHoldScale(chipScale, circuit.scale)) {
             outputGenerated = false;
@@ -207,7 +212,9 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         boolean sufficient = ChipManufacture.allSufficient(
                 this.playerInventory.items,
                 ChipManufacture.computeRequirements(circuit));
-        ItemStack expected = sufficient ? ChipManufacture.makeChip(chipScale, equiv) : ItemStack.EMPTY;
+        ItemStack expected = sufficient
+                ? ChipManufacture.makeChip(chipScale, equiv, record.isCustom() ? record.id() : null)
+                : ItemStack.EMPTY;
         ItemStack current = this.container.getItem(2);
         if (ItemStack.isSameItemSameComponents(current, expected)) {
             return;
@@ -227,7 +234,7 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
             this.container.removeItem(1, 1);
         }
         ItemStack diagramStack = this.container.getItem(0);
-        CircuitDiagram circuit = diagramStack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        CircuitDiagram circuit = CircuitItemData.diagram(diagramStack);
         if (circuit != null) {
             for (ChipManufacture.MaterialRequirement requirement : ChipManufacture.computeRequirements(circuit)) {
                 ChipManufacture.consume(this.playerInventory, requirement);

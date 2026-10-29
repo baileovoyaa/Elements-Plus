@@ -152,6 +152,14 @@ public class SequentialTestDataDialog {
                 && Arrays.equals(a.values(), b.values());
     }
 
+    public int getWindowX() {
+        return winX;
+    }
+
+    public int getWindowWidth() {
+        return winW;
+    }
+
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         GuiUtil.raisePose(g);

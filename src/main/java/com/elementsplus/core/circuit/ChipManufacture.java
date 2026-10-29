@@ -4,6 +4,7 @@ import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 芯片制造共用逻辑（服务端制造校验/扣料与客户端原料统计共用）。
@@ -32,6 +34,10 @@ public final class ChipManufacture {
     }
 
     public record ComponentRequirement(CircuitComponent component, int count) implements MaterialRequirement {
+        @Nullable
+        public UUID circuitId() {
+            return component.getCircuitId();
+        }
     }
 
     /** 空芯片对应的电路图规模；不是空芯片时返回 null。 */
@@ -111,7 +117,7 @@ public final class ChipManufacture {
         List<MaterialRequirement> result = new ArrayList<>();
         itemCounts.forEach((item, count) -> result.add(new ItemRequirement(item.getDefaultInstance(), count)));
         componentCounts.forEach((id, count) -> {
-            CircuitComponent cc = BuiltinCircuitComponents.byId(id);
+            CircuitComponent cc = CircuitComponentRegistry.byId(id);
             if (cc != null) result.add(new ComponentRequirement(cc, count));
         });
         return result;
@@ -131,10 +137,17 @@ public final class ChipManufacture {
             }
         } else if (requirement instanceof ComponentRequirement componentReq) {
             ResourceLocation id = componentReq.component().getId();
+            UUID circuitId = componentReq.circuitId();
             for (ItemStack stack : inventory) {
                 if (!isChipItem(stack)) continue;
-                ResourceLocation equiv = stack.get(ModDataComponents.EQUIVALENT_COMPONENT);
-                if (id != null && id.equals(equiv)) owned += stack.getCount();
+                if (circuitId != null) {
+                    if (circuitId.equals(stack.get(ModDataComponents.COMPILED_CIRCUIT))) {
+                        owned += stack.getCount();
+                    }
+                } else {
+                    ResourceLocation equiv = stack.get(ModDataComponents.EQUIVALENT_COMPONENT);
+                    if (id != null && id.equals(equiv)) owned += stack.getCount();
+                }
             }
         }
         return owned;
@@ -163,11 +176,14 @@ public final class ChipManufacture {
             }
         } else if (requirement instanceof ComponentRequirement componentReq) {
             ResourceLocation id = componentReq.component().getId();
+            UUID circuitId = componentReq.circuitId();
             for (int i = 0; i < container.getContainerSize() && remaining > 0; i++) {
                 ItemStack stack = container.getItem(i);
                 if (!isChipItem(stack)) continue;
-                ResourceLocation equiv = stack.get(ModDataComponents.EQUIVALENT_COMPONENT);
-                if (id != null && id.equals(equiv)) {
+                boolean match = circuitId != null
+                        ? circuitId.equals(stack.get(ModDataComponents.COMPILED_CIRCUIT))
+                        : id != null && id.equals(stack.get(ModDataComponents.EQUIVALENT_COMPONENT));
+                if (match) {
                     stack.shrink(1);
                     remaining--;
                 }
@@ -177,10 +193,19 @@ public final class ChipManufacture {
 
     /** 生成成品芯片。 */
     public static ItemStack makeChip(CircuitDiagram.Scale chipScale, ResourceLocation equivalentComponent) {
+        return makeChip(chipScale, equivalentComponent, null);
+    }
+
+    /** 生成成品芯片；自定义元件芯片额外带上电路 UUID。 */
+    public static ItemStack makeChip(CircuitDiagram.Scale chipScale, ResourceLocation equivalentComponent,
+                                     @Nullable UUID circuitId) {
         Item chipItem = chipItemForScale(chipScale);
         if (chipItem == null || equivalentComponent == null) return ItemStack.EMPTY;
         ItemStack stack = new ItemStack(chipItem);
         stack.set(ModDataComponents.EQUIVALENT_COMPONENT, equivalentComponent);
+        if (circuitId != null) {
+            stack.set(ModDataComponents.COMPILED_CIRCUIT, circuitId);
+        }
         return stack;
     }
 }

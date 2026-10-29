@@ -1,6 +1,11 @@
 package com.elementsplus.blocks.entity;
 
 import com.elementsplus.ModBlockEntityTypes;
+import com.elementsplus.core.circuit.CircuitItemData;
+import com.elementsplus.core.circuit.CustomComponentCompiler;
+import com.elementsplus.core.circuit.diagram.CircuitDiagram;
+import com.elementsplus.core.circuit.storage.CircuitStorage;
+import com.elementsplus.core.circuit.storage.StoredCircuit;
 import com.elementsplus.core.experiment.BaseExperiment;
 import com.elementsplus.core.experiment.BuiltinExperimentChapters;
 import com.elementsplus.core.experiment.BuiltinExperiments;
@@ -9,6 +14,8 @@ import com.elementsplus.core.experiment.ExperimentFailureInfo;
 import com.elementsplus.core.experiment.ExperimentHost;
 import com.elementsplus.core.experiment.SequentialFailureInfo;
 import com.elementsplus.menu.ExperimentTableMenu;
+import com.elementsplus.network.CircuitStorageSyncPayload;
+import com.elementsplus.network.CustomComponentCompilePayload;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableStatusPayload;
 import com.elementsplus.player.PlayerExperimentsAttachment;
@@ -187,6 +194,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         BaseExperiment.Context context = new BaseExperiment.Context(this, this, this.getItem(0));
         context.time = time;
         context.testIndex = testIndex;
+        context.playerUuid = initiator;
         context.experimentState = experimentState;
         boolean ok = experiment.tick(context);
         this.testIndex = context.testIndex;
@@ -206,7 +214,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             return;
         }
         BaseExperiment experiment = experimentName == null ? null : BuiltinExperiments.byId(experimentName);
-        if (experiment == null) {
+        if (experiment == null || experiment == BuiltinExperiments.CUSTOM_COMPONENT) {
             return;
         }
         Set<ExperimentChapter> unlocked = BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player));
@@ -222,6 +230,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         }
 
         BaseExperiment.Context context = new BaseExperiment.Context(this, this, this.getItem(0));
+        context.playerUuid = player.getUUID();
         List<Component> reasons = experiment.preCheckReasons(context);
         startedStack = this.getItem(0);
         if (reasons.isEmpty()) {
@@ -259,6 +268,59 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         }
         this.setChanged();
         syncStatus();
+    }
+
+    /** 自定义元件编译入口：校验表单和电路，保存到分离存储并完成实验。 */
+    public void compileCustomComponent(CustomComponentCompilePayload payload, ServerPlayer player) {
+        if (status == ExperimentStatus.BUSY) {
+            return;
+        }
+        ItemStack stack = this.getItem(0);
+        CircuitDiagram diagram = stack.get(com.elementsplus.ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null || CircuitItemData.isCompiled(stack)
+                || stack.has(com.elementsplus.ModDataComponents.EQUIVALENT_COMPONENT)) {
+            status = ExperimentStatus.ERROR;
+            setErrorLines(List.of(Component.translatable("experiment.elements-plus.precheck.not_diagram")));
+            syncStatus();
+            return;
+        }
+        List<Component> reasons = CustomComponentCompiler.validate(diagram, payload.name(),
+                payload.width(), payload.height(), payload.pins());
+        if (!reasons.isEmpty()) {
+            status = ExperimentStatus.ERROR;
+            initiator = player.getUUID();
+            setErrorLines(reasons);
+            syncStatus();
+            return;
+        }
+        StoredCircuit record = CustomComponentCompiler.compile(diagram, payload.name(), payload.description(),
+                payload.iconItem(), payload.iconChar(), payload.color(), payload.width(), payload.height(),
+                payload.pins(), player.getUUID(), player.getGameProfile().getName());
+        CircuitItemData.bindCompiled(stack, record);
+        startedStack = stack;
+        activeExperiment = BuiltinExperiments.CUSTOM_COMPONENT;
+        initiator = player.getUUID();
+        status = ExperimentStatus.SUCCESS;
+        paused = false;
+        progress = 1f;
+        testResults.clear();
+        failureInfo = null;
+        sequentialFailure = null;
+        experimentState = null;
+        tooltipLines.clear();
+        PlayerExperimentsAttachment.get(player).add(BuiltinExperiments.CUSTOM_COMPONENT.getName());
+        level.playSound(null, getBlockPos(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
+        this.setChanged();
+        syncStatus();
+        for (ServerPlayer tracking : PlayerLookup.tracking(this)) {
+            ServerPlayNetworking.send(tracking, screenDataFor(tracking));
+        }
+        if (level.getServer() != null) {
+            CircuitStorageSyncPayload storageSync = new CircuitStorageSyncPayload(CircuitStorage.get().ordered());
+            for (ServerPlayer online : level.getServer().getPlayerList().getPlayers()) {
+                ServerPlayNetworking.send(online, storageSync);
+            }
+        }
     }
 
     public void pauseExperiment() {
@@ -319,6 +381,11 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             ItemStack stack = this.getItem(0);
             if (experiment != null && !stack.isEmpty()) {
                 BaseExperiment.Context context = new BaseExperiment.Context(this, this, stack);
+                context.playerUuid = initiator;
+                if (initiator != null && this.level.getServer() != null) {
+                    ServerPlayer author = this.level.getServer().getPlayerList().getPlayer(initiator);
+                    context.playerName = author == null ? initiator.toString() : author.getGameProfile().getName();
+                }
                 experiment.onComplete(context, true);
             }
             if (activeExperiment != null && initiator != null && this.level.getServer() != null) {
@@ -330,6 +397,12 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             if (this.level instanceof ServerLevel serverLevel) {
                 for (ServerPlayer tracking : PlayerLookup.tracking(this)) {
                     ServerPlayNetworking.send(tracking, screenDataFor(tracking));
+                }
+                if (this.level.getServer() != null) {
+                    CircuitStorageSyncPayload storageSync = new CircuitStorageSyncPayload(CircuitStorage.get().ordered());
+                    for (ServerPlayer online : this.level.getServer().getPlayerList().getPlayers()) {
+                        ServerPlayNetworking.send(online, storageSync);
+                    }
                 }
             }
         } else {

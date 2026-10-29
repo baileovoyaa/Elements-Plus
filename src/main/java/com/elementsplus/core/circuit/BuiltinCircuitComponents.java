@@ -332,12 +332,12 @@ public class BuiltinCircuitComponents {
     }});
     // 模数转换
     public static final CircuitComponent DAC = register(new CircuitComponent(ElementsPlus.id("dac"), Component.translatable("circuit.elements-plus.component.dac"), null, ElementsPlus.id("textures/circuit/dac.png"), 1, 1) {{
-        setPin(Direction.WEST, 0, PinType.INPUT, "D");
-        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+        setPin(Direction.WEST, 0, PinType.INPUT, "D", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y");
     }});
     public static final CircuitComponent ADC = register(new CircuitComponent(ElementsPlus.id("adc"), Component.translatable("circuit.elements-plus.component.adc"), null, ElementsPlus.id("textures/circuit/adc.png"), 1, 1) {{
-        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
-        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y");
+        setPin(Direction.WEST, 0, PinType.INPUT, "A");
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
     }});
     // 比较器
     public static final CircuitComponent COMPARATOR = register(new CircuitComponent(ElementsPlus.id("comparator"), Component.translatable("circuit.elements-plus.component.comparator"), null, ElementsPlus.id("textures/circuit/comparator.png"), 2, 2) {{
@@ -499,16 +499,19 @@ public class BuiltinCircuitComponents {
         setPin(Direction.EAST, 0, PinType.OUTPUT, "Q");
     }});
     public static final CircuitComponent REGISTER = register(new CircuitComponent(ElementsPlus.id("register"), Component.translatable("circuit.elements-plus.component.register"), null, ElementsPlus.id("textures/circuit/register.png"), 1, 1) {{
-        setPin(Direction.NORTH, 0, PinType.INPUT, "EN");
-        setPin(Direction.WEST, 0, PinType.INPUT, "D");
-        setPin(Direction.SOUTH, 0, PinType.INPUT, "RST");
-        setPin(Direction.EAST, 0, PinType.OUTPUT, "Q");
+        setPin(Direction.WEST, 0, PinType.INPUT, "A");
+        setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y");
+    }});
+    public static final CircuitComponent REGISTER_ANALOG = register(new CircuitComponent(ElementsPlus.id("register_analog"), Component.translatable("circuit.elements-plus.component.register_analog"), null, ElementsPlus.id("textures/circuit/register_analog.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A");
+        setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y");
     }});
     public static final CircuitComponent REGISTER_8 = register(new CircuitComponent(ElementsPlus.id("register_8"), Component.translatable("circuit.elements-plus.component.register_8"), null, ElementsPlus.id("textures/circuit/register_8.png"), 1, 1) {{
-        setPin(Direction.NORTH, 0, PinType.INPUT, "EN");
-        setPin(Direction.WEST, 0, PinType.INPUT, "D", 8);
-        setPin(Direction.SOUTH, 0, PinType.INPUT, "RST");
-        setPin(Direction.EAST, 0, PinType.OUTPUT, "Q", 8);
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
     }});
     public static final CircuitComponent RAM = register(new CircuitComponent(ElementsPlus.id("ram"), Component.translatable("circuit.elements-plus.component.ram"), Component.translatable("circuit.elements-plus.component.ram.description"), ElementsPlus.id("textures/circuit/ram.png"), 1, 2) {{
         setPin(Direction.NORTH, 0, PinType.INPUT, "WE");

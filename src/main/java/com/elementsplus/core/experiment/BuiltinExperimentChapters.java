@@ -466,6 +466,12 @@ public class BuiltinExperimentChapters {
             ch.experiments(BuiltinExperiments.ALU_ADVANCED)
     ), Set.of(ALU_BASIC, MULTIPLIER_DIVISOR)));
 
+    public static final ExperimentChapter CUSTOM_COMPONENT = register(chapter("custom_component", null, ch -> List.of(
+            ch.text(4),
+            ch.experiments(BuiltinExperiments.CUSTOM_COMPONENT),
+            ch.text(1)
+    ), Set.of(ALU_BASIC)));
+
     public static final ExperimentChapter FLIP_FLOP = register(chapter("flip_flop", null, ch -> List.of(
             ch.text(9,
                     line(0, style(BLUE)),
@@ -484,6 +490,33 @@ public class BuiltinExperimentChapters {
             ),
             ch.experiments(BuiltinExperiments.TFF_PRIME).optional()
     ), Set.of(ALU_BASIC)));
+
+    public static final ExperimentChapter REGISTER = register(chapter("register", null, ch -> List.of(
+            ch.text(4,
+                    line(2, style(GOLD)),
+                    line(3, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.REGISTER),
+            ch.text(2,
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.REGISTER_8),
+            ch.text(2,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.REGISTER_ANALOG).optional()
+    ), Set.of(FLIP_FLOP)));
+
+    public static final ExperimentChapter ANALOG_DIGITAL_CONVERTER = register(chapter("analog_digital_converter", null, ch -> List.of(
+            ch.text(6,
+                    line(1, style(BLUE)),
+                    line(2, style(BLUE)),
+                    line(4, style(GOLD)),
+                    line(5, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.ADC, BuiltinExperiments.DAC)
+    ), Set.of(MULTIPLEXER, ENCODER_DECODER, MULTI_BIT_ADDER)));
 
     public static ExperimentChapter register(ExperimentChapter experimentChapter) {
         BUILTIN_EXPERIMENT_CHAPTERS.add(experimentChapter);

@@ -2,13 +2,16 @@ package com.elementsplus.core.circuit;
 
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.elementsplus.core.circuit.component.SimpleComponentInstance;
+import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public class CircuitComponent {
@@ -23,6 +26,17 @@ public class CircuitComponent {
     private final String[] pinNames;
     private Supplier<CircuitComponentInstance> instanceFactory = () -> SimpleComponentInstance.INSTANCE;
     private IngredientSupplier ingredientSupplier;
+
+    // 自定义元件元数据；内置元件保持默认值。
+    private boolean custom;
+    private int color = 0xFF808080;
+    @Nullable private UUID circuitId;
+    @Nullable private UUID author;
+    @Nullable private String customAuthorName;
+    @Nullable private ResourceLocation customIconItem;
+    @Nullable private String customIconText;
+    @Nullable private CircuitDiagram customCircuit;
+    @Nullable private CircuitDiagram.Scale customScale;
 
 
     public CircuitComponent(ResourceLocation id, Component name, Component description, ResourceLocation icon, int width, int height) {
@@ -272,6 +286,63 @@ public class CircuitComponent {
 
     public IngredientSupplier getIngredientSupplier() {
         return ingredientSupplier;
+    }
+
+    public boolean isCustom() {
+        return custom;
+    }
+
+    public int getColor() {
+        return color;
+    }
+
+    @Nullable
+    public UUID getCircuitId() {
+        return circuitId;
+    }
+
+    @Nullable
+    public UUID getAuthor() {
+        return author;
+    }
+
+    @Nullable
+    public String getCustomAuthorName() {
+        return customAuthorName;
+    }
+
+    @Nullable
+    public ResourceLocation getCustomIconItem() {
+        return customIconItem;
+    }
+
+    @Nullable
+    public String getCustomIconText() {
+        return customIconText;
+    }
+
+    @Nullable
+    public CircuitDiagram getCustomCircuit() {
+        return customCircuit;
+    }
+
+    @Nullable
+    public CircuitDiagram.Scale getCustomScale() {
+        return customScale;
+    }
+
+    public void setCustomMetadata(@Nullable UUID circuitId, @Nullable UUID author, @Nullable String authorName,
+                                  @Nullable CircuitDiagram circuit, @Nullable CircuitDiagram.Scale scale,
+                                  int color, @Nullable ResourceLocation iconItem, @Nullable String iconText) {
+        this.custom = true;
+        this.circuitId = circuitId;
+        this.author = author;
+        this.customAuthorName = authorName;
+        this.customCircuit = circuit;
+        this.customScale = scale;
+        this.color = color;
+        this.customIconItem = iconItem;
+        this.customIconText = iconText;
     }
 
     public sealed interface IngredientSupplier permits ItemIngredientSupplier, ComponentIngredientSupplier {

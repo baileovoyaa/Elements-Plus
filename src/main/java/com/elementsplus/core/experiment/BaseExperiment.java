@@ -17,6 +17,9 @@ public abstract class BaseExperiment {
          * 当前执行的测例索引（由宿主维护）。
          */
         public int testIndex = 0;
+        /** 发起实验的玩家 UUID/名称；用于给分离存储的元件记录作者。 */
+        public java.util.UUID playerUuid;
+        public String playerName;
         /**
          * 由具体实验使用的运行期状态（如时序测例的模拟器和 tick 进度），
          * 由宿主在 tick 之间保存。

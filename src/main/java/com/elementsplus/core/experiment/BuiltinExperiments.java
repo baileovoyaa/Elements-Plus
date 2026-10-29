@@ -10,6 +10,7 @@ import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.elementsplus.ElementsPlus;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.experiment.CircuitExperiment.ConstantCombinationalTestCase;
 import com.elementsplus.core.experiment.CircuitExperiment.ConstantSequentialTestCase;
@@ -209,6 +210,157 @@ public class BuiltinExperiments {
 
     public static final CircuitExperiment TFF_PRIME = register("tff_prime", BuiltinCircuitComponents.TFF_PRIME.getIcon(),
             new CircuitExperiment(buildTPrimeTests(), BuiltinCircuitComponents.TFF_PRIME));
+
+    // ================= 时序逻辑：寄存器 =================
+
+    private static byte[] amplifyLanes(byte[] lanes) {
+        byte[] result = new byte[lanes.length];
+        for (int i = 0; i < lanes.length; i++) {
+            result[i] = lanes[i] != 0 ? (byte) 15 : 0;
+        }
+        return result;
+    }
+
+    private static SequentialTick register1Tick(int a, int we, int y) {
+        return new SequentialTick(
+                Map.of("A", new PinValue(a), "WE", new PinValue(we)),
+                Map.of("Y", new PinValue(y)));
+    }
+
+    private static ConstantSequentialTestCase buildRegisterTest(int[] aValues, int[] weValues) {
+        List<SequentialTick> ticks = new ArrayList<>();
+        int q = 0;
+        for (int i = 0; i < aValues.length; i++) {
+            if (weValues[i] != 0) {
+                q = aValues[i] != 0 ? 15 : 0;
+            }
+            ticks.add(register1Tick(aValues[i], weValues[i], q));
+        }
+        return new ConstantSequentialTestCase(ticks);
+    }
+
+    private static List<TestCase> buildRegisterTests() {
+        return List.of(
+                buildRegisterTest(
+                        new int[]{0, 15, 8, 0, 0, 15, 8, 0, 15, 0, 15, 0},
+                        new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+                buildRegisterTest(
+                        new int[]{0, 0, 15, 0, 0, 15, 8, 0, 0, 15, 0, 0},
+                        new int[]{15, 0, 15, 0, 0, 15, 15, 0, 0, 15, 0, 0}),
+                buildRegisterTest(
+                        new int[]{15, 15, 15, 0, 0, 0, 15, 0, 0, 8, 0, 15},
+                        new int[]{15, 0, 0, 15, 0, 0, 15, 0, 0, 15, 0, 0})
+        );
+    }
+
+    private static SequentialTick register8Tick(byte[] a, int we, byte[] y) {
+        return new SequentialTick(
+                Map.of("A", new PinValue(a), "WE", new PinValue(we)),
+                Map.of("Y", new PinValue(y)));
+    }
+
+    private static ConstantSequentialTestCase buildRegister8Test(byte[][] aValues, int[] weValues) {
+        List<SequentialTick> ticks = new ArrayList<>();
+        byte[] q = new byte[8];
+        for (int i = 0; i < aValues.length; i++) {
+            if (weValues[i] != 0) {
+                q = amplifyLanes(aValues[i]);
+            }
+            ticks.add(register8Tick(aValues[i], weValues[i], q.clone()));
+        }
+        return new ConstantSequentialTestCase(ticks);
+    }
+
+    private static List<TestCase> buildRegister8Tests() {
+        byte[] bus1 = analogLanes(0, 1, 2, 3, 4, 5, 6, 7);
+        byte[] bus2 = analogLanes(15, 0, 7, 0, 3, 0, 0, 9);
+        byte[] bus3 = analogLanes(9, 8, 7, 6, 5, 4, 3, 2);
+        byte[] zero = new byte[8];
+        return List.of(
+                buildRegister8Test(
+                        new byte[][]{bus1, bus2, bus3, zero, bus1, bus2, bus3, zero},
+                        new int[]{0, 0, 0, 0, 0, 0, 0, 0}),
+                buildRegister8Test(
+                        new byte[][]{bus1, bus2, bus3, zero, bus2, bus1, zero, bus3},
+                        new int[]{15, 0, 15, 0, 15, 0, 15, 0}),
+                buildRegister8Test(
+                        new byte[][]{bus2, bus3, bus1, bus2, zero, bus1, bus3, bus2},
+                        new int[]{15, 0, 15, 0, 15, 0, 0, 15})
+        );
+    }
+
+    private static SequentialTick registerAnalogTick(int a, int we, int y) {
+        return new SequentialTick(
+                Map.of("A", new PinValue(a), "WE", new PinValue(we)),
+                Map.of("Y", new PinValue(y)));
+    }
+
+    private static ConstantSequentialTestCase buildRegisterAnalogTest(int[] aValues, int[] weValues) {
+        List<SequentialTick> ticks = new ArrayList<>();
+        int q = 0;
+        for (int i = 0; i < aValues.length; i++) {
+            if (weValues[i] != 0) {
+                q = aValues[i] & 0xF;
+            }
+            ticks.add(registerAnalogTick(aValues[i], weValues[i], q));
+        }
+        return new ConstantSequentialTestCase(ticks);
+    }
+
+    private static List<TestCase> buildRegisterAnalogTests() {
+        return List.of(
+                buildRegisterAnalogTest(
+                        new int[]{15, 0, 9, 0, 7, 0, 3, 0},
+                        new int[]{15, 0, 15, 0, 15, 0, 15, 0}),
+                buildRegisterAnalogTest(
+                        new int[]{0, 8, 15, 4, 0, 12, 0, 6},
+                        new int[]{15, 15, 0, 15, 0, 15, 0, 15})
+        );
+    }
+
+    public static final CircuitExperiment REGISTER = register("register", BuiltinCircuitComponents.REGISTER.getIcon(),
+            new CircuitExperiment(buildRegisterTests(), BuiltinCircuitComponents.REGISTER));
+
+    public static final CircuitExperiment REGISTER_8 = register("register_8", BuiltinCircuitComponents.REGISTER_8.getIcon(),
+            new CircuitExperiment(buildRegister8Tests(), BuiltinCircuitComponents.REGISTER_8));
+
+    public static final CircuitExperiment REGISTER_ANALOG = register("register_analog", BuiltinCircuitComponents.REGISTER_ANALOG.getIcon(),
+            new CircuitExperiment(buildRegisterAnalogTests(), BuiltinCircuitComponents.REGISTER_ANALOG));
+
+    // ================= 模数/数模转换 =================
+
+    private static List<TestCase> buildAdcTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int value = 0; value < 16; value++) {
+            tests.add(new ConstantCombinationalTestCase(
+                    Map.of("A", new PinValue(value)),
+                    Map.of("Y", new PinValue(pin8(value)))));
+        }
+        return tests;
+    }
+
+    private static List<TestCase> buildDacTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int value = 0; value < 16; value++) {
+            tests.add(new ConstantCombinationalTestCase(
+                    Map.of("A", new PinValue(pin8(value))),
+                    Map.of("Y", new PinValue(value))));
+            byte[] highLanes = pin8(value);
+            for (int b = 4; b < 8; b++) {
+                highLanes[b] = 15;
+            }
+            tests.add(new ConstantCombinationalTestCase(
+                    Map.of("A", new PinValue(highLanes)),
+                    Map.of("Y", new PinValue(value))));
+        }
+        return tests;
+    }
+
+    public static final CircuitExperiment ADC = register("adc", BuiltinCircuitComponents.ADC.getIcon(),
+            new CircuitExperiment(buildAdcTests(), BuiltinCircuitComponents.ADC));
+
+    public static final CircuitExperiment DAC = register("dac", BuiltinCircuitComponents.DAC.getIcon(),
+            new CircuitExperiment(buildDacTests(), BuiltinCircuitComponents.DAC));
 
     // ================= 总线常量/掩码 =================
     private static final int BUS_CONST_DEFAULT = 123;
@@ -822,6 +974,8 @@ public class BuiltinExperiments {
 
     public static final CircuitExperiment ALU_ADVANCED = register("alu_advanced", BuiltinCircuitComponents.ALU_ADVANCED.getIcon(),
             new CircuitExperiment(buildAluTests(true), BuiltinCircuitComponents.ALU_ADVANCED));
+
+    public static final BaseExperiment CUSTOM_COMPONENT = register("custom_component", ElementsPlus.id("textures/item/medium_chip.png"), new CustomComponentExperiment());
 
     public static final CircuitExperiment MUX_2 = register("mux_2", BuiltinCircuitComponents.MUX_2.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(inputs -> {
         int d0 = inputs.get(0), d1 = inputs.get(1), a = inputs.get(2);

@@ -8,6 +8,9 @@ import com.elementsplus.client.config.NumberFormat;
 import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
 import com.elementsplus.core.circuit.CircuitComponent;
+import com.elementsplus.core.circuit.CircuitComponentRegistry;
+import com.elementsplus.core.circuit.CircuitItemData;
+import com.elementsplus.core.circuit.ChipManufacture;
 import com.elementsplus.core.circuit.CircuitComponent.PinType;
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.elementsplus.core.circuit.component.Const8ComponentInstance;
@@ -20,6 +23,7 @@ import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.UpdateCircuitDiagramPayload;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -345,7 +349,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     private CircuitDiagram storedDiagram() {
         ItemStack stack = menu.slots.get(36).getItem();
-        return stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        return CircuitItemData.diagram(stack);
     }
 
     /**
@@ -438,7 +442,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     public boolean isReadOnly() {
         ItemStack stack = menu.slots.get(36).getItem();
-        return stack.has(ModDataComponents.EQUIVALENT_COMPONENT);
+        return CircuitItemData.isCompiled(stack) || stack.has(ModDataComponents.EQUIVALENT_COMPONENT);
     }
 
     public boolean hasDiagram() {
@@ -805,11 +809,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (stack == null || stack.isEmpty()) {
             return null;
         }
-        ResourceLocation id = stack.get(ModDataComponents.EQUIVALENT_COMPONENT);
-        if (id == null) {
-            return null;
-        }
-        return BuiltinCircuitComponents.byId(id);
+        return CircuitComponentRegistry.byId(CircuitItemData.componentId(stack));
     }
 
     private ItemStack displayCarried() {
@@ -854,7 +854,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
         int ty = (int) Math.floor(top);
         int rx = (int) Math.ceil(right);
         int by = (int) Math.ceil(bottom);
-        boolean conflict = !placementInBounds(gx, gy, w, h) || diagramHasConflict(gx, gy, w, h);
+        boolean conflict = !placementInBounds(gx, gy, w, h) || diagramHasConflict(gx, gy, w, h)
+                || !canNestComponent(component);
         guiGraphics.fill(lx, ty, rx, by, conflict ? COLOR_GHOST_INVALID : COLOR_GHOST_VALID);
         if (zoom >= 3) {
             guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_GHOST_BORDER);
@@ -883,6 +884,18 @@ public class CircuitDiagramPanel extends AbstractWidget {
         return false;
     }
 
+    private boolean canNestComponent(CircuitComponent component) {
+        if (!component.isCustom() || component.getCustomScale() == null) {
+            return true;
+        }
+        CircuitDiagram.Scale parent = diagramScale();
+        if (parent == null || parent.isInfinite()) {
+            return true;
+        }
+        CircuitDiagram.Scale child = component.getCustomScale();
+        return !child.isInfinite() && child.chunks < parent.chunks;
+    }
+
     private void playSound(SoundInstance soundInstance) {
         if (sound) {
             Minecraft.getInstance().getSoundManager().play(soundInstance);
@@ -898,7 +911,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         boolean force = Screen.hasShiftDown();
         int w = placementWidth(component);
         int h = placementHeight(component);
-        if (!placementInBounds(gx, gy, w, h)) {
+        if (!placementInBounds(gx, gy, w, h) || !canNestComponent(component)) {
             playSound(INVALID_SOUND);
             return;
         }
@@ -1663,7 +1676,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
         int ty = (int) Math.floor(top);
         int rx = (int) Math.ceil(right);
         int by = (int) Math.ceil(bottom);
-        guiGraphics.fill(lx, ty, rx, by, COLOR_COMPONENT_FILL);
+        guiGraphics.fill(lx, ty, rx, by, component.component.isCustom()
+                ? component.component.getColor() : COLOR_COMPONENT_FILL);
         if (zoom >= 3) {
             guiGraphics.fill(lx, ty, rx, ty + 1, COLOR_COMPONENT_BORDER);
             guiGraphics.fill(lx, by - 1, rx, by, COLOR_COMPONENT_BORDER);
@@ -1855,6 +1869,27 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void drawIcon(GuiGraphics guiGraphics, CircuitComponent component, double centerX, double centerY, double boxWidth, double boxHeight, float alpha) {
+        if (component.isCustom()) {
+            String text = component.getCustomIconText();
+            if (text != null && !text.isBlank()) {
+                var font = Minecraft.getInstance().font;
+                guiGraphics.drawCenteredString(font, Component.literal(text),
+                        (int) centerX, (int) (centerY - font.lineHeight / 2.0), 0xFFFFFFFF);
+                return;
+            }
+            net.minecraft.world.item.Item item = null;
+            if (component.getCustomIconItem() != null) {
+                item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(component.getCustomIconItem());
+            }
+            if (item == null && component.getCustomScale() != null) {
+                item = ChipManufacture.chipItemForScale(component.getCustomScale());
+            }
+            if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                guiGraphics.renderFakeItem(new net.minecraft.world.item.ItemStack(item),
+                        (int) Math.round(centerX - 8), (int) Math.round(centerY - 8));
+            }
+            return;
+        }
         ResourceLocation icon = component.getIcon();
         if (icon == null) {
             return;
@@ -2951,6 +2986,20 @@ public class CircuitDiagramPanel extends AbstractWidget {
         List<Component> lines = new ArrayList<>();
         lines.add(component.component.getName().copy()
                 .withStyle(style -> style.withColor(TextColor.fromRgb(COLOR_TEXT_NAME))));
+        if (component.component.isCustom()) {
+            if (component.component.getDescription() != null) {
+                lines.add(component.component.getDescription().copy().withStyle(ChatFormatting.GRAY));
+            }
+            lines.add(Component.translatable("gui.elements-plus.inspect.uuid",
+                    component.component.getCircuitId() == null ? "-" : component.component.getCircuitId().toString())
+                    .withStyle(ChatFormatting.DARK_GRAY));
+            String author = component.component.getCustomAuthorName();
+            if (author == null && component.component.getAuthor() != null) {
+                author = component.component.getAuthor().toString();
+            }
+            lines.add(Component.translatable("gui.elements-plus.inspect.author",
+                    author == null ? "-" : author).withStyle(ChatFormatting.DARK_GRAY));
+        }
 
         int degrees = switch (component.direction) {
             case EAST -> 90;

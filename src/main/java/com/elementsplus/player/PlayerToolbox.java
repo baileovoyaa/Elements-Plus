@@ -2,6 +2,8 @@ package com.elementsplus.player;
 
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
+import com.elementsplus.core.circuit.CircuitComponentRegistry;
+// CircuitComponent custom metadata is read by the client renderer.
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.chat.Component;
@@ -147,7 +149,7 @@ public final class PlayerToolbox {
 
     public void sanitize() {
         if (groups == null) return;
-        groups.removeIf(g -> g.components.removeIf(id -> BuiltinCircuitComponents.byId(id) == null));
+        groups.removeIf(g -> g.components.removeIf(id -> CircuitComponentRegistry.byId(id) == null));
         for (Group g : groups) {
             if (g.isBuiltin() && g.components.isEmpty()) {
                 g.components.clear();
