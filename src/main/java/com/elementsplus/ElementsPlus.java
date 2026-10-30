@@ -100,6 +100,7 @@ public class ElementsPlus implements ModInitializer {
         ModEffects.initialize();
         ModBlockEntityTypes.initialize();
         ModMenuTypes.initialize();
+        ModSounds.initialize();
         MetalCatalystRecipe.TYPE.toString();
         CrystallizerRecipe.TYPE.toString();
         ScaleUpgradeRecipe.TYPE_ID.toString();

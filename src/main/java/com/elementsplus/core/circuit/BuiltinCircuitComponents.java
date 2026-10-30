@@ -498,6 +498,7 @@ public class BuiltinCircuitComponents {
         setPin(Direction.WEST, 0, PinType.INPUT, "C");
         setPin(Direction.EAST, 0, PinType.OUTPUT, "Q");
     }});
+    // 寄存器
     public static final CircuitComponent REGISTER = register(new CircuitComponent(ElementsPlus.id("register"), Component.translatable("circuit.elements-plus.component.register"), null, ElementsPlus.id("textures/circuit/register.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT, "A");
         setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
@@ -513,15 +514,29 @@ public class BuiltinCircuitComponents {
         setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
         setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
     }});
-    public static final CircuitComponent RAM = register(new CircuitComponent(ElementsPlus.id("ram"), Component.translatable("circuit.elements-plus.component.ram"), Component.translatable("circuit.elements-plus.component.ram.description"), ElementsPlus.id("textures/circuit/ram.png"), 1, 2) {{
-        setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
-        setPin(Direction.WEST, 0, PinType.INPUT, "D", 8);
-        setPin(Direction.WEST, 1, PinType.INPUT, "A", 8);
-        setPin(Direction.SOUTH, 0, PinType.INPUT, "CLK");
-        setPin(Direction.EAST, 0, PinType.OUTPUT, "Q", 8);
+    // 计数器
+    public static final CircuitComponent RIPPLE_COUNTER_8 = register(new CircuitComponent(ElementsPlus.id("ripple_counter_8"), Component.translatable("circuit.elements-plus.component.ripple_counter_8"), null, ElementsPlus.id("textures/circuit/ripple_counter_8.png")){{
+        setPin(Direction.WEST, 0, PinType.INPUT, "C");
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
     }});
-    public static final CircuitComponent ANALOG_COUNTER = register(new CircuitComponent(ElementsPlus.id("analog_counter"), Component.translatable("circuit.elements-plus.component.analog_counter"), null, ElementsPlus.id("textures/circuit/analog_counter.png")));
-    public static final CircuitComponent COUNTER_8 = register(new CircuitComponent(ElementsPlus.id("counter_8"), Component.translatable("circuit.elements-plus.component.counter_8"), null, ElementsPlus.id("textures/circuit/counter_8.png")));
+    public static final CircuitComponent COUNTER_8 = register(new CircuitComponent(ElementsPlus.id("counter_8"), Component.translatable("circuit.elements-plus.component.counter_8"), null, ElementsPlus.id("textures/circuit/counter_8.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "E");
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    // 波形发生器
+    public static final CircuitComponent SAWTOOTH_GENERATOR = register(new CircuitComponent(ElementsPlus.id("sawtooth_generator"), Component.translatable("circuit.elements-plus.component.sawtooth_generator"), null, ElementsPlus.id("textures/circuit/sawtooth_generator.png")) {{
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y");
+        setInstanceFactory(SawtoothGeneratorComponentInstance::new);
+    }});
+
+    // 存储器
+    public static final CircuitComponent RAM = register(new CircuitComponent(ElementsPlus.id("ram"), Component.translatable("circuit.elements-plus.component.ram"), Component.translatable("circuit.elements-plus.component.ram.description"), ElementsPlus.id("textures/circuit/ram.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
+        setPin(Direction.SOUTH, 0, PinType.INPUT, "D", 8);
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
 
     public static CircuitComponent register(CircuitComponent circuitComponent) {
         BY_ID.put(circuitComponent.getId(), circuitComponent);

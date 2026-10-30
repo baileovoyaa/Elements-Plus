@@ -10,6 +10,7 @@ import com.elementsplus.core.circuit.component.Output8ComponentInstance;
 import com.elementsplus.core.circuit.component.OutputComponentInstance;
 import com.elementsplus.core.circuit.component.ResistorComponentInstance;
 import com.elementsplus.core.circuit.component.ResonatorComponentInstance;
+import com.elementsplus.core.circuit.component.SawtoothGeneratorComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram.Component;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram.Wire;
@@ -122,6 +123,15 @@ public class CircuitSimulator {
     private final List<Integer> tffNodes = new ArrayList<>();
     private final Map<Long, Long> registerQ = new HashMap<>();
     private final List<Integer> registerNodes = new ArrayList<>();
+    private final Map<Long, Integer> rippleCounterQ = new HashMap<>();
+    private final Map<Long, Integer> rippleCounterPreviousClock = new HashMap<>();
+    /** 下一 tick 需要翻转的位掩码；允许新脉冲与上一轮进位链同时存在。 */
+    private final Map<Long, Integer> rippleCounterPendingToggles = new HashMap<>();
+    private final List<Integer> rippleCounterNodes = new ArrayList<>();
+    private final Map<Long, Integer> counterQ = new HashMap<>();
+    private final List<Integer> counterNodes = new ArrayList<>();
+    private final Map<Long, Integer> sawtoothPhase = new HashMap<>();
+    private final List<Integer> sawtoothNodes = new ArrayList<>();
     private final Map<Long, CustomRuntime> customRuntimes = new HashMap<>();
 
     private static final class CustomRuntime {
@@ -150,6 +160,11 @@ public class CircuitSimulator {
         tffQ.clear();
         tffPrevClock.clear();
         registerQ.clear();
+        rippleCounterQ.clear();
+        rippleCounterPreviousClock.clear();
+        rippleCounterPendingToggles.clear();
+        counterQ.clear();
+        sawtoothPhase.clear();
         for (CustomRuntime runtime : customRuntimes.values()) {
             runtime.simulator.reset();
         }
@@ -306,6 +321,9 @@ public class CircuitSimulator {
         resNodes.clear();
         tffNodes.clear();
         registerNodes.clear();
+        rippleCounterNodes.clear();
+        counterNodes.clear();
+        sawtoothNodes.clear();
         // 与电容状态一致：重建依赖图（如输入值变化触发）时保留触发器和寄存器状态，
         // 只有显式 reset() 才清空时序状态。
         wireNet.clear();
@@ -409,6 +427,15 @@ public class CircuitSimulator {
                 // 寄存器同样只在时钟步进时更新内部状态。
                 nodeKind[numNets + i] = NodeKind.SEQ;
                 registerNodes.add(numNets + i);
+            } else if (cc == BuiltinCircuitComponents.RIPPLE_COUNTER_8) {
+                nodeKind[numNets + i] = NodeKind.SEQ;
+                rippleCounterNodes.add(numNets + i);
+            } else if (cc == BuiltinCircuitComponents.COUNTER_8) {
+                nodeKind[numNets + i] = NodeKind.SEQ;
+                counterNodes.add(numNets + i);
+            } else if (cc == BuiltinCircuitComponents.SAWTOOTH_GENERATOR) {
+                nodeKind[numNets + i] = NodeKind.SEQ;
+                sawtoothNodes.add(numNets + i);
             } else if (cc instanceof CustomCircuitComponent custom) {
                 CustomRuntime runtime = customRuntime(comps.get(i), custom);
                 nodeKind[numNets + i] = runtime.stateful ? NodeKind.SEQ : NodeKind.COMB;
@@ -1056,6 +1083,16 @@ public class CircuitSimulator {
                 || cc == BuiltinCircuitComponents.REGISTER_ANALOG) {
             return registerQ.getOrDefault(key(component.x, component.y), 0L)
                     << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.RIPPLE_COUNTER_8) {
+            int value = rippleCounterQ.getOrDefault(key(component.x, component.y), 0xFF);
+            return intToTuple(value & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.COUNTER_8) {
+            int value = counterQ.getOrDefault(key(component.x, component.y), 0);
+            return intToTuple(value & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.SAWTOOTH_GENERATOR) {
+            SawtoothGeneratorComponentInstance instance = (SawtoothGeneratorComponentInstance) component.instance;
+            int phase = sawtoothPhase.getOrDefault(key(component.x, component.y), instance.getInitialPhase());
+            return (long) (phase & 0xF) << outputSlot(cc, Direction.EAST, 0).bitStart();
         } else if (cc == BuiltinCircuitComponents.ADC) {
             return intToTuple((int) inPort(node, 0) & 0xF)
                     << outputSlot(cc, Direction.EAST, 0).bitStart();
@@ -1431,6 +1468,66 @@ public class CircuitSimulator {
         return high ? (int) inPort(node, 0) : 0;
     }
 
+    /**
+     * 8 位纹波计数器：C 上升沿触发第 0 位翻转，若某位由 1 变 0，
+     * 则下一 tick 继续翻转下一位，模拟逐 tick 传播的进位链。
+     * 新脉冲只追加第 0 位翻转，不会中断上一轮尚未完成的进位链。
+     * 初始状态为全 1（255），与文档中 T' 触发器取反后的初始状态一致。
+     */
+    private void updateRippleCounter(Component component, int node) {
+        long stateKey = key(component.x, component.y);
+        int state = rippleCounterQ.getOrDefault(stateKey, 0xFF);
+        int clock = inPort(node, 0) != 0 ? 1 : 0;
+        int previousClock = rippleCounterPreviousClock.getOrDefault(stateKey, 0);
+        boolean risingEdge = clock != 0 && previousClock == 0;
+        rippleCounterPreviousClock.put(stateKey, clock);
+
+        // 本 tick 同时应用：上一轮进位链 + 新脉冲（如果有）。
+        int toggles = rippleCounterPendingToggles.getOrDefault(stateKey, 0);
+        if (risingEdge) {
+            toggles |= 1;
+        }
+
+        int nextToggles = 0;
+        for (int bit = 0; bit < 8; bit++) {
+            if ((toggles & (1 << bit)) == 0) {
+                continue;
+            }
+            boolean falling = ((state >> bit) & 1) != 0;
+            state ^= 1 << bit;
+            if (falling && bit < 7) {
+                nextToggles |= 1 << (bit + 1);
+            }
+        }
+
+        rippleCounterQ.put(stateKey, state & 0xFF);
+        rippleCounterPendingToggles.put(stateKey, nextToggles);
+    }
+
+    /**
+     * 8 位加法计数器：E 非 0 时同步置数，否则同步加上 A。
+     * A 按 8 位总线的“通道非 0 即 1”解释，结果溢出后按 8 位循环。
+     */
+    private void updateCounter(Component component, int node) {
+        long stateKey = key(component.x, component.y);
+        int addend = tupleToInt(inPort(node, 0));
+        int value = counterQ.getOrDefault(stateKey, 0);
+        if (inPort(node, 1) != 0) {
+            value = addend;
+        } else {
+            value = (value + addend) & 0xFF;
+        }
+        counterQ.put(stateKey, value);
+    }
+
+    /** 锯齿波发生器：每个 tick 输出强度加 1，15 后回到 0。 */
+    private void updateSawtooth(Component component, int node) {
+        long stateKey = key(component.x, component.y);
+        SawtoothGeneratorComponentInstance instance = (SawtoothGeneratorComponentInstance) component.instance;
+        int phase = sawtoothPhase.getOrDefault(stateKey, instance.getInitialPhase());
+        sawtoothPhase.put(stateKey, (phase + 1) & 0xF);
+    }
+
     /* ============================================================
      *  时钟步进 / 复位
      * ============================================================ */
@@ -1505,6 +1602,15 @@ public class CircuitSimulator {
                 }
                 registerQ.put(stateKey, value);
             }
+        }
+        for (int node : rippleCounterNodes) {
+            updateRippleCounter(comps.get(node - numNets), node);
+        }
+        for (int node : counterNodes) {
+            updateCounter(comps.get(node - numNets), node);
+        }
+        for (int node : sawtoothNodes) {
+            updateSawtooth(comps.get(node - numNets), node);
         }
         for (CustomRuntime runtime : customRuntimes.values()) {
             if (runtime.stateful) {

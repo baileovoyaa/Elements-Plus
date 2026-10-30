@@ -518,6 +518,26 @@ public class BuiltinExperimentChapters {
             ch.experiments(BuiltinExperiments.ADC, BuiltinExperiments.DAC)
     ), Set.of(MULTIPLEXER, ENCODER_DECODER, MULTI_BIT_ADDER)));
 
+    public static final ExperimentChapter COUNTER = register(chapter("counter", null, ch -> List.of(
+            ch.text(5,
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.RIPPLE_COUNTER_8),
+            ch.text(6,
+                    line(2, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.COUNTER_8),
+            ch.text(2,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD))
+            ),
+            ch.experiments(BuiltinExperiments.SAWTOOTH_GENERATOR).optional(),
+            ch.text(1,
+                    line(0, style(GOLD))
+            )
+    ), Set.of(REGISTER)));
+
     public static ExperimentChapter register(ExperimentChapter experimentChapter) {
         BUILTIN_EXPERIMENT_CHAPTERS.add(experimentChapter);
         return experimentChapter;

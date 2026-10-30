@@ -1,3 +1,7 @@
 {
-
+  "lithography": {
+    "sounds": [
+      "elements-plus:lithography"
+    ]
+  }
 }

@@ -147,11 +147,11 @@ public class CustomComponentConfigDialog {
         g.drawCenteredString(font, Component.translatable("gui.elements-plus.custom_component.title"),
                 winX + winW / 2, winY + 6, 0xFFFFFFFF);
 
-        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.name"), winX + 10, winY + 30, 0xFFE0E0E0);
-        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.description"), winX + 10, winY + 52, 0xFFE0E0E0);
-        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.icon"), winX + 10, winY + 74, 0xFFE0E0E0);
-        g.drawString(font, WIDTH_TEXT, winX + winW - 10 - 34 - 5 - font.width(HEIGHT_TEXT) - 5 - 34 - 5 - font.width(WIDTH_TEXT), winY + 74, 0xFFE0E0E0);
-        g.drawString(font, HEIGHT_TEXT, winX + winW - 10 - 34 - 5 - font.width(HEIGHT_TEXT), winY + 74, 0xFFE0E0E0);
+        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.name"), winX + 10, winY + 30, 0xFF3F3F3F, false);
+        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.description"), winX + 10, winY + 52, 0xFF3F3F3F, false);
+        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.icon"), winX + 10, winY + 74, 0xFF3F3F3F, false);
+        g.drawString(font, WIDTH_TEXT, winX + winW - 10 - 34 - 5 - font.width(HEIGHT_TEXT) - 5 - 34 - 5 - font.width(WIDTH_TEXT), winY + 74, 0xFF3F3F3F, false);
+        g.drawString(font, HEIGHT_TEXT, winX + winW - 10 - 34 - 5 - font.width(HEIGHT_TEXT), winY + 74, 0xFF3F3F3F, false);
 
         nameBox.render(g, mouseX, mouseY, partialTick);
         descriptionBox.render(g, mouseX, mouseY, partialTick);
@@ -160,8 +160,8 @@ public class CustomComponentConfigDialog {
         widthBox.render(g, mouseX, mouseY, partialTick);
         heightBox.render(g, mouseX, mouseY, partialTick);
 
-        g.drawString(font, COLOR_TEXT, winX + winW - 10 - 100 - 5 - font.width(COLOR_TEXT), winY + 30, 0xFFE0E0E0);
-        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.icon_item"), winX + 10, winY + 96, 0xFFE0E0E0);
+        g.drawString(font, COLOR_TEXT, winX + winW - 10 - 100 - 5 - font.width(COLOR_TEXT), winY + 30, 0xFF3F3F3F, false);
+        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.icon_item"), winX + 10, winY + 96, 0xFF3F3F3F, false);
         renderButton(g, winX + 48, winY + 93, 70, 14, Component.translatable("gui.elements-plus.custom_component.use_hand"), mouseX, mouseY);
         g.drawString(font, iconItem == null ? "-" : iconItem.toString(), winX + 48 + 70 + 5, winY + 96, 0xFFAAAAAA);
 
@@ -173,7 +173,7 @@ public class CustomComponentConfigDialog {
         renderButton(g, closeX, closeY, 48, 16, Component.translatable("gui.elements-plus.custom_component.close"), mouseX, mouseY);
 
         if (!error.isEmpty()) {
-            g.drawString(font, Component.literal(error), winX + 10, submitY - 4 - font.lineHeight, 0xFFFF5555);
+            g.drawString(font, Component.literal(error), winX + 10, submitY - 4 - font.lineHeight, 0xFFFF5555, true);
         }
     }
 
@@ -249,7 +249,7 @@ public class CustomComponentConfigDialog {
     }
 
     private static int pinTypeColor(CircuitComponent.PinType type) {
-        return type == CircuitComponent.PinType.INPUT ? 0xFF4A90FF : 0xFF55DD55;
+        return type == CircuitComponent.PinType.INPUT ? 0xFF4488FF : 0xFF44FF88;
     }
 
     private static int bitWidthColor(int bitWidth) {
@@ -257,7 +257,7 @@ public class CustomComponentConfigDialog {
     }
 
     private void drawUnused(GuiGraphics g, int mouseX, int mouseY) {
-        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.unused"), unusedX, unusedY, 0xFFE0E0E0);
+        g.drawString(font, Component.translatable("gui.elements-plus.custom_component.unused"), unusedX, unusedY, 0xFF3F3F3F, false);
         List<CustomComponentCompiler.PinCandidate> unused = unusedCandidates();
         int visible = Math.max(1, (unusedH - 16) / ROW);
         int maxScroll = Math.max(0, unused.size() - visible);

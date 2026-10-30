@@ -327,6 +327,138 @@ public class BuiltinExperiments {
     public static final CircuitExperiment REGISTER_ANALOG = register("register_analog", BuiltinCircuitComponents.REGISTER_ANALOG.getIcon(),
             new CircuitExperiment(buildRegisterAnalogTests(), BuiltinCircuitComponents.REGISTER_ANALOG));
 
+    // ================= 时序逻辑：计数器 =================
+
+    private static SequentialTick rippleCounterTick(int c, int y) {
+        return new SequentialTick(
+                Map.of("C", new PinValue(c)),
+                Map.of("Y", new PinValue(pin8(y))));
+    }
+
+    /**
+     * 纹波计数器参考模型：C 上升沿翻转第 0 位，产生借位时下一 tick 继续翻转高位。
+     * 初始状态与元件定义一致，为全 1（255）。
+     */
+    private static ConstantSequentialTestCase buildRippleCounterTest(int[] cValues) {
+        List<SequentialTick> ticks = new ArrayList<>();
+        int state = 0xFF;
+        int previousClock = 0;
+        int pendingToggles = 0;
+        for (int c : cValues) {
+            boolean risingEdge = c != 0 && previousClock == 0;
+            previousClock = c != 0 ? 1 : 0;
+            int toggles = pendingToggles;
+            if (risingEdge) {
+                toggles |= 1;
+            }
+            int nextToggles = 0;
+            for (int bit = 0; bit < 8; bit++) {
+                if ((toggles & (1 << bit)) == 0) {
+                    continue;
+                }
+                boolean falling = ((state >> bit) & 1) != 0;
+                state ^= 1 << bit;
+                if (falling && bit < 7) {
+                    nextToggles |= 1 << (bit + 1);
+                }
+            }
+            pendingToggles = nextToggles;
+            ticks.add(rippleCounterTick(c, state));
+        }
+        return new ConstantSequentialTestCase(ticks);
+    }
+
+    private static List<TestCase> buildRippleCounterTests() {
+        return List.of(
+                // 初始 255；第一个上升沿后逐 tick 从 254 稳定到 0。
+                buildRippleCounterTest(new int[]{0, 15, 15, 15, 15, 15, 15, 15, 15, 0, 0}),
+                // 高电平保持、短脉冲和单 tick 进位。
+                buildRippleCounterTest(new int[]{15, 15, 0, 15, 15, 0, 15, 15, 15, 0, 15, 15, 0, 0, 15, 15}),
+                // 进位链未完成时再次触发：255 -> 254 -> 252 -> 248，新脉冲不中断进位，248 -> 241。
+                new ConstantSequentialTestCase(List.of(
+                        rippleCounterTick(15, 254),
+                        rippleCounterTick(15, 252),
+                        rippleCounterTick(0, 248),
+                        rippleCounterTick(15, 241),
+                        rippleCounterTick(15, 225),
+                        rippleCounterTick(15, 193),
+                        rippleCounterTick(15, 129),
+                        rippleCounterTick(15, 1),
+                        rippleCounterTick(0, 1),
+                        rippleCounterTick(15, 0),
+                        rippleCounterTick(15, 2)
+                ))
+        );
+    }
+
+    private static SequentialTick counter8Tick(int a, int e, int y) {
+        return new SequentialTick(
+                Map.of("A", new PinValue(pin8(a)), "E", new PinValue(e)),
+                Map.of("Y", new PinValue(pin8(y))));
+    }
+
+    private static ConstantSequentialTestCase buildCounter8Test(int[] aValues, int[] eValues) {
+        List<SequentialTick> ticks = new ArrayList<>();
+        int state = 0;
+        for (int i = 0; i < aValues.length; i++) {
+            int a = aValues[i] & 0xFF;
+            state = eValues[i] != 0 ? a : (state + a) & 0xFF;
+            ticks.add(counter8Tick(a, eValues[i], state));
+        }
+        return new ConstantSequentialTestCase(ticks);
+    }
+
+    private static List<TestCase> buildCounter8Tests() {
+        return List.of(
+                // E=0：覆盖小步长、255 溢出、0 步长和 2 的幂。
+                buildCounter8Test(
+                        new int[]{0, 1, 1, 3, 255, 16, 0, 2, 128, 127, 1, 255},
+                        new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+                // 置数与自增交替。
+                buildCounter8Test(
+                        new int[]{5, 7, 200, 0, 255, 0, 1, 255, 255, 42, 1, 0},
+                        new int[]{15, 0, 15, 0, 0, 15, 0, 0, 15, 0, 15, 0}),
+                buildCounter8Test(
+                        new int[]{10, 10, 10, 250, 250, 250, 0, 0, 1, 1, 1, 1},
+                        new int[]{15, 0, 0, 15, 0, 0, 15, 0, 15, 0, 0, 15})
+        );
+    }
+
+    private static SequentialTick sawtoothTick(int y) {
+        return new SequentialTick(
+                Map.of(),
+                Map.of("Y", new PinValue(y)));
+    }
+
+    private static ConstantSequentialTestCase buildSawtoothTest(int tickCount) {
+        List<SequentialTick> ticks = new ArrayList<>();
+        int phase = 0;
+        for (int i = 0; i < tickCount; i++) {
+            phase = (phase + 1) & 0xF;
+            ticks.add(sawtoothTick(phase));
+        }
+        return new ConstantSequentialTestCase(ticks);
+    }
+
+    private static List<TestCase> buildSawtoothTests() {
+        return List.of(
+                buildSawtoothTest(17),
+                buildSawtoothTest(19)
+        );
+    }
+
+    public static final CircuitExperiment RIPPLE_COUNTER_8 = register("ripple_counter_8",
+            BuiltinCircuitComponents.RIPPLE_COUNTER_8.getIcon(),
+            new CircuitExperiment(buildRippleCounterTests(), BuiltinCircuitComponents.RIPPLE_COUNTER_8));
+
+    public static final CircuitExperiment COUNTER_8 = register("counter_8",
+            BuiltinCircuitComponents.COUNTER_8.getIcon(),
+            new CircuitExperiment(buildCounter8Tests(), BuiltinCircuitComponents.COUNTER_8));
+
+    public static final CircuitExperiment SAWTOOTH_GENERATOR = register("sawtooth_generator",
+            BuiltinCircuitComponents.SAWTOOTH_GENERATOR.getIcon(),
+            new CircuitExperiment(buildSawtoothTests(), BuiltinCircuitComponents.SAWTOOTH_GENERATOR));
+
     // ================= 模数/数模转换 =================
 
     private static List<TestCase> buildAdcTests() {

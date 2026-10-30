@@ -4,11 +4,15 @@ import com.elementsplus.ModBlocks;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.ModMenuTypes;
+import com.elementsplus.ModSounds;
 import com.elementsplus.core.circuit.ChipManufacture;
 import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.storage.StoredCircuit;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -86,9 +90,11 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
                 if (isManufactureEligible(container.getItem(0), container.getItem(1))) {
                     // 制造模式：取出前先扣空芯片与原料，再重算输出
                     consumeManufactureForTake();
+                    playTakeSound(player, true);
                 } else {
                     // 复制模式：默认 onTake 触发 setChanged → updateManufactureResult 消耗模板
                     super.onTake(player, itemStack);
+                    playTakeSound(player, false);
                 }
             }
         });
@@ -244,6 +250,19 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         updateManufactureResult();
     }
 
+    /**
+     * 取出制造产物时播放音效。芯片使用光刻机音效，复制电路图使用制图台取结果音效。
+     * 仅在服务端播放，由原版音效包同步给附近玩家，避免客户端预测导致重复播放。
+     */
+    private void playTakeSound(Player player, boolean chip) {
+        if (player.level().isClientSide()) {
+            return;
+        }
+        SoundEvent sound = chip ? ModSounds.LITHOGRAPHY : SoundEvents.UI_CARTOGRAPHY_TABLE_TAKE_RESULT;
+        this.access.execute((level, pos) ->
+                level.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F));
+    }
+
     /** 强制物品栏槽位标记脏，让服务端下一次 broadcastChanges 把数量变化同步给客户端。 */
     private void markPlayerInventoryChanged() {
         for (int i = 0; i < 36; i++) {
@@ -346,6 +365,10 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
                 slot.setByPlayer(ItemStack.EMPTY);
             }
             consumeManufactureForTake();
+        }
+        if (!moved.isEmpty()) {
+            // 批量取出只播放一次，避免 Shift 点击时音效叠加。
+            playTakeSound(player, true);
         }
         return moved;
     }
