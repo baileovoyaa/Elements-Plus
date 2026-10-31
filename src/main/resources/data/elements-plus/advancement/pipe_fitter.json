@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:wrench"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.pipe_fitter.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.pipe_fitter.description"
+    }
+  },
+  "criteria": {
+    "wrench_pipe": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "wrench_pipe"
+    ]
+  ],
+  "parent": "elements-plus:elements_plus"
+}

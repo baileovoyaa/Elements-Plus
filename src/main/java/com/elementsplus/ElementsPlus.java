@@ -13,6 +13,7 @@ import com.elementsplus.core.experiment.BuiltinExperiments;
 import com.elementsplus.core.experiment.ExperimentChapter;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
+import com.elementsplus.network.AdvancementActionPayload;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
 import com.elementsplus.network.CopyCompiledSettingPayload;
 import com.elementsplus.network.CircuitStorageSyncPayload;
@@ -116,6 +117,15 @@ public class ElementsPlus implements ModInitializer {
                 context.server().execute(() -> {
                     if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
                         menu.returnCarriedToInventory();
+                    }
+                }));
+
+        PayloadTypeRegistry.playC2S().register(AdvancementActionPayload.TYPE, AdvancementActionPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(AdvancementActionPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    // 检查该进度是否是两个客户端进度之一
+                    if (payload.advancement().equals("keyboard_fury") || payload.advancement().equals("all_rounder")) {
+                        ModAdvancements.award(context.player(), payload.advancement(), payload.criterion());
                     }
                 }));
 

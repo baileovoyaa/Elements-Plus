@@ -1,5 +1,6 @@
 package com.elementsplus.blocks.entity;
 
+import com.elementsplus.ModAdvancements;
 import com.elementsplus.ModBlockEntityTypes;
 import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.CustomComponentCompiler;
@@ -309,6 +310,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         experimentState = null;
         tooltipLines.clear();
         PlayerExperimentsAttachment.get(player).add(BuiltinExperiments.CUSTOM_COMPONENT.getName());
+        ModAdvancements.award(player, "self_made", "compile_custom");
+        ModAdvancements.onExperimentCompleted(player, BuiltinExperiments.CUSTOM_COMPONENT.getName());
         level.playSound(null, getBlockPos(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
         this.setChanged();
         syncStatus();
@@ -392,6 +395,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
                 ServerPlayer init = this.level.getServer().getPlayerList().getPlayer(initiator);
                 if (init != null) {
                     PlayerExperimentsAttachment.get(init).add(activeExperiment.getName());
+                    ModAdvancements.onExperimentCompleted(init, activeExperiment.getName());
                 }
             }
             if (this.level instanceof ServerLevel serverLevel) {

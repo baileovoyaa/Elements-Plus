@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:medium_chip"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.self_made.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.self_made.description"
+    }
+  },
+  "criteria": {
+    "compile_custom": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "compile_custom"
+    ]
+  ],
+  "parent": "elements-plus:logical_conclusion"
+}

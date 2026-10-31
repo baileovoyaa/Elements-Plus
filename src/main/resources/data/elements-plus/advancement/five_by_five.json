@@ -1,0 +1,31 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:advanced_crafting_table"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.five_by_five.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.five_by_five.description"
+    }
+  },
+  "criteria": {
+    "has_advanced_table": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "elements-plus:advanced_crafting_table"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_advanced_table"
+    ]
+  ],
+  "parent": "elements-plus:elements_plus"
+}

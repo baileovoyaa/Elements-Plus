@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:lithography_machine"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.a_world_within.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.a_world_within.description"
+    }
+  },
+  "criteria": {
+    "open_lithography": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "open_lithography"
+    ]
+  ],
+  "parent": "elements-plus:circuit_blueprint"
+}

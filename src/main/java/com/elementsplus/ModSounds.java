@@ -7,6 +7,7 @@ import net.minecraft.sounds.SoundEvent;
 
 public class ModSounds {
     public static final SoundEvent LITHOGRAPHY = register("lithography");
+    public static final SoundEvent STEEL_PIPE = register("steel_pipe");
 
     private static SoundEvent register(String id) {
         ResourceLocation location = ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, id);

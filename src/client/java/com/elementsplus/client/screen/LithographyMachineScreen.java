@@ -190,6 +190,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             if (isPlaying) {
                 playButton.icon = TEXTURE_PLAY;
                 isPlaying = false;
+                ElementsPlusClient.awardAdvancement("all_rounder", "pause");
             } else {
                 if (simulator.hasCycle()) {
                     return;
@@ -197,6 +198,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 playButton.icon = TEXTURE_PAUSE;
                 isPlaying = true;
                 simAccum = 0;
+                ElementsPlusClient.awardAdvancement("all_rounder", "run");
             }
         }));
 
@@ -207,6 +209,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 playButton.icon = TEXTURE_PLAY;
             }
             simulator.step();
+            ElementsPlusClient.awardAdvancement("all_rounder", "step");
         }));
 
         // 复位
@@ -216,6 +219,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 playButton.icon = TEXTURE_PLAY;
             }
             simulator.reset();
+            ElementsPlusClient.awardAdvancement("all_rounder", "reset");
         }));
 
         // 速度滑块（范围 1~20，与输入框同步；输入超出范围时滑块停在两端）
@@ -225,6 +229,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             syncingSpeed = true;
             speedEditBox.setValue(String.valueOf(value));
             syncingSpeed = false;
+            ElementsPlusClient.awardAdvancement("all_rounder", "speed");
         }));
         speedEditBox.setResponder(text -> {
             if (syncingSpeed) return;
@@ -235,6 +240,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 return;
             }
             speedSlider.setValue(parsed);
+            if (speedEditBox.isFocused()) {
+                ElementsPlusClient.awardAdvancement("all_rounder", "speed");
+            }
         });
         speedEditBox.setValue("20");
         toolbarWidget.addChild(speedEditBox);
@@ -266,6 +274,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 bitWidth = 1;
             }
             bitWidthButton.setMessage(Component.nullToEmpty(String.valueOf(bitWidth)));
+            ElementsPlusClient.awardAdvancement("all_rounder", "bit_width");
         }) {
             @Override
             public boolean mouseScrolled(double d, double e, double f, double g) {
@@ -276,6 +285,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                     bitWidth = 1;
                 }
                 bitWidthButton.setMessage(Component.nullToEmpty(String.valueOf(bitWidth)));
+                ElementsPlusClient.awardAdvancement("all_rounder", "bit_width");
                 return true;
             }
         });
@@ -297,6 +307,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             CircuitDiagramPanel.colorDot = darkMode ? 0xFF4A4A44 : 0xFFA0A0A0;
             ClientConfig.get().darkMode = darkMode;
             ClientConfig.get().save();
+            ElementsPlusClient.awardAdvancement("all_rounder", "theme");
         }));
 
         CircuitDiagramPanel.sound = !muted;
@@ -311,6 +322,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             CircuitDiagramPanel.sound = !muted;
             ClientConfig.get().muted = muted;
             ClientConfig.get().save();
+            ElementsPlusClient.awardAdvancement("all_rounder", "mute");
         }));
 
         // 数字格式：总线 / 信号强度
@@ -342,6 +354,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                     : "textures/gui/inspect_off.png");
             ClientConfig.get().inspect = inspect;
             ClientConfig.get().save();
+            ElementsPlusClient.awardAdvancement("all_rounder", "inspect");
         }));
 
         this.addRenderableWidget(manufactureWidget = new ScrollPanelWidget(leftPos + 89, topPos + 48, imageWidth - 94, imageHeight - 53, GuiUtil.SubPanelType.BORDERED, 0xFF2B2B2B));
@@ -398,6 +411,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
             circuitPanel.setVirtualWire(null);
             circuitPanel.setVirtualComponent(component);
+            ElementsPlusClient.awardAdvancement("all_rounder", "component_list");
         }
     }
 
@@ -409,6 +423,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         circuitPanel.setVirtualComponent(null);
         circuitPanel.setVirtualWire(material);
         setBitWidth(pickedBitWidth);
+        ElementsPlusClient.awardAdvancement("all_rounder", "component_list");
     }
 
     private void setBitWidth(int width) {
@@ -419,6 +434,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (circuitPanel != null) {
             circuitPanel.setWireBitWidth(bitWidth);
         }
+        ElementsPlusClient.awardAdvancement("all_rounder", "bit_width");
     }
 
     public void onRequestMenu(int screenX, int screenY, PlayerToolboxWidget.MenuRequest request) {
@@ -722,6 +738,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 && (attributeEditBox == null || !attributeEditBox.isFocused())
                 && (circuitPanel.hasSelection() || circuitPanel.isMultiSelected() || circuitPanel.hasSelectionBox())) {
             circuitPanel.deleteSelection();
+            ElementsPlusClient.awardAdvancement("keyboard_fury", "delete_key");
             return true;
         }
         if (buttonGroup.getSelected() == tabButtonDesign
@@ -731,13 +748,16 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 if (keyCode == GLFW.GLFW_KEY_Z) {
                     if (Screen.hasShiftDown()) {
                         if (circuitPanel.redo()) {
+                            ElementsPlusClient.awardAdvancement("keyboard_fury", "redo_key");
                             return true;
                         }
                     } else if (circuitPanel.undo()) {
+                        ElementsPlusClient.awardAdvancement("keyboard_fury", "undo_key");
                         return true;
                     }
                 } else if (keyCode == GLFW.GLFW_KEY_Y) {
                     if (circuitPanel.redo()) {
+                        ElementsPlusClient.awardAdvancement("keyboard_fury", "redo_key");
                         return true;
                     }
                 }
@@ -745,11 +765,13 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             if (ElementsPlusClient.keyMirrorHorizontal != null
                     && ElementsPlusClient.keyMirrorHorizontal.matches(keyCode, scanCode)) {
                 circuitPanel.applyMirror(true);
+                ElementsPlusClient.awardAdvancement("keyboard_fury", "mirror_key");
                 return true;
             }
             if (ElementsPlusClient.keyMirrorVertical != null
                     && ElementsPlusClient.keyMirrorVertical.matches(keyCode, scanCode)) {
                 circuitPanel.applyMirror(false);
+                ElementsPlusClient.awardAdvancement("keyboard_fury", "mirror_key");
                 return true;
             }
         }
@@ -1197,6 +1219,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     }
 
     private void commitAttributes() {
+        CircuitDiagram.Component selected = circuitPanel.getSelectedComponent();
+        if (selected != null && selected.instance instanceof Input8ComponentInstance) {
+            ElementsPlusClient.awardAdvancement("all_rounder", "input8");
+        }
         if (circuitPanel.isReadOnly() && circuitPanel.hasDiagram()) {
             // 编译后的预览修改：只刷新客户端模拟，不写回电路图。
             circuitPanel.requestPreviewResimulate();
@@ -1392,12 +1418,14 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 return;
             }
             onCommit.run();
+            ElementsPlusClient.awardAdvancement("all_rounder", "attribute_label");
         }
 
         @Override
         public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
                 flush();
+                ElementsPlusClient.awardAdvancement("keyboard_fury", "enter_label");
                 return true;
             }
 

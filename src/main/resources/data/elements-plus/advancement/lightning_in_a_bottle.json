@@ -1,0 +1,31 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:lightning_bottle"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.lightning_in_a_bottle.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.lightning_in_a_bottle.description"
+    }
+  },
+  "criteria": {
+    "has_lightning_bottle": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "elements-plus:lightning_bottle"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_lightning_bottle"
+    ]
+  ],
+  "parent": "elements-plus:elements_plus"
+}

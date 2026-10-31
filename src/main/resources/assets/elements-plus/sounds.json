@@ -3,5 +3,10 @@
     "sounds": [
       "elements-plus:lithography"
     ]
+  },
+  "steel_pipe": {
+    "sounds": [
+      "elements-plus:steel_pipe"
+    ]
   }
 }

@@ -1,0 +1,31 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:amethyst_shard"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.amethyst_dawn.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.amethyst_dawn.description"
+    }
+  },
+  "criteria": {
+    "has_amethyst": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:amethyst_shard"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_amethyst"
+    ]
+  ],
+  "parent": "elements-plus:elements_plus"
+}

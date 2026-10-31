@@ -97,19 +97,61 @@ public class PressureMachineBlock extends BaseEntityBlock {
 
     @Override
     public void animateTick(BlockState blockState, Level level, BlockPos blockPos, RandomSource randomSource) {
-        if (!blockState.getValue(LIT)) {
+        if (!blockState.getValue(LIT) || !level.isClientSide
+                || !(level.getBlockEntity(blockPos) instanceof PressureMachineBlockEntity machine)) {
             return;
         }
+        double flow = machine.getFlow();
+        if (flow <= 0.0) {
+            return;
+        }
+
         Direction facing = blockState.getValue(FACING);
-        double x = blockPos.getX() + 0.5 + facing.getStepX() * 0.52;
-        double y = blockPos.getY() + 0.5 + facing.getStepY() * 0.52;
-        double z = blockPos.getZ() + 0.5 + facing.getStepZ() * 0.52;
+        double axisX = facing.getStepX();
+        double axisY = facing.getStepY();
+        double axisZ = facing.getStepZ();
+        double centerX = blockPos.getX() + 0.5;
+        double centerY = blockPos.getY() + 0.5;
+        double centerZ = blockPos.getZ() + 0.5;
+
+        double x = centerX + axisX * 0.52;
+        double y = centerY + axisY * 0.52;
+        double z = centerZ + axisZ * 0.52;
         if (randomSource.nextDouble() < 0.1) {
             level.playLocalSound(x, y, z, SoundEvents.FURNACE_FIRE_CRACKLE, SoundSource.BLOCKS, 1.0F, 1.0F, false);
         }
-        level.addParticle(ParticleTypes.SMOKE, x, y, z, 0.0, 0.0, 0.0);
-        level.addParticle(ParticleTypes.FLAME, x, y, z, 0.0, 0.0, 0.0);
-        // TODO: 改为灰尘粒子表示空气流向
+
+        // 流量越大，灰尘越多、沿轴向速度越快。
+        double strength = Math.min(1.0, flow / 8.0);
+        int count = 1 + (int) Math.floor(strength * 3.0);
+        double speed = 0.06 + strength * 0.20;
+
+        for (int i = 0; i < count; i++) {
+            // 去掉沿流速方向的分量，得到垂直于气流轴的随机散布。
+            double offsetX = randomSource.nextDouble() - 0.5;
+            double offsetY = randomSource.nextDouble() - 0.5;
+            double offsetZ = randomSource.nextDouble() - 0.5;
+            double projection = offsetX * axisX + offsetY * axisY + offsetZ * axisZ;
+            offsetX = (offsetX - projection * axisX) * 0.35;
+            offsetY = (offsetY - projection * axisY) * 0.35;
+            offsetZ = (offsetZ - projection * axisZ) * 0.35;
+
+            // 入口侧：从方块外侧向中心飞入。
+            double entryDistance = 0.5 + randomSource.nextDouble() * 0.25;
+            level.addParticle(ParticleTypes.DUST_PLUME,
+                    centerX - axisX * entryDistance + offsetX,
+                    centerY - axisY * entryDistance + offsetY,
+                    centerZ - axisZ * entryDistance + offsetZ,
+                    axisX * speed, axisY * speed - 0.08, axisZ * speed);
+
+            // 出口侧：从中心附近向方块外侧飞出。
+            double outputDistance = 0.15 + randomSource.nextDouble() * 0.25;
+            level.addParticle(ParticleTypes.DUST_PLUME,
+                    centerX + axisX * outputDistance + offsetX,
+                    centerY + axisY * outputDistance + offsetY,
+                    centerZ + axisZ * outputDistance + offsetZ,
+                    axisX * speed, axisY * speed - 0.08, axisZ * speed);
+        }
     }
 
     @Override

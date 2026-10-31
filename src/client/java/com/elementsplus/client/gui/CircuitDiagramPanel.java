@@ -2,6 +2,7 @@ package com.elementsplus.client.gui;
 
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModDataComponents;
+import com.elementsplus.client.ElementsPlusClient;
 import com.elementsplus.ModItems;
 import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.config.NumberFormat;
@@ -931,6 +932,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (editor.setBlock(gx, gy, placed, force)) {
             playSound(COMPONENT_PLACE_SOUND);
             setSelectionSingle(gx, gy);
+            ElementsPlusClient.awardAdvancement("all_rounder", "place_component");
+            if (force) {
+                ElementsPlusClient.awardAdvancement("keyboard_fury", "shift_force");
+            }
         }
         commitDiagram(stack, editor);
     }
@@ -1351,6 +1356,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         CircuitDiagram target = undoStack.removeLast();
         pushRedo(currentState);
         applyHistoryState(stack, target);
+        ElementsPlusClient.awardAdvancement("all_rounder", "undo");
         return true;
     }
 
@@ -1382,6 +1388,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         CircuitDiagram target = redoStack.removeLast();
         pushUndo(currentState);
         applyHistoryState(stack, target);
+        ElementsPlusClient.awardAdvancement("all_rounder", "redo");
         return true;
     }
 
@@ -1530,6 +1537,8 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         playSound(WIRE_PLACE_SOUND);
         commitDiagram(stack, editor);
+        ElementsPlusClient.awardAdvancement("all_rounder", "place_wire");
+        ElementsPlusClient.awardAdvancement("keyboard_fury", "straight_wire");
     }
 
     private void commitConnection(int fromX, int fromY, int toX, int toY, CircuitDiagram.Wire.WireMaterial material) {
@@ -1561,6 +1570,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (toBlock instanceof CircuitDiagram.Component) {
             diagram.setBlock(toX, toY, null);
+            if (force) {
+                ElementsPlusClient.awardAdvancement("keyboard_fury", "shift_force");
+            }
         }
         setWireSide(diagram, fromX, fromY, fromSide, material);
         setWireSide(diagram, toX, toY, fromSide.getOpposite(), material);
@@ -1594,6 +1606,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (newMaterial) {
             wire.setBitWidth(material, wirePlaceBitWidth);
         }
+        ElementsPlusClient.awardAdvancement("all_rounder", "place_wire");
     }
 
     private void drawDotGrid(GuiGraphics guiGraphics) {
@@ -2163,6 +2176,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                         lastEraseX = gx;
                         lastEraseY = gy;
                         tryErase(gx, gy, mouseX, mouseY);
+                        ElementsPlusClient.awardAdvancement("keyboard_fury", "shift_right_erase");
                         return true;
                     }
                 }
@@ -2321,6 +2335,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
             offsetX -= dx / zoom;
             offsetY -= dy / zoom;
             clampPan();
+            if (dx != 0 || dy != 0) {
+                ElementsPlusClient.awardAdvancement("keyboard_fury", "middle_drag_pan");
+            }
         }
         if (erasing) {
             int eraseX = cellX(mouseX);
@@ -2626,6 +2643,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         setSelBox(dragBoxX + dx, dragBoxY + dy, dragBoxW, dragBoxH);
         syncSelectionAnchor();
+        ElementsPlusClient.awardAdvancement("all_rounder", "move");
+        if (force) {
+            ElementsPlusClient.awardAdvancement("keyboard_fury", "shift_force");
+        }
     }
 
     private void commitCopy(int dx, int dy) {
@@ -2669,6 +2690,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         setSelBox(dragBoxX + dx, dragBoxY + dy, dragBoxW, dragBoxH);
         syncSelectionAnchor();
+        ElementsPlusClient.awardAdvancement("all_rounder", "copy");
+        ElementsPlusClient.awardAdvancement("keyboard_fury", "ctrl_drag_copy");
+        if (force) {
+            ElementsPlusClient.awardAdvancement("keyboard_fury", "shift_force");
+        }
     }
 
     private void syncSelectionAnchor() {
@@ -2727,6 +2753,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         syncSelectionAnchor();
         clearDragState();
         bumpSelection();
+        ElementsPlusClient.awardAdvancement("all_rounder", "box_select");
     }
 
     public void deleteSelection() {
@@ -2782,6 +2809,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         playSound(removedComp ? COMPONENT_ERASE_SOUND : WIRE_ERASE_SOUND);
         commitDiagram(stack, editor);
         clearSelection();
+        ElementsPlusClient.awardAdvancement("all_rounder", "delete");
     }
 
     /**
@@ -2801,6 +2829,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (tryRotateGroup(clockwise)) {
             playSound(clockwise ? ROTATE_CLOCKWISE_SOUND : ROTATE_ANTICLOCKWISE_SOUND);
+            ElementsPlusClient.awardAdvancement("all_rounder", "rotate");
         }
     }
 
@@ -2898,6 +2927,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             }
             placeMirrored = !placeMirrored;
             playSound(MIRROR_SOUND);
+            ElementsPlusClient.awardAdvancement("all_rounder", "mirror");
             return;
         }
         if (lastMouseX == null || lastMouseY == null || !contains(lastMouseX, lastMouseY)) {
@@ -2916,6 +2946,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (tryMirrorGroup(horizontal)) {
             playSound(MIRROR_SOUND);
+            ElementsPlusClient.awardAdvancement("all_rounder", "mirror");
         }
     }
 
@@ -3162,9 +3193,11 @@ public class CircuitDiagramPanel extends AbstractWidget {
         }
         if (Screen.hasControlDown()) {
             zoomAt(mouseX, mouseY, Math.pow(2, scrollY / 5));
+            ElementsPlusClient.awardAdvancement("keyboard_fury", "ctrl_scroll_zoom");
             return true;
         }
         if (Screen.hasAltDown() && !isReadOnly()) {
+            ElementsPlusClient.awardAdvancement("keyboard_fury", "alt_scroll_rotate");
             if (activeComponent() != null) {
                 if (scrollY > 0) {
                     rotation = rotation.getClockWise();
@@ -3187,6 +3220,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (Screen.hasShiftDown()) {
             sx = scrollX != 0 ? scrollX : scrollY;
             sy = 0;
+            ElementsPlusClient.awardAdvancement("keyboard_fury", "shift_scroll_pan");
         }
         offsetX -= sx * SCROLL_PIXELS / zoom;
         offsetY -= sy * SCROLL_PIXELS / zoom;

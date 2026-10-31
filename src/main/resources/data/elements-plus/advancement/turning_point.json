@@ -1,0 +1,38 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:amethyst_transistor"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.turning_point.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.turning_point.description"
+    }
+  },
+  "criteria": {
+    "has_amethyst_component": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "elements-plus:amethyst_transistor",
+              "elements-plus:amethyst_diode",
+              "elements-plus:amethyst_capacitor",
+              "elements-plus:amethyst_resistor",
+              "elements-plus:amethyst_resonator",
+              "elements-plus:amethyst_battery"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_amethyst_component"
+    ]
+  ],
+  "parent": "elements-plus:amethyst_dawn"
+}

@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:redstone"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.social_interface.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.social_interface.description"
+    }
+  },
+  "criteria": {
+    "drive_io_interface": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "drive_io_interface"
+    ]
+  ],
+  "parent": "elements-plus:heart_to_heart"
+}

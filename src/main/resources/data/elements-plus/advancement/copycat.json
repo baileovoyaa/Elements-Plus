@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:circuit_diagram"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.copycat.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.copycat.description"
+    }
+  },
+  "criteria": {
+    "copy_diagram": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "copy_diagram"
+    ]
+  ],
+  "parent": "elements-plus:a_world_within"
+}

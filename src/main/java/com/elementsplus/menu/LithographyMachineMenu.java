@@ -1,5 +1,6 @@
 package com.elementsplus.menu;
 
+import com.elementsplus.ModAdvancements;
 import com.elementsplus.ModBlocks;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
@@ -10,6 +11,7 @@ import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.storage.StoredCircuit;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -91,10 +93,12 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
                     // 制造模式：取出前先扣空芯片与原料，再重算输出
                     consumeManufactureForTake();
                     playTakeSound(player, true);
+                    awardChipTake(player, itemStack.is(ModItems.HUGE_CHIP));
                 } else {
                     // 复制模式：默认 onTake 触发 setChanged → updateManufactureResult 消耗模板
                     super.onTake(player, itemStack);
                     playTakeSound(player, false);
+                    awardCopyTake(player);
                 }
             }
         });
@@ -263,6 +267,23 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
                 level.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F));
     }
 
+    private void awardChipTake(Player player, boolean huge) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            ModAdvancements.award(serverPlayer, "heart_to_heart", "take_chip");
+            ModAdvancements.award(serverPlayer, "all_rounder", "manufacture_chip");
+            if (huge) {
+                ModAdvancements.award(serverPlayer, "late_bloomer", "take_huge_chip");
+            }
+        }
+    }
+
+    private void awardCopyTake(Player player) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            ModAdvancements.award(serverPlayer, "copycat", "copy_diagram");
+            ModAdvancements.award(serverPlayer, "all_rounder", "copy_diagram");
+        }
+    }
+
     /** 强制物品栏槽位标记脏，让服务端下一次 broadcastChanges 把数量变化同步给客户端。 */
     private void markPlayerInventoryChanged() {
         for (int i = 0; i < 36; i++) {
@@ -342,6 +363,7 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
             return copy;
         }
         ItemStack moved = ItemStack.EMPTY;
+        boolean tookHuge = false;
         int safety = 0;
         while (safety++ < 64) {
             if (!isManufactureEligible(this.container.getItem(0), this.container.getItem(1))) {
@@ -358,6 +380,9 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
             if (out.getCount() == before.getCount()) {
                 break;
             }
+            if (before.is(ModItems.HUGE_CHIP)) {
+                tookHuge = true;
+            }
             if (moved.isEmpty()) {
                 moved = before;
             }
@@ -369,6 +394,7 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         if (!moved.isEmpty()) {
             // 批量取出只播放一次，避免 Shift 点击时音效叠加。
             playTakeSound(player, true);
+            awardChipTake(player, tookHuge);
         }
         return moved;
     }

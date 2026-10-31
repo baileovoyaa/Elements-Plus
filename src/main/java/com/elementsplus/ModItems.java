@@ -15,6 +15,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.food.FoodProperties;
@@ -81,6 +82,8 @@ public class ModItems {
                                 player.removeEffect(STEEL_PIPE_SHIELD);
                             }
                         }
+                        level.playSound(null, player.blockPosition(), ModSounds.STEEL_PIPE,
+                                SoundSource.PLAYERS, 1.0F, 1.0F);
                     }
                     return result;
                 }

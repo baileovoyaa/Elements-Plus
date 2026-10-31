@@ -1,6 +1,7 @@
 package com.elementsplus.item;
 
 
+import com.elementsplus.ModAdvancements;
 import com.elementsplus.blocks.pipe.AbstractPipeBlock;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -83,6 +84,9 @@ public class WrenchItem extends Item {
             BlockState blockState2 = cycleState(blockState, property, player.isSecondaryUseActive());
             level.setBlock(blockPos, blockState2, 3);
             NeighborUpdater.executeUpdate(level, blockState2, blockPos, blockState2.getBlock(), blockPos, false);
+            if (player instanceof ServerPlayer serverPlayer) {
+                ModAdvancements.award(serverPlayer, "pipe_fitter", "wrench_pipe");
+            }
             message(player, Component.translatable(Items.DEBUG_STICK.getDescriptionId() + ".update", property.getName(), getNameHelper(blockState2, property)));
         } else {
             property = getRelative(collection, property, player.isSecondaryUseActive());

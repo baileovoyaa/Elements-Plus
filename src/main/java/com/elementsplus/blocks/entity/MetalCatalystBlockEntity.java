@@ -1,6 +1,7 @@
 package com.elementsplus.blocks.entity;
 
 import com.elementsplus.ModBlockEntityTypes;
+import com.elementsplus.ModItems;
 import com.elementsplus.blocks.MetalCatalystBlock;
 import com.elementsplus.menu.MetalCatalystMenu;
 import com.elementsplus.recipe.MetalCatalystRecipe;
@@ -35,6 +36,7 @@ import java.util.Map;
 
 public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implements WorldlyContainer, StackedContentsCompatible {
 
+    private static final int TOTAL_COOK_TIME = 200;
     private static final int[] SLOTS_FOR_UP = new int[]{0, 1};
     private static final int[] SLOTS_FOR_DOWN = new int[]{4, 2};
     private static final int[] SLOTS_FOR_SIDES = new int[]{2, 3, 0, 1};
@@ -42,7 +44,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
     int litTime;
     int litDuration;
     int cookingProgress;
-    int cookingTotalTime;
+    int cookingTotalTime = TOTAL_COOK_TIME;
     int waste;
     @Nullable
     protected final ContainerData dataAccess = new ContainerData() {
@@ -121,7 +123,8 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
         ContainerHelper.loadAllItems(compoundTag, this.items, provider);
         this.litTime = compoundTag.getShort("BurnTime");
         this.cookingProgress = compoundTag.getShort("CookTime");
-        this.cookingTotalTime = compoundTag.getShort("CookTimeTotal");
+        int savedCookTimeTotal = compoundTag.getShort("CookTimeTotal");
+        this.cookingTotalTime = savedCookTimeTotal > 0 ? savedCookTimeTotal : TOTAL_COOK_TIME;
         this.litDuration = this.getBurnDuration(this.items.get(2));
         this.waste = compoundTag.getShort("Waste");
         CompoundTag compoundTag2 = compoundTag.getCompound("RecipesUsed");
@@ -145,6 +148,11 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
 
     public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, MetalCatalystBlockEntity blockEntity) {
         boolean changed = false;
+        if (blockEntity.cookingTotalTime <= 0) {
+            // 兼容旧存档或异常状态；否则首 tick 的进度会直接超过 0 并瞬间产出。
+            blockEntity.cookingTotalTime = TOTAL_COOK_TIME;
+            changed = true;
+        }
         if (blockEntity.isLit()) {
             blockEntity.litTime--;
         }
@@ -202,6 +210,10 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
     }
 
     private static boolean canBurn(MetalCatalystBlockEntity blockEntity, List<ItemStack> inputs, Level level) {
+        // 催化剂槽为空或不是催化剂时机器不得开始或继续工作。
+        if (!blockEntity.items.get(3).is(ModItems.CATALYST)) {
+            return false;
+        }
         MetalCatalystRecipe recipe = MetalCatalystRecipe.findRecipe(inputs, level);
         if (recipe == null) {
             return false;
@@ -262,7 +274,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
     }
 
     private static int getTotalCookTime() {
-        return 200;
+        return TOTAL_COOK_TIME;
     }
 
     public static boolean isFuel(ItemStack itemStack) {
@@ -289,7 +301,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
         if (isFuel(itemStack)) {
             return i == 2;
         }
-        if (itemStack.is(com.elementsplus.ModItems.CATALYST)) {
+        if (itemStack.is(ModItems.CATALYST)) {
             return i == 3;
         }
         return i == 0 || i == 1;
@@ -330,7 +342,7 @@ public class MetalCatalystBlockEntity extends BaseContainerBlockEntity implement
             return isFuel(itemStack) || itemStack.is(Items.BUCKET);
         }
         if (i == 3) {
-            return itemStack.is(com.elementsplus.ModItems.CATALYST);
+            return itemStack.is(ModItems.CATALYST);
         }
         return false;
     }

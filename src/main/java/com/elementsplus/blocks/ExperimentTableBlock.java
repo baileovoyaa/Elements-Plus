@@ -1,10 +1,12 @@
 package com.elementsplus.blocks;
 
+import com.elementsplus.ModAdvancements;
 import com.elementsplus.blocks.entity.ExperimentTableBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
@@ -61,6 +63,9 @@ public class ExperimentTableBlock extends BaseEntityBlock {
         BlockEntity blockEntity = level.getBlockEntity(blockPos);
         if (blockEntity instanceof ExperimentTableBlockEntity) {
             player.openMenu((MenuProvider) blockEntity);
+            if (player instanceof ServerPlayer serverPlayer) {
+                ModAdvancements.award(serverPlayer, "on_the_table", "open_experiment_table");
+            }
         }
     }
 

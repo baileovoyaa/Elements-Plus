@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:pressure_machine"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.pressure_cooker.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.pressure_cooker.description"
+    }
+  },
+  "criteria": {
+    "pressure_high": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "pressure_high"
+    ]
+  ],
+  "parent": "elements-plus:air_apparent"
+}

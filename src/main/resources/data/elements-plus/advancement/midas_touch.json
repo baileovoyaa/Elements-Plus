@@ -1,0 +1,31 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:metal_catalyst"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.midas_touch.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.midas_touch.description"
+    }
+  },
+  "criteria": {
+    "has_metal_catalyst": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "elements-plus:metal_catalyst"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_metal_catalyst"
+    ]
+  ],
+  "parent": "elements-plus:five_by_five"
+}

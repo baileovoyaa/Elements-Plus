@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:circuit_diagram"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.logical_conclusion.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.logical_conclusion.description"
+    }
+  },
+  "criteria": {
+    "alu_basic_complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "alu_basic_complete"
+    ]
+  ],
+  "parent": "elements-plus:trial_and_error"
+}

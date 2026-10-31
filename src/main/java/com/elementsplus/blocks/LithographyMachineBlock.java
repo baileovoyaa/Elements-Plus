@@ -1,9 +1,11 @@
 package com.elementsplus.blocks;
 
+import com.elementsplus.ModAdvancements;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
@@ -42,6 +44,9 @@ public class LithographyMachineBlock extends HorizontalDirectionalBlock {
         }
 
         player.openMenu(blockState.getMenuProvider(level, blockPos));
+        if (player instanceof ServerPlayer serverPlayer) {
+            ModAdvancements.award(serverPlayer, "a_world_within", "open_lithography");
+        }
         return InteractionResult.CONSUME;
     }
 

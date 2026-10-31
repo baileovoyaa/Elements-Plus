@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:small_chip"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.heart_to_heart.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.heart_to_heart.description"
+    }
+  },
+  "criteria": {
+    "take_chip": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "take_chip"
+    ]
+  ],
+  "parent": "elements-plus:a_world_within"
+}

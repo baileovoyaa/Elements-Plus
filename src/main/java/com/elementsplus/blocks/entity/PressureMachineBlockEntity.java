@@ -1,9 +1,11 @@
 package com.elementsplus.blocks.entity;
 
 import com.elementsplus.ElementsPlus;
+import com.elementsplus.ModAdvancements;
 import com.elementsplus.ModBlockEntityTypes;
 import com.elementsplus.blocks.PressureMachineBlock;
 import com.elementsplus.menu.PressureMachineMenu;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -12,7 +14,12 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.damagesource.DamageSource;
@@ -136,6 +143,8 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
     /** 入口与出口是否连成同一个空间（此时搬运没有意义）。 */
     boolean sameSpace;
     double flow;
+    private int flowSyncCooldown;
+    private int lastSentFlow;
 
     private SpaceInfo inputSpace = EMPTY_SPACE;
     private SpaceInfo outputSpace = EMPTY_SPACE;
@@ -249,6 +258,7 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         ContainerHelper.loadAllItems(tag, this.items, registries);
         this.litTime = tag.getShort("BurnTime");
         this.litDuration = tag.getShort("BurnTimeTotal");
+        this.flow = tag.getDouble("Flow");
         // 压强由共享网络维护（当前为内存实现），这里只做默认值。
         this.inputPressure = 1.0;
         this.outputPressure = 1.0;
@@ -260,6 +270,41 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         ContainerHelper.saveAllItems(tag, this.items, registries);
         tag.putShort("BurnTime", (short) this.litTime);
         tag.putShort("BurnTimeTotal", (short) this.litDuration);
+        tag.putDouble("Flow", this.flow);
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        // 客户端 animateTick 需要知道当前流量；只同步粒子和状态相关的小字段。
+        CompoundTag tag = new CompoundTag();
+        tag.putDouble("Flow", this.flow);
+        return tag;
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /** 低频同步流量到附近客户端，避免每 tick 发送方块实体包。 */
+    private void syncFlowToClients(Level level) {
+        if (!(level instanceof ServerLevel)) {
+            return;
+        }
+        if (flowSyncCooldown > 0) {
+            flowSyncCooldown--;
+            return;
+        }
+        int quantized = (int) Math.round(flow * 1000.0);
+        if (quantized == lastSentFlow) {
+            return;
+        }
+        lastSentFlow = quantized;
+        flowSyncCooldown = 5;
+        ClientboundBlockEntityDataPacket packet = ClientboundBlockEntityDataPacket.create(this);
+        for (ServerPlayer player : PlayerLookup.tracking(this)) {
+            player.connection.send(packet);
+        }
     }
 
     // ---- tick ----
@@ -310,6 +355,7 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
             changed = true;
         }
         be.writeToNetwork(level);
+        be.syncFlowToClients(level);
 
         // 生物效果每秒结算一次（同一空间由共享网络去重）。
         be.applySpaceEffects(level);
@@ -613,10 +659,16 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
             }
             if (highDamage) {
                 double dps = HIGH_DAMAGE_K * (delta - HIGH_DAMAGE_THRESHOLD);
-                entity.hurt(pressureDamage(level, PRESSURE_HIGH_DAMAGE), (float) (dps * 2.0));
+                boolean damaged = entity.hurt(pressureDamage(level, PRESSURE_HIGH_DAMAGE), (float) (dps * 2.0));
+                if (damaged && entity instanceof ServerPlayer serverPlayer) {
+                    ModAdvancements.award(serverPlayer, "pressure_cooker", "pressure_high");
+                }
             } else if (lowDamage) {
                 double dps = LOW_DAMAGE_K * (-delta - LOW_DAMAGE_THRESHOLD);
-                entity.hurt(pressureDamage(level, PRESSURE_LOW_DAMAGE), (float) (dps * 2.0));
+                boolean damaged = entity.hurt(pressureDamage(level, PRESSURE_LOW_DAMAGE), (float) (dps * 2.0));
+                if (damaged && pressure < 0.01 && entity instanceof ServerPlayer serverPlayer) {
+                    ModAdvancements.award(serverPlayer, "boiling_point", "pressure_low");
+                }
             }
         }
     }

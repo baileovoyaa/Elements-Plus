@@ -1,0 +1,88 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:lithography_machine"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.all_rounder.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.all_rounder.description"
+    }
+  },
+  "criteria": {
+    "place_wire": {
+      "trigger": "minecraft:impossible"
+    },
+    "place_component": {
+      "trigger": "minecraft:impossible"
+    },
+    "rotate": {
+      "trigger": "minecraft:impossible"
+    },
+    "mirror": {
+      "trigger": "minecraft:impossible"
+    },
+    "box_select": {
+      "trigger": "minecraft:impossible"
+    },
+    "move": {
+      "trigger": "minecraft:impossible"
+    },
+    "copy": {
+      "trigger": "minecraft:impossible"
+    },
+    "delete": {
+      "trigger": "minecraft:impossible"
+    },
+    "undo": {
+      "trigger": "minecraft:impossible"
+    },
+    "redo": {
+      "trigger": "minecraft:impossible"
+    },
+    "run": {
+      "trigger": "minecraft:impossible"
+    },
+    "pause": {
+      "trigger": "minecraft:impossible"
+    },
+    "step": {
+      "trigger": "minecraft:impossible"
+    },
+    "reset": {
+      "trigger": "minecraft:impossible"
+    },
+    "speed": {
+      "trigger": "minecraft:impossible"
+    },
+    "bit_width": {
+      "trigger": "minecraft:impossible"
+    },
+    "inspect": {
+      "trigger": "minecraft:impossible"
+    },
+    "theme": {
+      "trigger": "minecraft:impossible"
+    },
+    "mute": {
+      "trigger": "minecraft:impossible"
+    },
+    "component_list": {
+      "trigger": "minecraft:impossible"
+    },
+    "attribute_label": {
+      "trigger": "minecraft:impossible"
+    },
+    "input8": {
+      "trigger": "minecraft:impossible"
+    },
+    "copy_diagram": {
+      "trigger": "minecraft:impossible"
+    },
+    "manufacture_chip": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "parent": "elements-plus:a_world_within"
+}

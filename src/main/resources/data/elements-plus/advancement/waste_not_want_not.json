@@ -1,0 +1,27 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:catalyst"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.waste_not_want_not.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.waste_not_want_not.description"
+    }
+  },
+  "criteria": {
+    "crafted_catalyst_from_waste": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "elements-plus:crafting/catalyst_from_waste"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "crafted_catalyst_from_waste"
+    ]
+  ],
+  "parent": "elements-plus:midas_touch"
+}

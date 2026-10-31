@@ -543,6 +543,51 @@ public class BuiltinExperimentChapters {
         return experimentChapter;
     }
 
+    /** 某章节及其全部前置章节的必做实验。 */
+    public static Set<BaseExperiment> requiredExperimentsFor(ExperimentChapter chapter) {
+        Set<BaseExperiment> result = new HashSet<>();
+        collectRequiredExperiments(chapter, result, new HashSet<>());
+        return result;
+    }
+
+    private static void collectRequiredExperiments(ExperimentChapter chapter,
+                                                   Set<BaseExperiment> result,
+                                                   Set<ExperimentChapter> visited) {
+        if (chapter == null || !visited.add(chapter)) {
+            return;
+        }
+        result.addAll(chapter.getExperiments());
+        for (ExperimentChapter dependency : chapter.dependencies) {
+            collectRequiredExperiments(dependency, result, visited);
+        }
+    }
+
+    /** 所有章节中出现过的实验，包括选做实验。 */
+    public static Set<BaseExperiment> allExperimentsIncludingOptional() {
+        Set<BaseExperiment> result = new HashSet<>();
+        for (ExperimentChapter chapter : BUILTIN_EXPERIMENT_CHAPTERS) {
+            for (ExperimentChapter.Section section : chapter.sections) {
+                if (section instanceof ExperimentChapter.ExperimentSection experimentSection) {
+                    result.addAll(experimentSection.experiments);
+                }
+            }
+        }
+        return result;
+    }
+
+    public static boolean isOptionalExperiment(BaseExperiment experiment) {
+        for (ExperimentChapter chapter : BUILTIN_EXPERIMENT_CHAPTERS) {
+            for (ExperimentChapter.Section section : chapter.sections) {
+                if (section instanceof ExperimentChapter.ExperimentSection experimentSection
+                        && experimentSection.optional != null
+                        && experimentSection.optional.contains(experiment)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static ExperimentChapter byName(String name) {
         for (ExperimentChapter c : BUILTIN_EXPERIMENT_CHAPTERS) {
             if (c.name.equals(name)) {

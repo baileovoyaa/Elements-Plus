@@ -1,0 +1,29 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:syringe"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.a_shot_in_the_arm.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.a_shot_in_the_arm.description"
+    }
+  },
+  "criteria": {
+    "has_rust_proof": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "elements-plus:rust_proof": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_rust_proof"
+    ]
+  ],
+  "parent": "elements-plus:under_pressure"
+}

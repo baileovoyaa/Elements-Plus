@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:experiment_table"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.on_the_table.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.on_the_table.description"
+    }
+  },
+  "criteria": {
+    "open_experiment_table": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "open_experiment_table"
+    ]
+  ],
+  "parent": "elements-plus:circuit_blueprint"
+}

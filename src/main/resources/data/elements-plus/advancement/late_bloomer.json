@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:huge_chip"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.late_bloomer.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.late_bloomer.description"
+    }
+  },
+  "criteria": {
+    "take_huge_chip": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "take_huge_chip"
+    ]
+  ],
+  "parent": "elements-plus:heart_to_heart"
+}

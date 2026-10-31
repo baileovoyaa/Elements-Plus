@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:observer"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.employee_of_the_month.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.employee_of_the_month.description"
+    }
+  },
+  "criteria": {
+    "drive_robot": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "drive_robot"
+    ]
+  ],
+  "parent": "elements-plus:social_interface"
+}

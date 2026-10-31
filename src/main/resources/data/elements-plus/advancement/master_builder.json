@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:computer"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.master_builder.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.master_builder.description"
+    }
+  },
+  "criteria": {
+    "complete_computer_architecture": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "complete_computer_architecture"
+    ]
+  ],
+  "parent": "elements-plus:logical_conclusion"
+}

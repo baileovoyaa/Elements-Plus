@@ -1,0 +1,31 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:pressure_machine"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.air_apparent.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.air_apparent.description"
+    }
+  },
+  "criteria": {
+    "has_pressure_machine": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "elements-plus:pressure_machine"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_pressure_machine"
+    ]
+  ],
+  "parent": "elements-plus:under_pressure"
+}

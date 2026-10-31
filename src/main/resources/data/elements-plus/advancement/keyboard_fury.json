@@ -1,0 +1,55 @@
+{
+    "display": {
+        "icon": {
+            "id": "minecraft:redstone_torch"
+        },
+        "title": {
+            "translate": "advancement.elements-plus.keyboard_fury.title"
+        },
+        "description": {
+            "translate": "advancement.elements-plus.keyboard_fury.description"
+        }
+    },
+    "criteria": {
+        "mirror_key": {
+            "trigger": "minecraft:impossible"
+        },
+        "delete_key": {
+            "trigger": "minecraft:impossible"
+        },
+        "undo_key": {
+            "trigger": "minecraft:impossible"
+        },
+        "redo_key": {
+            "trigger": "minecraft:impossible"
+        },
+        "ctrl_drag_copy": {
+            "trigger": "minecraft:impossible"
+        },
+        "straight_wire": {
+            "trigger": "minecraft:impossible"
+        },
+        "alt_scroll_rotate": {
+            "trigger": "minecraft:impossible"
+        },
+        "ctrl_scroll_zoom": {
+            "trigger": "minecraft:impossible"
+        },
+        "shift_scroll_pan": {
+            "trigger": "minecraft:impossible"
+        },
+        "middle_drag_pan": {
+            "trigger": "minecraft:impossible"
+        },
+        "shift_right_erase": {
+            "trigger": "minecraft:impossible"
+        },
+        "shift_force": {
+            "trigger": "minecraft:impossible"
+        },
+        "enter_label": {
+            "trigger": "minecraft:impossible"
+        }
+    },
+    "parent": "elements-plus:all_rounder"
+}

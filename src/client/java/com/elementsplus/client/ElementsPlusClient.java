@@ -8,6 +8,7 @@ import com.elementsplus.client.gui.CircuitDiagramPanel;
 import com.elementsplus.client.screen.ExperimentTableScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
 import com.elementsplus.core.circuit.storage.CircuitStorage;
+import com.elementsplus.network.AdvancementActionPayload;
 import com.elementsplus.network.CircuitStorageSyncPayload;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableSelectionChangePayload;
@@ -29,9 +30,15 @@ import net.minecraft.resources.ResourceLocation;
 
 import org.lwjgl.glfw.GLFW;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class ElementsPlusClient implements ClientModInitializer {
 
     private static PlayerToolbox toolbox;
+
+    /** 本次连接中已经发送过的进度条件，避免拖动操作重复发包。 */
+    private static final Set<String> SENT_ADVANCEMENT_CRITERIA = new HashSet<>();
 
     /** 按键绑定分类（在「选项 → 按键控制」中显示）。 */
     public static final String KEY_CATEGORY = "key.categories.elements-plus";
@@ -106,8 +113,20 @@ public class ElementsPlusClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
                 ClientPlayNetworking.send(new ToolboxRequestPayload()));
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
-                CircuitStorage.get().clear());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            CircuitStorage.get().clear();
+            SENT_ADVANCEMENT_CRITERIA.clear();
+        });
+    }
+
+    /** 上报一个由客户端操作触发的进度条件。 */
+    public static void awardAdvancement(String advancement, String criterion) {
+        if (!ClientPlayNetworking.canSend(AdvancementActionPayload.TYPE)) {
+            return;
+        }
+        if (SENT_ADVANCEMENT_CRITERIA.add(advancement + ":" + criterion)) {
+            ClientPlayNetworking.send(new AdvancementActionPayload(advancement, criterion));
+        }
     }
 
     /** 客户端缓存的元件列表。未收到服务端数据时显示默认工具箱。 */

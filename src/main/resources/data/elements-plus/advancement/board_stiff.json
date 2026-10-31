@@ -1,0 +1,31 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:circuit_board"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.board_stiff.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.board_stiff.description"
+    }
+  },
+  "criteria": {
+    "has_circuit_board": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "elements-plus:circuit_board"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_circuit_board"
+    ]
+  ],
+  "parent": "elements-plus:heart_to_heart"
+}

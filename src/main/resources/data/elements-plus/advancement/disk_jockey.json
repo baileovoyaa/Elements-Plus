@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:music_disc_13"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.disk_jockey.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.disk_jockey.description"
+    }
+  },
+  "criteria": {
+    "obtain_disk": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "obtain_disk"
+    ]
+  ],
+  "parent": "elements-plus:master_builder"
+}

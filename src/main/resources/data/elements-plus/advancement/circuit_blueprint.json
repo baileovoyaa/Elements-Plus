@@ -1,0 +1,31 @@
+{
+  "display": {
+    "icon": {
+      "id": "elements-plus:circuit_diagram"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.circuit_blueprint.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.circuit_blueprint.description"
+    }
+  },
+  "criteria": {
+    "has_circuit_diagram": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "elements-plus:circuit_diagram"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_circuit_diagram"
+    ]
+  ],
+  "parent": "elements-plus:turning_point"
+}

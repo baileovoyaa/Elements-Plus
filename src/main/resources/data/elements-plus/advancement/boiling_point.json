@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:water_bucket"
+    },
+    "title": {
+      "translate": "advancement.elements-plus.boiling_point.title"
+    },
+    "description": {
+      "translate": "advancement.elements-plus.boiling_point.description"
+    }
+  },
+  "criteria": {
+    "pressure_low": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "pressure_low"
+    ]
+  ],
+  "parent": "elements-plus:air_apparent"
+}
