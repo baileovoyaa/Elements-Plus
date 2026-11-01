@@ -8,6 +8,8 @@ import net.minecraft.sounds.SoundEvent;
 public class ModSounds {
     public static final SoundEvent LITHOGRAPHY = register("lithography");
     public static final SoundEvent STEEL_PIPE = register("steel_pipe");
+    public static final SoundEvent SYRINGE_USE = register("syringe_use");
+    public static final SoundEvent SYRINGE_INJECT = register("syringe_inject");
 
     private static SoundEvent register(String id) {
         ResourceLocation location = ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, id);

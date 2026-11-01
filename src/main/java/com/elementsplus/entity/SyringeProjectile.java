@@ -2,6 +2,7 @@ package com.elementsplus.entity;
 
 import com.elementsplus.ModEntities;
 import com.elementsplus.ModItems;
+import com.elementsplus.ModSounds;
 import com.elementsplus.item.SyringeItem;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -66,6 +67,8 @@ public class SyringeProjectile extends ThrowableItemProjectile {
             ItemStack stack = getItem();
             serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, stack),
                     getX(), getY(), getZ(), 10, 0.15D, 0.15D, 0.15D, 0.06D);
+            serverLevel.playSound(null, getX(), getY(), getZ(),
+                    ModSounds.SYRINGE_INJECT, SoundSource.PLAYERS, 0.9F, 1.0F);
             serverLevel.playSound(null, getX(), getY(), getZ(),
                     SoundEvents.GLASS_BREAK, SoundSource.NEUTRAL, 0.8F, 1.25F);
         }

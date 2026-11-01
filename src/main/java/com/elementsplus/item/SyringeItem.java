@@ -2,6 +2,7 @@ package com.elementsplus.item;
 
 import com.elementsplus.ModItems;
 import com.elementsplus.ModPotions;
+import com.elementsplus.ModSounds;
 import com.elementsplus.entity.SyringeProjectile;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -9,7 +10,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Position;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -102,6 +102,8 @@ public class SyringeItem extends PotionItem implements ProjectileItem {
         if (!player.level().isClientSide()) {
             LivingEntity resolved = target != null ? target : findUseTarget(player);
             USE_STATES.put(player, new UseState(resolved, hand));
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                    ModSounds.SYRINGE_USE, SoundSource.PLAYERS, 0.8F, 1.0F);
         }
         player.startUsingItem(hand);
     }
@@ -121,6 +123,10 @@ public class SyringeItem extends PotionItem implements ProjectileItem {
             player.stopUsingItem();
         }
         player.startUsingItem(InteractionHand.MAIN_HAND);
+        if (!player.level().isClientSide()) {
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                    ModSounds.SYRINGE_USE, SoundSource.PLAYERS, 0.8F, 1.0F);
+        }
     }
 
     /** 左键松开时结束持矛平举姿态。 */
@@ -195,8 +201,10 @@ public class SyringeItem extends PotionItem implements ProjectileItem {
             return false;
         }
         consume(player, stack);
-        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.HONEY_DRINK, SoundSource.PLAYERS, 0.7F, 1.35F);
+        if (!player.level().isClientSide()) {
+            player.level().playSound(null, target.getX(), target.getY(), target.getZ(),
+                    ModSounds.SYRINGE_INJECT, SoundSource.PLAYERS, 0.9F, 1.0F);
+        }
         player.swing(hand, true);
         return true;
     }
@@ -276,7 +284,8 @@ public class SyringeItem extends PotionItem implements ProjectileItem {
 
     @Override
     public @NotNull UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.SPEAR;
+        // 客户端在左键蓄力时由 SyringeItemMixin 切换为 SPEAR；默认右键使用为 BOW。
+        return UseAnim.BOW;
     }
 
     @Override
@@ -294,7 +303,7 @@ public class SyringeItem extends PotionItem implements ProjectileItem {
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         PotionContents contents = contents(stack);
         if (isFilled(stack)) {
-            contents.addPotionTooltip(tooltip::add, 1.0F, 1.0F);
+            contents.addPotionTooltip(tooltip::add, 1.0F, context.tickRate());
         }
         tooltip.add(Component.translatable("tooltip.elements-plus.syringe.one_use")
                 .withStyle(ChatFormatting.GRAY));

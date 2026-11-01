@@ -8,5 +8,15 @@
     "sounds": [
       "elements-plus:steel_pipe"
     ]
+  },
+  "syringe_use": {
+    "sounds": [
+      "elements-plus:syringe_use"
+    ]
+  },
+  "syringe_inject": {
+    "sounds": [
+      "elements-plus:syringe_inject"
+    ]
   }
 }
