@@ -11,6 +11,8 @@ import com.elementsplus.core.experiment.BaseExperiment;
 import com.elementsplus.core.experiment.BuiltinExperimentChapters;
 import com.elementsplus.core.experiment.BuiltinExperiments;
 import com.elementsplus.core.experiment.ExperimentChapter;
+import com.elementsplus.item.SyringeChargeManager;
+import com.elementsplus.item.SyringeItem;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.AdvancementActionPayload;
@@ -25,6 +27,7 @@ import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
 import com.elementsplus.network.ExperimentTableStatusPayload;
 import com.elementsplus.network.LithographyTabPayload;
 import com.elementsplus.network.ReturnCarriedPayload;
+import com.elementsplus.network.SyringeChargePayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
 import com.elementsplus.network.ToolboxUpdatePayload;
@@ -46,11 +49,16 @@ import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.registry.FabricBrewingRecipeRegistryBuilder;
 import net.fabricmc.fabric.api.registry.OxidizableBlocksRegistry;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.commands.CommandSourceStack;
@@ -71,9 +79,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -95,13 +107,25 @@ public class ElementsPlus implements ModInitializer {
     @Override
     public void onInitialize() {
         ModDataComponents.initialize();
+        ModEffects.initialize();
+        ModPotions.initialize();
         ModItems.initialize();
+        ModEntities.initialize();
         ModItemGroups.registerAll();
         ModBlocks.initialize();
-        ModEffects.initialize();
         ModBlockEntityTypes.initialize();
         ModMenuTypes.initialize();
         ModSounds.initialize();
+
+        FabricBrewingRecipeRegistryBuilder.BUILD.register(builder -> {
+            // 粗制的药水 + 钢管 -> 防锈药水
+            builder.registerPotionRecipe(Potions.AWKWARD,
+                    Ingredient.of(ModItems.STEEL_PIPE), ModPotions.RUST_PROOF);
+            // 任意普通药水 + 塑料 -> 对应效果的注射器
+            builder.registerItemRecipe(Items.POTION,
+                    Ingredient.of(ModItems.PLASTIC), ModItems.SYRINGE);
+            LOGGER.info("Registered brewing recipes for Rust Proof and Syringes");
+        });
         MetalCatalystRecipe.TYPE.toString();
         CrystallizerRecipe.TYPE.toString();
         ScaleUpgradeRecipe.TYPE_ID.toString();
@@ -119,6 +143,10 @@ public class ElementsPlus implements ModInitializer {
                         menu.returnCarriedToInventory();
                     }
                 }));
+
+        PayloadTypeRegistry.playC2S().register(SyringeChargePayload.TYPE, SyringeChargePayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(SyringeChargePayload.TYPE, (payload, context) ->
+                context.server().execute(() -> SyringeChargeManager.setCharging(context.player(), payload.charging())));
 
         PayloadTypeRegistry.playC2S().register(AdvancementActionPayload.TYPE, AdvancementActionPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(AdvancementActionPayload.TYPE, (payload, context) ->
@@ -264,10 +292,45 @@ public class ElementsPlus implements ModInitializer {
                     }
                 }));
 
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                ExperimentTableMenu.closeTable(handler.player.getUUID()));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            ExperimentTableMenu.closeTable(handler.player.getUUID());
+            SyringeChargeManager.remove(handler.player);
+            SyringeItem.clearUseState(handler.player);
+        });
+        ServerTickEvents.END_SERVER_TICK.register(SyringeChargeManager::tick);
 
-        LOGGER.info("Hello Fabric world!");
+        // 手持注射器时左键不执行原版攻击/挖掘；蓄力突刺由 SyringeChargeManager 处理。
+        AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+            if (player.getMainHandItem().is(ModItems.SYRINGE)) {
+                return InteractionResult.FAIL;
+            }
+            return InteractionResult.PASS;
+        });
+        AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
+            if (player.getMainHandItem().is(ModItems.SYRINGE)) {
+                return InteractionResult.FAIL;
+            }
+            return InteractionResult.PASS;
+        });
+
+        // 右键生物优先注射，避免村民等生物的原版交互抢占。
+        UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+            if (SyringeChargeManager.isCharging(player)) {
+                return InteractionResult.FAIL;
+            }
+            ItemStack stack = player.getItemInHand(hand);
+            if (player.isSpectator()
+                    || !stack.is(ModItems.SYRINGE)
+                    || !(entity instanceof LivingEntity target)
+                    || target instanceof ArmorStand
+                    || !SyringeItem.isFilled(stack)
+                    || !player.canInteractWithEntity(target, 1.0D)
+                    || !player.hasLineOfSight(target)) {
+                return InteractionResult.PASS;
+            }
+            SyringeItem.beginUse(player, hand, target);
+            return InteractionResult.SUCCESS;
+        });
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
             if (!world.isClientSide) {
@@ -327,6 +390,7 @@ public class ElementsPlus implements ModInitializer {
         });
 
         DispenserBlock.registerBehavior(Items.GLASS_BOTTLE, new MyCustomBottleBehavior());
+        DispenserBlock.registerProjectileBehavior(ModItems.SYRINGE);
 
         OxidizableBlocksRegistry.registerWaxableBlockPair(ModBlocks.STEEL_PIPE_L, ModBlocks.WAXED_STEEL_PIPE_L);
         OxidizableBlocksRegistry.registerWaxableBlockPair(ModBlocks.STEEL_PIPE_I, ModBlocks.WAXED_STEEL_PIPE_I);

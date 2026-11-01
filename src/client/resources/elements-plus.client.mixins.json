@@ -4,7 +4,10 @@
     "compatibilityLevel": "JAVA_21",
     "client": [
         "AbstractContainerScreenMixin",
-        "ExampleClientMixin"
+        "ExampleClientMixin",
+        "LocalPlayerMixin",
+        "MinecraftMixin",
+        "MultiPlayerGameModeMixin"
     ],
     "injectors": {
         "defaultRequire": 1

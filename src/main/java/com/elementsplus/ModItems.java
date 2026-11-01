@@ -8,6 +8,7 @@ import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.storage.CircuitStorage;
 import com.elementsplus.core.circuit.storage.StoredCircuit;
 import com.elementsplus.item.ChipItem;
+import com.elementsplus.item.SyringeItem;
 import com.elementsplus.item.WrenchItem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
@@ -22,6 +23,7 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.component.DebugStickState;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
@@ -91,25 +93,10 @@ public class ModItems {
             "steel_pipe"
     );
     public static final Item SYRINGE = register(
-            new Item(new Item.Properties()
-                    .food(new FoodProperties.Builder()
-                            .alwaysEdible()
-                            .build()
-                    )
+            new SyringeItem(new Item.Properties()
                     .stacksTo(16)
-            ) {
-                @Override
-                public @NotNull ItemStack finishUsingItem(ItemStack stack, Level level, net.minecraft.world.entity.LivingEntity entity) {
-                    ItemStack result = super.finishUsingItem(stack, level, entity);
-                    if (!level.isClientSide() && entity instanceof net.minecraft.world.entity.player.Player player) {
-                        player.addEffect(new MobEffectInstance(
-                                RUST_PROOF, 2400, 0, true, true, true
-                        ));
-                        player.getCooldowns().addCooldown(this, 400);
-                    }
-                    return result;
-                }
-            },
+                    .component(DataComponents.POTION_CONTENTS, new PotionContents(ModPotions.RUST_PROOF))
+            ),
             "syringe"
     );
     public static final Item WRENCH = register(

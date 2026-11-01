@@ -1,7 +1,15 @@
 {
   "item.elements-plus.steel_pipe": "Steel Pipe",
+  "tag.item.elements-plus.steel_pipes": "Steel Pipes",
 
   "item.elements-plus.syringe": "Syringe",
+  "item.elements-plus.syringe.filled": "Syringe (%s)",
+  "tooltip.elements-plus.syringe.one_use": "Single use",
+  "tooltip.elements-plus.syringe.usage": "Hold right-click for 1 second to inject (target change resets the timer); hold attack with it in your main hand to charge; load into a crossbow or fire from a dispenser",
+  "tooltip.elements-plus.syringe.projectile_decay": "When fired as a projectile, the potion duration decreases with flight time",
+  "message.elements-plus.syringe.drink_only": "Rust Proof potion cannot be drunk; use a syringe instead.",
+  "item.minecraft.potion.effect.rust_proof": "Potion of Rust Proof",
+  "entity.elements-plus.syringe_projectile": "Syringe",
 
   "item.elements-plus.wrench": "Wrench",
 

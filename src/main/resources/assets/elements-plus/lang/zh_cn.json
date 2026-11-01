@@ -1,7 +1,15 @@
 {
   "item.elements-plus.steel_pipe": "钢管",
+  "tag.item.elements-plus.steel_pipes": "钢管",
 
   "item.elements-plus.syringe": "注射器",
+  "item.elements-plus.syringe.filled": "注射器（%s）",
+  "tooltip.elements-plus.syringe.one_use": "一次性使用",
+  "tooltip.elements-plus.syringe.usage": "右键长按 1 秒注射（目标变化会重新计时）；主手按住左键蓄力撞击；可装填弩或被发射器发射",
+  "tooltip.elements-plus.syringe.projectile_decay": "作为弹射物命中时，飞行越久药水持续时间越短",
+  "message.elements-plus.syringe.drink_only": "防锈药水无法饮用，请使用注射器。",
+  "item.minecraft.potion.effect.rust_proof": "防锈药水",
+  "entity.elements-plus.syringe_projectile": "注射器",
 
   "item.elements-plus.wrench": "扳手",
 

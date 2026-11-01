@@ -2,29 +2,37 @@ package com.elementsplus.client;
 
 import com.elementsplus.ModBlocks;
 import com.elementsplus.ModDataComponents;
+import com.elementsplus.ModEntities;
 import com.elementsplus.ModItems;
 import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.gui.CircuitDiagramPanel;
 import com.elementsplus.client.screen.ExperimentTableScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
 import com.elementsplus.core.circuit.storage.CircuitStorage;
+import com.elementsplus.entity.SyringeProjectile;
+import com.elementsplus.item.SyringeItem;
 import com.elementsplus.network.AdvancementActionPayload;
 import com.elementsplus.network.CircuitStorageSyncPayload;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
 import com.elementsplus.network.ExperimentTableSelectionChangePayload;
 import com.elementsplus.network.ExperimentTableStatusPayload;
+import com.elementsplus.network.SyringeChargePayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
 import com.elementsplus.player.PlayerToolbox;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.event.client.player.ClientPreAttackCallback;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 
@@ -39,6 +47,9 @@ public class ElementsPlusClient implements ClientModInitializer {
 
     /** 本次连接中已经发送过的进度条件，避免拖动操作重复发包。 */
     private static final Set<String> SENT_ADVANCEMENT_CRITERIA = new HashSet<>();
+
+    /** 上一次同步给服务端的注射器蓄力状态。 */
+    private static boolean lastSyringeCharging;
 
     /** 按键绑定分类（在「选项 → 按键控制」中显示）。 */
     public static final String KEY_CATEGORY = "key.categories.elements-plus";
@@ -63,6 +74,8 @@ public class ElementsPlusClient implements ClientModInitializer {
         // This entrypoint is suitable for setting up client-specific logic, such as rendering.
         ModMenuScreens.initialize();
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.CHARGED_LIGHTNING_ROD, RenderType.cutout());
+        EntityRendererRegistry.register(ModEntities.SYRINGE_PROJECTILE,
+                (context) -> new ThrownItemRenderer<SyringeProjectile>(context));
 
         ItemProperties.register(
                 ModItems.CIRCUIT_DIAGRAM,
@@ -111,12 +124,43 @@ public class ElementsPlusClient implements ClientModInitializer {
                     }
                 }));
 
+        // 仅主手注射器接管左键：取消原版挥砍/挖掘，保持平举姿态。
+        ClientPreAttackCallback.EVENT.register((client, player, clickCount) ->
+                player.getMainHandItem().is(ModItems.SYRINGE));
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            SyringeTargeting.tick(client);
+            boolean charging = client.player != null
+                    && client.screen == null
+                    && client.options.keyAttack.isDown()
+                    && client.player.getMainHandItem().is(ModItems.SYRINGE);
+            if (charging != lastSyringeCharging) {
+                lastSyringeCharging = charging;
+                if (client.player != null) {
+                    if (charging) {
+                        SyringeItem.startChargePose(client.player);
+                    } else {
+                        SyringeItem.stopChargePose(client.player);
+                    }
+                }
+                if (ClientPlayNetworking.canSend(SyringeChargePayload.TYPE)) {
+                    ClientPlayNetworking.send(new SyringeChargePayload(charging));
+                }
+            }
+        });
+
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
                 ClientPlayNetworking.send(new ToolboxRequestPayload()));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             CircuitStorage.get().clear();
             SENT_ADVANCEMENT_CRITERIA.clear();
+            lastSyringeCharging = false;
         });
+    }
+
+    /** 当前是否处于主手注射器左键蓄力姿态。 */
+    public static boolean isSyringeCharging() {
+        return lastSyringeCharging;
     }
 
     /** 上报一个由客户端操作触发的进度条件。 */

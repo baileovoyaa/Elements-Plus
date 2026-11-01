@@ -4,10 +4,13 @@
     "compatibilityLevel": "JAVA_21",
     "mixins": [
         "BottleItemMixin",
+        "CrossbowItemMixin",
         "ExampleMixin",
         "LightningRodBlockMixin",
         "LivingEntityMixin",
         "MarkerMixin",
+        "PotionBrewingMixin",
+        "PotionItemMixin",
         "RedStoneWireBlockAccessor",
         "RedStoneWireBlockMixin",
         "ShapedRecipePatternDataMixin"
