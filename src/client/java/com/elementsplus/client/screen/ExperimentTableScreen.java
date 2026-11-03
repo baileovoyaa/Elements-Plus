@@ -52,6 +52,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     public ButtonGroup experimentGroup;
 
     public ExperimentChapter selectedChapter;
+    private long worldSeed;
     public BaseExperiment selectedExperiment;
     public AbstractWidget currentExperimentWidget;
 
@@ -137,7 +138,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.addRenderableWidget(tabButtonExperiment = new TabButton(this.layoutLeftPos + this.font.width(this.title) + 10, this.topPos, 50, 22, Component.translatable("gui.elements-plus.experiment_table.tab")));
         tabButtonExperiment.active = true;
 
-        this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.layoutLeftPos + 5, inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23, 79, 18, Component.nullToEmpty("物品栏")) {
+        this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.layoutLeftPos + 5, inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23, 79, 18, Component.translatable("container.inventory")) {
             @Override
             public void onClick(double d, double e) {
                 super.onClick(d, e);
@@ -171,7 +172,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         ClientPlayNetworking.send(new ExperimentTableDataRequestPayload());
 
         this.addRenderableWidget(testCasePanelWidget = new ScrollPanelWidget(layoutLeftPos + 9 + 80, topPos + imageHeight - 125, Math.max(1, layoutImageWidth - 95), 120, GuiUtil.SubPanelType.BORDERED, 0xFFA0A0A0));
-        this.addRenderableWidget(collapseButtonTestCases = new CollapseButton(this.layoutLeftPos + 89, testCasesActive ? this.topPos + this.imageHeight - 142 : this.topPos + this.imageHeight - 23, layoutImageWidth - 95, 18, Component.nullToEmpty("测例信息")) {
+        this.addRenderableWidget(collapseButtonTestCases = new CollapseButton(this.layoutLeftPos + 89, testCasesActive ? this.topPos + this.imageHeight - 142 : this.topPos + this.imageHeight - 23, layoutImageWidth - 95, 18, Component.translatable("gui.elements-plus.experiment_table.test_cases")) {
             @Override
             public void onClick(double d, double e) {
                 super.onClick(d, e);
@@ -577,6 +578,11 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                 TextSectionWidget textSectionWidget = new TextSectionWidget(5, y, experimentChapterWidget.getWidth() - 10, textSection.text);
                 experimentChapterWidget.addChild(textSectionWidget);
                 y += textSectionWidget.getHeight();
+            } else if (section instanceof ExperimentChapter.DynamicTextSection dynamicTextSection) {
+                TextSectionWidget textSectionWidget = new TextSectionWidget(5, y,
+                        experimentChapterWidget.getWidth() - 10, dynamicTextSection.text.apply(worldSeed));
+                experimentChapterWidget.addChild(textSectionWidget);
+                y += textSectionWidget.getHeight();
             } else if (section instanceof ExperimentChapter.ImageSection imageSection) {
                 TranslatedImage imageSectionWidget = new TranslatedImage(5, y, experimentChapterWidget.getWidth() - 15, imageSection.image, imageSection.width, imageSection.height);
                 experimentChapterWidget.addChild(imageSectionWidget);
@@ -628,12 +634,17 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         experimentChapterWidget.addChild(new EmptyWidget(0, y));
     }
 
-    public void onServerData(BlockPos pos, String selectedName, String selectedExperimentName, Set<String> unlocked, Set<String> completed) {
+    public void onServerData(BlockPos pos, String selectedName, String selectedExperimentName,
+                             Set<String> unlocked, Set<String> completed, long worldSeed) {
         this.tablePos = pos;
+        this.worldSeed = worldSeed;
         unlockedChapters.clear();
         unlockedChapters.addAll(unlocked);
         completedExperiments.clear();
         completedExperiments.addAll(completed);
+        if (selectedChapter != null) {
+            setSelectedChapter(selectedChapter);
+        }
         for (ChapterEntryButton button : chapterButtons) {
             boolean locked = !unlockedChapters.contains(button.chapter.name);
             button.locked = locked;

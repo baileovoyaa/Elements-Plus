@@ -10,6 +10,7 @@ import com.elementsplus.core.circuit.component.Output8ComponentInstance;
 import com.elementsplus.core.circuit.component.OutputComponentInstance;
 import com.elementsplus.core.circuit.component.ResistorComponentInstance;
 import com.elementsplus.core.circuit.component.ResonatorComponentInstance;
+import com.elementsplus.core.circuit.component.RomComponentInstance;
 import com.elementsplus.core.circuit.component.SawtoothGeneratorComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram.Component;
@@ -83,6 +84,11 @@ public class CircuitSimulator {
     }
 
     private static final double EPS = 1e-6;
+    /**
+     * 自定义时序元件和 RAM 不建立输入依赖边（避免把合法反馈误判为组合环），
+     * 因此需要多遍求值，让组合输入先稳定。
+     */
+    private static final int MAX_EVAL_PASSES = 16;
 
     private CircuitDiagram diagram;
 
@@ -97,6 +103,7 @@ public class CircuitSimulator {
     private int[] topo = new int[0];
     private int topoLen;
     private boolean hasCycle;
+    private boolean hasDeferredInputs;
     private boolean[] badNet = new boolean[0];
 
     private List<Component> comps = new ArrayList<>();
@@ -128,6 +135,9 @@ public class CircuitSimulator {
     /** 下一 tick 需要翻转的位掩码；允许新脉冲与上一轮进位链同时存在。 */
     private final Map<Long, Integer> rippleCounterPendingToggles = new HashMap<>();
     private final List<Integer> rippleCounterNodes = new ArrayList<>();
+    /** RAM 存储内容，按元件坐标索引；每个元素保存一个 0~255 字节。 */
+    private final Map<Long, int[]> ramMemory = new HashMap<>();
+    private final List<Integer> ramNodes = new ArrayList<>();
     private final Map<Long, Integer> counterQ = new HashMap<>();
     private final List<Integer> counterNodes = new ArrayList<>();
     private final Map<Long, Integer> sawtoothPhase = new HashMap<>();
@@ -165,6 +175,7 @@ public class CircuitSimulator {
         rippleCounterPendingToggles.clear();
         counterQ.clear();
         sawtoothPhase.clear();
+        ramMemory.clear();
         for (CustomRuntime runtime : customRuntimes.values()) {
             runtime.simulator.reset();
         }
@@ -324,6 +335,7 @@ public class CircuitSimulator {
         rippleCounterNodes.clear();
         counterNodes.clear();
         sawtoothNodes.clear();
+        ramNodes.clear();
         // 与电容状态一致：重建依赖图（如输入值变化触发）时保留触发器和寄存器状态，
         // 只有显式 reset() 才清空时序状态。
         wireNet.clear();
@@ -333,6 +345,7 @@ public class CircuitSimulator {
         compValues.clear();
         mismatchCells.clear();
         hasCycle = false;
+        hasDeferredInputs = false;
 
         if (diagram == null) {
             totalNodes = 0;
@@ -436,9 +449,16 @@ public class CircuitSimulator {
             } else if (cc == BuiltinCircuitComponents.SAWTOOTH_GENERATOR) {
                 nodeKind[numNets + i] = NodeKind.SEQ;
                 sawtoothNodes.add(numNets + i);
+            } else if (isRam(cc)) {
+                // RAM 的 Y 读取是组合逻辑，但写入需要保持状态；不建立输入边，
+                // 由多遍求值保证读取时地址已经稳定。
+                nodeKind[numNets + i] = NodeKind.SEQ;
+                ramNodes.add(numNets + i);
+                hasDeferredInputs = true;
             } else if (cc instanceof CustomCircuitComponent custom) {
                 CustomRuntime runtime = customRuntime(comps.get(i), custom);
                 nodeKind[numNets + i] = runtime.stateful ? NodeKind.SEQ : NodeKind.COMB;
+                hasDeferredInputs |= runtime.stateful;
             } else {
                 nodeKind[numNets + i] = NodeKind.COMB;
             }
@@ -730,6 +750,25 @@ public class CircuitSimulator {
     private void evalOnce() {
         Arrays.fill(nodeVals, 0L);
         Arrays.fill(nodeValsHigh, 0L);
+        evalPass();
+
+        if (!hasDeferredInputs) {
+            return;
+        }
+        // 时序自定义元件的输入不参与拓扑排序，因此第一遍可能读到 0。
+        // 重复求值直到组合值稳定，保证自定义元件采样的是当前输入。
+        for (int pass = 1; pass < MAX_EVAL_PASSES; pass++) {
+            long[] previousVals = nodeVals.clone();
+            long[] previousHigh = nodeValsHigh.clone();
+            evalPass();
+            if (Arrays.equals(previousVals, nodeVals)
+                    && Arrays.equals(previousHigh, nodeValsHigh)) {
+                break;
+            }
+        }
+    }
+
+    private void evalPass() {
         for (int k = 0; k < topoLen; k++) {
             int node = topo[k];
             NodeKind kind = nodeKind[node];
@@ -987,6 +1026,76 @@ public class CircuitSimulator {
         return false;
     }
 
+    public static boolean isRam(CircuitComponent component) {
+        return component == BuiltinCircuitComponents.RAM_4
+                || component == BuiltinCircuitComponents.RAM_16
+                || component == BuiltinCircuitComponents.RAM_64
+                || component == BuiltinCircuitComponents.RAM_256;
+    }
+
+    public static int ramSize(CircuitComponent component) {
+        if (component == BuiltinCircuitComponents.RAM_4) return 4;
+        if (component == BuiltinCircuitComponents.RAM_16) return 16;
+        if (component == BuiltinCircuitComponents.RAM_64) return 64;
+        if (component == BuiltinCircuitComponents.RAM_256) return 256;
+        return 0;
+    }
+
+    /**
+     * 读取 RAM 当前内容的副本。未求值或该位置不是 RAM 时返回空数组。
+     */
+    public int[] getRamContents(int x, int y) {
+        CircuitDiagram.Block block = diagram == null ? null : diagram.getBlock(x, y);
+        if (!(block instanceof Component component) || !isRam(component.component)) {
+            return new int[0];
+        }
+        int size = ramSize(component.component);
+        int[] memory = ramMemory.get(key(x, y));
+        if (memory == null || memory.length != size) {
+            return new int[size];
+        }
+        return memory.clone();
+    }
+
+    /**
+     * 当前地址输入 D 对应的 RAM 地址；不在 RAM 上时返回 0。
+     */
+    public int getRamAddress(int x, int y) {
+        CircuitDiagram.Block block = diagram == null ? null : diagram.getBlock(x, y);
+        if (!(block instanceof Component component) || !isRam(component.component)) {
+            return 0;
+        }
+        Integer node = compNodes.get(key(x, y));
+        int size = ramSize(component.component);
+        if (node == null || size == 0 || node >= inputPorts.length) {
+            return 0;
+        }
+        return tupleToInt(inPort(node, 1)) & (size - 1);
+    }
+
+    /** 当前 ROM 地址输入 D 对应的地址；不在 ROM 上时返回 0。 */
+    public int getRomAddress(int x, int y) {
+        CircuitDiagram.Block block = diagram == null ? null : diagram.getBlock(x, y);
+        if (!(block instanceof Component component)
+                || component.component != BuiltinCircuitComponents.ROM_256) {
+            return 0;
+        }
+        Integer node = compNodes.get(key(x, y));
+        if (node == null || node >= inputPorts.length) {
+            return 0;
+        }
+        return tupleToInt(inPort(node, 0)) & 0xFF;
+    }
+
+    private static int[] memoryFor(Map<Long, int[]> map, long stateKey, int size) {
+        int[] memory = map.get(stateKey);
+        if (memory == null || memory.length != size) {
+            memory = new int[size];
+            map.put(stateKey, memory);
+        }
+        return memory;
+    }
+
     private long evalCustom(CustomRuntime runtime, int node) {
         CustomCircuitComponent custom = runtime.component;
         Map<String, Long> inputValues = new HashMap<>();
@@ -1051,6 +1160,17 @@ public class CircuitSimulator {
         CustomRuntime runtime = customRuntimes.get(key(component.x, component.y));
         if (runtime != null && runtime.component == component.component) {
             return evalCustom(runtime, node);
+        }
+        if (isRam(cc)) {
+            int size = ramSize(cc);
+            int address = tupleToInt(inPort(node, 1)) & (size - 1);
+            int[] memory = memoryFor(ramMemory, key(component.x, component.y), size);
+            return intToTuple(memory[address] & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
+        }
+        if (cc == BuiltinCircuitComponents.ROM_256) {
+            int address = tupleToInt(inPort(node, 0)) & 0xFF;
+            int value = component.instance instanceof RomComponentInstance rom ? rom.getByte(address) : 0;
+            return intToTuple(value & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
         }
         if (cc == BuiltinCircuitComponents.TRANSISTOR) {
             int west = (int) inPort(node, 0);
@@ -1601,6 +1721,16 @@ public class CircuitSimulator {
                     value = amplifyTuple(inPort(node, 0));
                 }
                 registerQ.put(stateKey, value);
+            }
+        }
+        for (int node : ramNodes) {
+            int idx = node - numNets;
+            Component component = comps.get(idx);
+            int size = ramSize(component.component);
+            int address = tupleToInt(inPort(node, 1)) & (size - 1);
+            if (inPort(node, 2) != 0) {
+                int[] memory = memoryFor(ramMemory, key(component.x, component.y), size);
+                memory[address] = tupleToInt(inPort(node, 0)) & 0xFF;
             }
         }
         for (int node : rippleCounterNodes) {

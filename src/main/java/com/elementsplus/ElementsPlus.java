@@ -243,7 +243,8 @@ public class ElementsPlus implements ModInitializer {
                     for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player))) {
                         unlocked.add(chapter.name);
                     }
-                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), table.getSelectedExperiment(), unlocked, PlayerExperimentsAttachment.get(player)));
+                    long worldSeed = player.serverLevel().getSeed();
+                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), table.getSelectedExperiment(), unlocked, PlayerExperimentsAttachment.get(player), worldSeed));
                     ServerPlayNetworking.send(player, table.buildStatusPayload());
                 }));
 

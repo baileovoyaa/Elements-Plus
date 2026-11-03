@@ -1,24 +1,46 @@
 package com.elementsplus.blocks.pipe;
 
+import com.elementsplus.ModMth;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 public class PipeXBlock extends AbstractPipeBlock {
 
     public PipeXBlock(Properties properties, PipeMaterial pipeMaterial) {
         super(properties, pipeMaterial);
+    }
+
+    @Override
+    public @NotNull BlockState getStateForPlacement(BlockPlaceContext context) {
+        // 与 L 型管相同：一侧连接被点击的面，另一侧取玩家相对方向。
+        Direction clickedSide = context.getClickedFace().getOpposite();
+        Set<Direction> candidates = ModMth.getAxisParallelDirections(clickedSide.getAxis());
+        Direction playerSide = ModMth.orderedByNearest(context.getPlayer(), candidates)
+                .getFirst().getOpposite();
+        // X 型管的轴垂直于选定的两条支臂。
+        Direction.Axis axis = perpendicularAxis(clickedSide.getAxis(), playerSide.getAxis());
+        return this.defaultBlockState().setValue(AXIS, axis);
+    }
+
+    private static Direction.Axis perpendicularAxis(Direction.Axis first, Direction.Axis second) {
+        for (Direction.Axis axis : Direction.Axis.values()) {
+            if (axis != first && axis != second) {
+                return axis;
+            }
+        }
+        throw new IllegalArgumentException("The two sides of the pipe cannot be located on the same axis: " + first + ", " + second);
     }
 
     @Override

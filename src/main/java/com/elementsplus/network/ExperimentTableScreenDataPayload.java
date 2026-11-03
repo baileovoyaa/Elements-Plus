@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
-public record ExperimentTableScreenDataPayload(BlockPos pos, @Nullable String selectedChapter, @Nullable String selectedExperiment, Set<String> unlockedChapters, Set<String> completedExperiments) implements CustomPacketPayload {
+public record ExperimentTableScreenDataPayload(BlockPos pos, @Nullable String selectedChapter, @Nullable String selectedExperiment, Set<String> unlockedChapters, Set<String> completedExperiments, long worldSeed) implements CustomPacketPayload {
     public static final Type<ExperimentTableScreenDataPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, "experiment_table_screen_data"));
     public static final StreamCodec<FriendlyByteBuf, ExperimentTableScreenDataPayload> STREAM_CODEC = StreamCodec.of(
             (buf, payload) -> {
@@ -20,13 +20,15 @@ public record ExperimentTableScreenDataPayload(BlockPos pos, @Nullable String se
                 buf.writeNullable(payload.selectedExperiment(), FriendlyByteBuf::writeUtf);
                 buf.writeCollection(payload.unlockedChapters(), FriendlyByteBuf::writeUtf);
                 buf.writeCollection(payload.completedExperiments(), FriendlyByteBuf::writeUtf);
+                buf.writeLong(payload.worldSeed());
             },
             buf -> new ExperimentTableScreenDataPayload(
                     buf.readBlockPos(),
                     buf.readNullable(FriendlyByteBuf::readUtf),
                     buf.readNullable(FriendlyByteBuf::readUtf),
                     buf.readCollection(HashSet::new, FriendlyByteBuf::readUtf),
-                    buf.readCollection(HashSet::new, FriendlyByteBuf::readUtf)
+                    buf.readCollection(HashSet::new, FriendlyByteBuf::readUtf),
+                    buf.readLong()
             )
     );
 

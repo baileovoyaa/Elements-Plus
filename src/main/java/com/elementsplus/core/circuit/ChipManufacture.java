@@ -82,6 +82,17 @@ public final class ChipManufacture {
      * 导线按有无对应侧向材料计 1 份，各材质位宽为对应倍率。
      */
     public static List<MaterialRequirement> computeRequirements(CircuitDiagram diagram) {
+        return computeRequirements(diagram, null);
+    }
+
+    /**
+     * 统计电路图的原料需求。
+     *
+     * @param chipEquivalent 这次要制造的芯片对应的元件 id；只有制造 ROM 芯片本身时才按 16 倍计算，
+     *                       包含 ROM 的其他芯片不受影响
+     */
+    public static List<MaterialRequirement> computeRequirements(CircuitDiagram diagram,
+                                                                 @Nullable ResourceLocation chipEquivalent) {
         Map<Item, Integer> itemCounts = new LinkedHashMap<>();
         Map<ResourceLocation, Integer> componentCounts = new LinkedHashMap<>();
 
@@ -112,6 +123,13 @@ public final class ChipManufacture {
                     if (id != null) componentCounts.merge(id, 1, Integer::sum);
                 }
             }
+        }
+
+        // ROM 是 256 字节器件；实验只要求 16 字节。只有在制造 ROM 芯片本身时，
+        // 整个电路图的原料才按 16 倍计算；包含 ROM 的其他芯片不受影响。
+        if (chipEquivalent != null && chipEquivalent.equals(BuiltinCircuitComponents.ROM_256.getId())) {
+            itemCounts.replaceAll((item, count) -> count * 16);
+            componentCounts.replaceAll((id, count) -> count * 16);
         }
 
         List<MaterialRequirement> result = new ArrayList<>();

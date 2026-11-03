@@ -459,6 +459,96 @@ public class BuiltinExperiments {
             BuiltinCircuitComponents.SAWTOOTH_GENERATOR.getIcon(),
             new CircuitExperiment(buildSawtoothTests(), BuiltinCircuitComponents.SAWTOOTH_GENERATOR));
 
+    // ================= 多字节存储器 =================
+
+    private static SequentialTick ramTick(int address, int data, int we, int expected) {
+        return new SequentialTick(
+                Map.of("D", new PinValue(pin8(address)),
+                        "A", new PinValue(pin8(data)),
+                        "WE", new PinValue(we)),
+                Map.of("Y", new PinValue(pin8(expected))));
+    }
+
+    /**
+     * 简化 March C：
+     * 写入一遍唯一数据 -> 顺序读回 -> 逆序清零 -> 逆序读回。
+     * 每个测例都使用独立的模拟器，因此 RAM 初始内容为 0。
+     */
+    private static ConstantSequentialTestCase buildRamMarchTest(int size) {
+        List<SequentialTick> ticks = new ArrayList<>();
+        int[] values = new int[size];
+        for (int address = 0; address < size; address++) {
+            values[address] = (address * 73 + 29) & 0xFF;
+            ticks.add(ramTick(address, values[address], 15, values[address]));
+        }
+        for (int address = 0; address < size; address++) {
+            ticks.add(ramTick(address, 0, 0, values[address]));
+        }
+        for (int address = size - 1; address >= 0; address--) {
+            ticks.add(ramTick(address, 0, 15, 0));
+        }
+        for (int address = size - 1; address >= 0; address--) {
+            ticks.add(ramTick(address, 0, 0, 0));
+        }
+        return new ConstantSequentialTestCase(ticks);
+    }
+
+    public static final CircuitExperiment RAM_4 = register("ram_4",
+            BuiltinCircuitComponents.RAM_4.getIcon(),
+            new CircuitExperiment(List.of(buildRamMarchTest(4)), BuiltinCircuitComponents.RAM_4));
+
+    public static final CircuitExperiment RAM_16 = register("ram_16",
+            BuiltinCircuitComponents.RAM_16.getIcon(),
+            new CircuitExperiment(List.of(buildRamMarchTest(16)), BuiltinCircuitComponents.RAM_16));
+
+    public static final CircuitExperiment RAM_64 = register("ram_64",
+            BuiltinCircuitComponents.RAM_64.getIcon(),
+            new CircuitExperiment(List.of(buildRamMarchTest(64)), BuiltinCircuitComponents.RAM_64));
+
+    public static final CircuitExperiment RAM_256 = register("ram_256",
+            BuiltinCircuitComponents.RAM_256.getIcon(),
+            new CircuitExperiment(List.of(buildRamMarchTest(256)), BuiltinCircuitComponents.RAM_256));
+
+    /** ROM 测例：只检查低 4 位地址 0~15，预期值由当前存档世界种子生成。 */
+    private static final class RomReadTestCase implements CircuitExperiment.SeededCombinationalTestCase {
+        private final int address;
+
+        private RomReadTestCase(int address) {
+            this.address = address;
+        }
+
+        @Override
+        public Map<String, PinValue> getInputs() {
+            return Map.of("D", new PinValue(pin8(address)));
+        }
+
+        @Override
+        public Map<String, PinValue> getExpectedOutputs() {
+            return Map.of("Y", new PinValue(pin8(0)));
+        }
+
+        @Override
+        public Map<String, PinValue> getExpectedOutputs(long worldSeed) {
+            return Map.of("Y", new PinValue(pin8(MemoryExperimentData.romValues(worldSeed)[address] & 0xFF)));
+        }
+
+        @Override
+        public boolean judgeOutputs(Map<String, PinValue> outputs) {
+            return getExpectedOutputs(0L).equals(outputs);
+        }
+
+        @Override
+        public boolean judgeOutputs(Map<String, PinValue> outputs, long worldSeed) {
+            return getExpectedOutputs(worldSeed).equals(outputs);
+        }
+    }
+
+    public static final CircuitExperiment ROM_256 = register("rom_256",
+            BuiltinCircuitComponents.ROM_256.getIcon(),
+            new CircuitExperiment(IntStream.range(0, 16)
+                    .mapToObj(i -> (TestCase) new RomReadTestCase(i))
+                    .toList(), BuiltinCircuitComponents.ROM_256));
+
     // ================= 模数/数模转换 =================
 
     private static List<TestCase> buildAdcTests() {

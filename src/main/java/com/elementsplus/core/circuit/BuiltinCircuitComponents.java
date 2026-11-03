@@ -531,11 +531,34 @@ public class BuiltinCircuitComponents {
     }});
 
     // 存储器
-    public static final CircuitComponent RAM = register(new CircuitComponent(ElementsPlus.id("ram"), Component.translatable("circuit.elements-plus.component.ram"), Component.translatable("circuit.elements-plus.component.ram.description"), ElementsPlus.id("textures/circuit/ram.png")) {{
+    public static final CircuitComponent RAM_4 = register(new CircuitComponent(ElementsPlus.id("ram_4"), Component.translatable("circuit.elements-plus.component.ram_4"), Component.translatable("circuit.elements-plus.component.ram_4.description"), ElementsPlus.id("textures/circuit/ram_4.png")) {{
         setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
         setPin(Direction.SOUTH, 0, PinType.INPUT, "D", 8);
         setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
         setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent RAM_16 = register(new CircuitComponent(ElementsPlus.id("ram_16"), Component.translatable("circuit.elements-plus.component.ram_16"), Component.translatable("circuit.elements-plus.component.ram_16.description"), ElementsPlus.id("textures/circuit/ram_16.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
+        setPin(Direction.SOUTH, 0, PinType.INPUT, "D", 8);
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent RAM_64 = register(new CircuitComponent(ElementsPlus.id("ram_64"), Component.translatable("circuit.elements-plus.component.ram_64"), Component.translatable("circuit.elements-plus.component.ram_64.description"), ElementsPlus.id("textures/circuit/ram_64.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
+        setPin(Direction.SOUTH, 0, PinType.INPUT, "D", 8);
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent RAM_256 = register(new CircuitComponent(ElementsPlus.id("ram_256"), Component.translatable("circuit.elements-plus.component.ram_256"), Component.translatable("circuit.elements-plus.component.ram_256.description"), ElementsPlus.id("textures/circuit/ram_256.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
+        setPin(Direction.SOUTH, 0, PinType.INPUT, "D", 8);
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent ROM_256 = register(new CircuitComponent(ElementsPlus.id("rom_256"), Component.translatable("circuit.elements-plus.component.rom_256"), Component.translatable("circuit.elements-plus.component.rom_256.description"), ElementsPlus.id("textures/circuit/rom_256.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "D", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+        setInstanceFactory(RomComponentInstance::new);
     }});
 
     public static CircuitComponent register(CircuitComponent circuitComponent) {

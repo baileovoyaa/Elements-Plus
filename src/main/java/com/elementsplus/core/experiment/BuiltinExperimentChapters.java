@@ -48,6 +48,11 @@ public class BuiltinExperimentChapters {
         public ExperimentChapter.ImageSection image(ResourceLocation image, int width, int height) {
             return new ExperimentChapter.ImageSection(image, width, height);
         }
+
+        public ExperimentChapter.DynamicTextSection dynamicText(
+                java.util.function.LongFunction<List<Component>> text) {
+            return new ExperimentChapter.DynamicTextSection(text);
+        }
     }
 
     // ========== 行 / 参数描述 ==========
@@ -508,6 +513,23 @@ public class BuiltinExperimentChapters {
             ch.experiments(BuiltinExperiments.REGISTER_ANALOG).optional()
     ), Set.of(FLIP_FLOP)));
 
+    private static List<Component> buildRomValueLines(long worldSeed) {
+        byte[] values = MemoryExperimentData.romValues(worldSeed);
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.translatable(
+                "experiment.elements-plus.group.multi_byte_memory.rom_values"));
+        for (int row = 0; row < 4; row++) {
+            StringBuilder sb = new StringBuilder();
+            for (int col = 0; col < 4; col++) {
+                if (col > 0) sb.append("  ");
+                int address = row * 4 + col;
+                sb.append(String.format("%02X: %02X", address, values[address] & 0xFF));
+            }
+            lines.add(Component.literal(sb.toString()).withColor(0xE0E0E0));
+        }
+        return lines;
+    }
+
     public static final ExperimentChapter ANALOG_DIGITAL_CONVERTER = register(chapter("analog_digital_converter", null, ch -> List.of(
             ch.text(6,
                     line(1, style(BLUE)),
@@ -535,6 +557,41 @@ public class BuiltinExperimentChapters {
             ch.experiments(BuiltinExperiments.SAWTOOTH_GENERATOR).optional(),
             ch.text(1,
                     line(0, style(GOLD))
+            )
+    ), Set.of(REGISTER)));
+
+    public static final ExperimentChapter MULTI_BYTE_MEMORY = register(chapter("multi_byte_memory", null, ch -> List.of(
+            ch.text(4,
+                    line(0, style(BLUE)),
+                    line(1, style(BLUE), style(BLUE), style(GOLD)),
+                    line(2).withStyle(BOLD)
+            ),
+            ch.text(13,
+                    line(0, style(GOLD)),
+                    line(1, style(GOLD)),
+                    line(8, style(BOLD)),
+                    line(9, style(BOLD))
+            ),
+            ch.experiments(BuiltinExperiments.RAM_4),
+            ch.text(6,
+                    line(1, style(GOLD)),
+                    line(2, style(GOLD)),
+                    line(3, style(GOLD)),
+                    line(5, style(BLUE))
+            ),
+            ch.experiments(BuiltinExperiments.RAM_16, BuiltinExperiments.RAM_64, BuiltinExperiments.RAM_256),
+            ch.text(8,
+                    line(0, style(GOLD)),
+                    line(6, style(GOLD))
+            ),
+            ch.text(1),
+            ch.dynamicText(seed -> buildRomValueLines(seed)),
+            ch.text(1),
+            ch.experiments(BuiltinExperiments.ROM_256).optional(),
+            ch.text(6,
+                    line(0, style(GOLD)),
+                    line(2, style(BLUE)),
+                    line(3, style(BLUE))
             )
     ), Set.of(REGISTER)));
 

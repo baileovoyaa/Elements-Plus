@@ -645,7 +645,9 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     || component.component == BuiltinCircuitComponents.INPUT_8
                     || component.component == BuiltinCircuitComponents.CONST_8
                     || component.component == BuiltinCircuitComponents.MASK_8
-                    || component.component == BuiltinCircuitComponents.CONST_ANALOG_8) {
+                    || component.component == BuiltinCircuitComponents.CONST_ANALOG_8
+                    || CircuitSimulator.isRam(component.component)
+                    || component.component == BuiltinCircuitComponents.ROM_256) {
                 long now = Util.getMillis();
                 if (lastInputClicked == component && now - lastInputClickTime <= 300) {
                     if (component.component == BuiltinCircuitComponents.INPUT) {

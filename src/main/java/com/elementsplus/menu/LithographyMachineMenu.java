@@ -221,7 +221,7 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         }
         boolean sufficient = ChipManufacture.allSufficient(
                 this.playerInventory.items,
-                ChipManufacture.computeRequirements(circuit));
+                ChipManufacture.computeRequirements(circuit, equiv));
         ItemStack expected = sufficient
                 ? ChipManufacture.makeChip(chipScale, equiv, record.isCustom() ? record.id() : null)
                 : ItemStack.EMPTY;
@@ -245,8 +245,11 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         }
         ItemStack diagramStack = this.container.getItem(0);
         CircuitDiagram circuit = CircuitItemData.diagram(diagramStack);
+        StoredCircuit record = CircuitItemData.stored(diagramStack);
         if (circuit != null) {
-            for (ChipManufacture.MaterialRequirement requirement : ChipManufacture.computeRequirements(circuit)) {
+            ResourceLocation chipEquivalent = record == null ? null : record.componentId();
+            for (ChipManufacture.MaterialRequirement requirement
+                    : ChipManufacture.computeRequirements(circuit, chipEquivalent)) {
                 ChipManufacture.consume(this.playerInventory, requirement);
             }
         }

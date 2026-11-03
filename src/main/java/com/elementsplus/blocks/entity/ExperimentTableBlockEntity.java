@@ -504,7 +504,9 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player))) {
             unlocked.add(chapter.name);
         }
-        return new ExperimentTableScreenDataPayload(worldPosition, selectedChapter, selectedExperiment, unlocked, PlayerExperimentsAttachment.get(player));
+        long worldSeed = this.level instanceof ServerLevel serverLevel ? serverLevel.getSeed() : 0L;
+        return new ExperimentTableScreenDataPayload(worldPosition, selectedChapter, selectedExperiment,
+                unlocked, PlayerExperimentsAttachment.get(player), worldSeed);
     }
 
     public void syncStatus() {

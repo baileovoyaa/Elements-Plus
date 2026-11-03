@@ -13,6 +13,7 @@ import com.elementsplus.core.circuit.component.Output8ComponentInstance;
 import com.elementsplus.core.circuit.component.OutputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 
@@ -69,6 +70,18 @@ public class CircuitExperiment extends BaseExperiment {
         Map<String, PinValue> getInputs();
 
         boolean judgeOutputs(Map<String, PinValue> outputs);
+    }
+
+    /**
+     * 预期输出依赖世界种子的组合测例（例如 ROM 章节中随机生成的 16 字节表）。
+     * 预检只读取占位输出以确定标签与位宽，真正判定时使用当前存档种子。
+     */
+    public interface SeededCombinationalTestCase extends CombinationalTestCase {
+        Map<String, PinValue> getExpectedOutputs();
+
+        Map<String, PinValue> getExpectedOutputs(long worldSeed);
+
+        boolean judgeOutputs(Map<String, PinValue> outputs, long worldSeed);
     }
 
     public static class ConstantCombinationalTestCase implements CombinationalTestCase {
@@ -271,6 +284,9 @@ public class CircuitExperiment extends BaseExperiment {
         if (testCase instanceof RandomizedCombinationalTestCase randomized) {
             return randomized.expectedOutputs;
         }
+        if (testCase instanceof SeededCombinationalTestCase seeded) {
+            return seeded.getExpectedOutputs();
+        }
         return null;
     }
 
@@ -310,14 +326,19 @@ public class CircuitExperiment extends BaseExperiment {
 
         Map<String, PinValue> inputs = buildRuntimeInputs(context, combinationalTestCase);
         Map<String, PinValue> outputs = evaluate(inputs, diagram);
-        boolean pass = combinationalTestCase.judgeOutputs(outputs);
+        long worldSeed = worldSeed(context);
+        boolean pass = combinationalTestCase instanceof SeededCombinationalTestCase seeded
+                ? seeded.judgeOutputs(outputs, worldSeed)
+                : combinationalTestCase.judgeOutputs(outputs);
         context.reportTestResult(index, pass);
 
         if (!pass) {
             // 将失败测例的输入写回电路图（对应输入元件修改信号值，无关输入置0），便于之后在光刻机中检查失败逻辑
             writeBackFailedInputs(context, inputs);
-            context.setErrorLines(buildFailureLines(combinationalTestCase, inputs, outputs));
-            Map<String, PinValue> expectedOutputs = testExpectedOutputs(combinationalTestCase);
+            context.setErrorLines(buildFailureLines(combinationalTestCase, inputs, outputs, worldSeed));
+            Map<String, PinValue> expectedOutputs = combinationalTestCase instanceof SeededCombinationalTestCase seeded
+                    ? seeded.getExpectedOutputs(worldSeed)
+                    : testExpectedOutputs(combinationalTestCase);
             context.setFailureInfo(ExperimentFailureInfo.of(inputs, expectedOutputs, outputs));
             context.complete(false);
             return false;
@@ -614,7 +635,8 @@ public class CircuitExperiment extends BaseExperiment {
         return reasons;
     }
 
-    private List<Component> buildFailureLines(CombinationalTestCase testCase, Map<String, PinValue> inputs, Map<String, PinValue> outputs) {
+    private List<Component> buildFailureLines(CombinationalTestCase testCase, Map<String, PinValue> inputs,
+                                              Map<String, PinValue> outputs, long worldSeed) {
         List<Component> lines = new ArrayList<>();
         lines.add(Component.translatable("experiment.elements-plus.testfail.header"));
         if (testCase instanceof ConstantCombinationalTestCase constant) {
@@ -623,9 +645,21 @@ public class CircuitExperiment extends BaseExperiment {
         } else if (testCase instanceof RandomizedCombinationalTestCase randomized) {
             lines.add(Component.translatable("experiment.elements-plus.testfail.input", formatPins(inputs)));
             lines.add(Component.translatable("experiment.elements-plus.testfail.expected", formatPins(randomized.expectedOutputs)));
+        } else if (testCase instanceof SeededCombinationalTestCase seeded) {
+            lines.add(Component.translatable("experiment.elements-plus.testfail.input", formatPins(inputs)));
+            lines.add(Component.translatable("experiment.elements-plus.testfail.expected",
+                    formatPins(seeded.getExpectedOutputs(worldSeed))));
         }
         lines.add(Component.translatable("experiment.elements-plus.testfail.actual", formatPins(outputs)));
         return lines;
+    }
+
+    private static long worldSeed(Context context) {
+        if (context.blockEntity != null
+                && context.blockEntity.getLevel() instanceof ServerLevel serverLevel) {
+            return serverLevel.getSeed();
+        }
+        return 0L;
     }
 
     private static List<Component> buildFailureLinesForTick(Map<String, PinValue> inputs,

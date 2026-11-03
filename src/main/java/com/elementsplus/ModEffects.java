@@ -27,6 +27,8 @@ public class ModEffects {
     }
     public static Holder<MobEffect> STEEL_PIPE_SHIELD;
     public static Holder<MobEffect> RUST_PROOF;
+    /** 内部标记：玩家处于 <0.4 atm 的空间，复用原版水下空气消耗。 */
+    public static Holder<MobEffect> LOW_PRESSURE;
     public static List<Holder<MobEffect>> getEffects() {
         return EFFECTS;
     }
@@ -45,6 +47,10 @@ public class ModEffects {
                     public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
                         return true;
                     }
+                }
+        );
+        LOW_PRESSURE = registerEffect("low_pressure",
+                new MobEffect(MobEffectCategory.HARMFUL, 0x88CCFF) {
                 }
         );
         ElementsPlus.LOGGER.info("Registered {} effect(s)", EFFECTS.size());

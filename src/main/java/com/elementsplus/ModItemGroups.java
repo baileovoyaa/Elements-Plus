@@ -16,6 +16,8 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.ItemLike;
 
 import java.util.ArrayList;
@@ -121,6 +123,18 @@ public class ModItemGroups {
                 addItemStacksToTab("circuit", new ItemStack(Holder.direct(ModItems.CREATIVE_COMPONENT), 1, DataComponentPatch.builder().set(ModDataComponents.EQUIVALENT_COMPONENT, component.getId()).build()));
             }
         }
+
+        // 在“元素++”末尾列出每种带效果的药水对应的注射器。
+        // 默认注射器本身已经展示防锈药水，因此这里跳过它，避免重复。
+        ItemGroupEvents.modifyEntriesEvent(getTabKey("steel_pipe")).register(itemGroup -> {
+            for (Holder<Potion> potion : BuiltInRegistries.POTION.holders().toList()) {
+                if (potion.value().getEffects().isEmpty()
+                        || potion.value() == ModPotions.RUST_PROOF.value()) {
+                    continue;
+                }
+                itemGroup.accept(PotionContents.createItemStack(ModItems.SYRINGE, potion));
+            }
+        });
 
         ElementsPlus.LOGGER.info("Registered {} creative tab(s)", TAB_CONFIGS.size());
     }

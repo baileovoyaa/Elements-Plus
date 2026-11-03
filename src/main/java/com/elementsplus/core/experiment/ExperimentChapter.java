@@ -56,6 +56,15 @@ public class ExperimentChapter {
         }
     }
 
+    /** 内容依赖存档世界种子的文本段（例如 ROM 实验的随机字节表）。 */
+    public static class DynamicTextSection extends Section {
+        public java.util.function.LongFunction<List<Component>> text;
+
+        public DynamicTextSection(java.util.function.LongFunction<List<Component>> text) {
+            this.text = text;
+        }
+    }
+
     public ExperimentChapter(String name, ResourceLocation icon, List<Section> sections, Set<ExperimentChapter> dependencies) {
         this.name = name;
         this.icon = icon;

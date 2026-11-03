@@ -34,7 +34,8 @@ category: "用户文档"
 - [寄存器](register.md)
 - [模数转换器](analog-digital-converter.md)
 - [计数器](counter.md)
-- 多字节存储器
+- [多字节存储器](multi-byte-memory.md)
+- A+B问题
 - 计算机架构-输入输出寄存器
 - 计算机架构-运算
 - 计算机架构-立即数

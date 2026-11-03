@@ -74,6 +74,7 @@ public class ElementsPlusClient implements ClientModInitializer {
         // This entrypoint is suitable for setting up client-specific logic, such as rendering.
         ModMenuScreens.initialize();
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.CHARGED_LIGHTNING_ROD, RenderType.cutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.CRYSTALLIZER, RenderType.translucent());
         EntityRendererRegistry.register(ModEntities.SYRINGE_PROJECTILE,
                 (context) -> new ThrownItemRenderer<SyringeProjectile>(context));
 
@@ -106,7 +107,8 @@ public class ElementsPlusClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(ExperimentTableScreenDataPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
-                        screen.onServerData(payload.pos(), payload.selectedChapter(), payload.selectedExperiment(), payload.unlockedChapters(), payload.completedExperiments());
+                        screen.onServerData(payload.pos(), payload.selectedChapter(), payload.selectedExperiment(),
+                                payload.unlockedChapters(), payload.completedExperiments(), payload.worldSeed());
                     }
                 }));
 

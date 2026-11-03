@@ -3,6 +3,7 @@ package com.elementsplus.blocks.entity;
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.ModAdvancements;
 import com.elementsplus.ModBlockEntityTypes;
+import com.elementsplus.ModEffects;
 import com.elementsplus.blocks.PressureMachineBlock;
 import com.elementsplus.menu.PressureMachineMenu;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -58,6 +59,7 @@ import java.util.Set;
  *     台阶/楼梯等不完整方块视为空气；任一边长超过 16 格或空气数超过 4096 视为开放空间；</li>
  *     <li>流量随压差变化：顺压差（入口更高）时更快，逆压差（出口更高）时更慢；
  *     输入或输出口被堵住、或两侧连成同一空间时不工作；</li>
+ *     <li>空间压强低于 0.4 atm 时，玩家空气值会像在水中一样持续下降；</li>
  *     <li>空间压强偏离标准值会施加反胃与高压/低压伤害；</li>
  *     <li>参数均为占位值，见下方常量，后续进游戏实测调整。</li>
  * </ul>
@@ -93,6 +95,8 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
     public static final double HIGH_DAMAGE_THRESHOLD = 1.25;
     /** 低压伤害阈值（1-p）。 */
     public static final double LOW_DAMAGE_THRESHOLD = 0.9;
+    /** 压强低于该值时玩家开始像在水中一样消耗空气（atm）。 */
+    public static final double LOW_AIR_PRESSURE_THRESHOLD = 0.4;
     /** 高压伤害系数（心/秒/Δ）。 */
     public static final double HIGH_DAMAGE_K = 0.9;
     /** 低压伤害系数（心/秒/Δ）。 */
@@ -640,7 +644,8 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
         boolean nausea = Math.abs(delta) >= NAUSEA_THRESHOLD;
         boolean highDamage = delta >= HIGH_DAMAGE_THRESHOLD;
         boolean lowDamage = -delta >= LOW_DAMAGE_THRESHOLD;
-        if (!nausea && !highDamage && !lowDamage) {
+        boolean lowAir = pressure < LOW_AIR_PRESSURE_THRESHOLD;
+        if (!nausea && !highDamage && !lowDamage && !lowAir) {
             return;
         }
 
@@ -653,6 +658,11 @@ public class PressureMachineBlockEntity extends BaseContainerBlockEntity impleme
             }
             if (entity instanceof Player player && (player.isCreative() || player.isSpectator())) {
                 continue;
+            }
+            if (lowAir && entity instanceof Player) {
+                // 隐藏标记效果；客户端也据此复用原版水下空气条表现。
+                entity.addEffect(new MobEffectInstance(ModEffects.LOW_PRESSURE,
+                        40, 0, false, false, false));
             }
             if (nausea) {
                 entity.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 120, 0, false, false));

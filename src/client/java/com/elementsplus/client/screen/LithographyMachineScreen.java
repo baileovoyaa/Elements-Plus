@@ -16,6 +16,7 @@ import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
+import com.elementsplus.core.circuit.component.RomComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.CopyCompiledSettingPayload;
@@ -75,6 +76,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public PlayerToolboxWidget playerToolboxWidget;
     private ContextMenu contextMenu;
     private ToolboxDialog toolboxDialog;
+    private MemoryEditorDialog memoryDialog;
 
     public Map<Integer, Point> slotPosition;
 
@@ -500,6 +502,14 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     }
 
     private void openNumberValueDialog(CircuitDiagram.Component component) {
+        if (CircuitSimulator.isRam(component.component)) {
+            openRamDialog(component);
+            return;
+        }
+        if (component.component == BuiltinCircuitComponents.ROM_256) {
+            openRomDialog(component);
+            return;
+        }
         // 锁定的电路图只允许预览修改输入元件；常量/掩码不是输入输出元件，不应弹窗。
         if (circuitPanel.isReadOnly()
                 && (component.component == BuiltinCircuitComponents.CONST_8
@@ -512,6 +522,57 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         } else {
             openBusValueDialog(component);
         }
+    }
+
+    private void openRamDialog(CircuitDiagram.Component component) {
+        int[] contents = simulator.getRamContents(component.x, component.y);
+        byte[] data = new byte[contents.length];
+        for (int i = 0; i < contents.length; i++) {
+            data[i] = (byte) contents[i];
+        }
+        memoryDialog = new MemoryEditorDialog(
+                Component.translatable("gui.elements-plus.memory.ram_title"),
+                data, contents.length,
+                () -> simulator.getRamAddress(component.x, component.y),
+                false, this.font, this.width, this.height,
+                new MemoryEditorDialog.Callback() {
+                    @Override
+                    public void onSave(byte[] ignored) {
+                        memoryDialog = null;
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        memoryDialog = null;
+                    }
+                });
+    }
+
+    private void openRomDialog(CircuitDiagram.Component component) {
+        if (!(component.instance instanceof RomComponentInstance rom)) {
+            return;
+        }
+        boolean editable = !circuitPanel.isReadOnly();
+        memoryDialog = new MemoryEditorDialog(
+                Component.translatable("gui.elements-plus.memory.rom_title"),
+                rom.getData(), 256,
+                () -> simulator.getRomAddress(component.x, component.y),
+                editable, this.font, this.width, this.height,
+                new MemoryEditorDialog.Callback() {
+                    @Override
+                    public void onSave(byte[] data) {
+                        if (editable) {
+                            rom.setData(data);
+                            circuitPanel.commitDiagram();
+                        }
+                        memoryDialog = null;
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        memoryDialog = null;
+                    }
+                });
     }
 
     private void openBusValueDialog(CircuitDiagram.Component component) {
@@ -669,6 +730,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (memoryDialog != null) {
+            memoryDialog.mouseClicked(mouseX, mouseY, button);
+            return true;
+        }
         if (toolboxDialog != null) {
             toolboxDialog.mouseClicked(mouseX, mouseY, button);
             return true;
@@ -691,6 +756,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (memoryDialog != null) {
+            memoryDialog.mouseReleased(mouseX, mouseY, button);
+            return true;
+        }
         if (toolboxDialog != null || contextMenu != null) {
             return true;
         }
@@ -702,6 +771,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (memoryDialog != null) {
+            memoryDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+            return true;
+        }
         if (toolboxDialog != null) {
             return true;
         }
@@ -710,6 +783,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (memoryDialog != null) {
+            return true;
+        }
         if (contextMenu != null) {
             contextMenu = null;
             return true;
@@ -722,6 +798,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (memoryDialog != null) {
+            return memoryDialog.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (toolboxDialog != null) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 toolboxDialog.cancel();
@@ -783,6 +862,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean charTyped(char c, int modifiers) {
+        if (memoryDialog != null) {
+            return memoryDialog.charTyped(c, modifiers);
+        }
         if (toolboxDialog != null) {
             return toolboxDialog.charTyped(c, modifiers);
         }
@@ -834,12 +916,12 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
         CircuitDiagram diagram = null;
         CircuitDiagram.Scale chipScale = null;
+        com.elementsplus.core.circuit.storage.StoredCircuit record = null;
         if (!diagramStack.isEmpty() && diagramStack.is(ModItems.CIRCUIT_DIAGRAM)
                 && com.elementsplus.core.circuit.CircuitItemData.isCompiled(diagramStack)
                 && !inputStack.isEmpty()) {
             chipScale = ChipManufacture.emptyChipScale(inputStack);
-            com.elementsplus.core.circuit.storage.StoredCircuit record =
-                    com.elementsplus.core.circuit.CircuitItemData.stored(diagramStack);
+            record = com.elementsplus.core.circuit.CircuitItemData.stored(diagramStack);
             diagram = record == null ? null : record.diagram();
             if (chipScale == null || diagram == null || !ChipManufacture.canHoldScale(chipScale, diagram.scale)) {
                 diagram = null;
@@ -848,7 +930,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
         if (diagram != null && chipScale != null) {
             List<ItemStack> inventory = menu.getPlayerInventory().items;
-            List<ChipManufacture.MaterialRequirement> requirements = ChipManufacture.computeRequirements(diagram);
+            List<ChipManufacture.MaterialRequirement> requirements = ChipManufacture.computeRequirements(
+                    diagram, record == null ? null : record.componentId());
             for (ChipManufacture.MaterialRequirement requirement : requirements) {
                 Object icon;
                 if (requirement instanceof ChipManufacture.ItemRequirement itemReq) {
@@ -997,6 +1080,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (toolboxDialog != null) {
             toolboxDialog.tick();
         }
+        if (memoryDialog != null) {
+            memoryDialog.tick();
+        }
         ItemStack diagramNow = menu.diagramSlot.getItem();
         ItemStack inputNow = menu.manufactureInputSlot.getItem();
         boolean inventoryChanged = inventoryChanged();
@@ -1126,6 +1212,15 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         });
         int y = 22;
         attributeEditBox = null;
+        if (attrComponent.component == BuiltinCircuitComponents.ROM_256) {
+            Button editButton = attributeWidget.addChild(Button.builder(
+                    Component.translatable("gui.elements-plus.lithography_machine.rom_edit_content"),
+                    button -> openRomDialog(attrComponent))
+                    .bounds(4, y, attributeWidget.getWidth() - 8, 20)
+                    .build());
+            editButton.active = !readOnly;
+            return;
+        }
         for (CircuitComponentInstance.Config config : attrComponent.instance.getConfigs()) {
             if (config instanceof CircuitComponentInstance.BooleanConfig booleanConfig) {
                 attributeWidget.addChild(new AbstractWidget(4, y, attributeWidget.getWidth() - 28, 10, Component.empty()) {
@@ -1285,7 +1380,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             circuitPanel.setPreviewStack(carried);
             this.menu.setCarried(ItemStack.EMPTY);
         }
-        super.render(guiGraphics, toolboxDialog == null ? mouseX : -1, toolboxDialog == null ? mouseY : -1, delta);
+        boolean modal = toolboxDialog != null || memoryDialog != null;
+        super.render(guiGraphics, modal ? -1 : mouseX, modal ? -1 : mouseY, delta);
         if (hideCarried) {
             this.menu.setCarried(carried);
             circuitPanel.setPreviewStack(ItemStack.EMPTY);
@@ -1307,7 +1403,12 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (toolboxDialog != null) {
             toolboxDialog.render(guiGraphics, mouseX, mouseY, delta);
         }
-        this.renderTooltip(guiGraphics, mouseX, mouseY);
+        if (memoryDialog != null) {
+            memoryDialog.render(guiGraphics, mouseX, mouseY, delta);
+        }
+        if (memoryDialog == null && toolboxDialog == null) {
+            this.renderTooltip(guiGraphics, mouseX, mouseY);
+        }
     }
 
     @Override
