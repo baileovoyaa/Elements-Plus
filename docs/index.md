@@ -10,6 +10,10 @@ title: 文档索引
 
 # 开发文档索引
 
+## 构建、执行与部署
+
+- [本地配置 Gradle 发行版镜像](dev/deploy/gradle-mirror.md)
+
 ## 阶段性文档
 
 - [v1.0.0](dev/phases/v1.0.0/index.md)

@@ -70,12 +70,33 @@ echo location of your Java installation. 1>&2
 :execute
 @rem Setup the command line
 
+@rem Optional local override of the Gradle distribution URL (e.g. a mirror).
+@rem Precedence: GRADLE_DISTRIBUTION_URL environment variable, then the
+@rem "gradle.distributionUrl" entry in local.properties (not committed).
+@rem The generated wrapper scripts have no built-in support for this, so a copy
+@rem of the wrapper jar plus a matching properties file is used instead.
+set "GRADLE_WRAPPER_JAR=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar"
+if not defined GRADLE_DISTRIBUTION_URL if exist "%APP_HOME%\local.properties" (
+    for /f "usebackq eol=# tokens=1,* delims==" %%A in ("%APP_HOME%\local.properties") do (
+        if /i "%%A"=="gradle.distributionUrl" set "GRADLE_DISTRIBUTION_URL=%%B"
+    )
+)
+if defined GRADLE_DISTRIBUTION_URL (
+    for /f "tokens=*" %%C in ("%GRADLE_DISTRIBUTION_URL%") do set "GRADLE_DISTRIBUTION_URL=%%C"
+)
+if defined GRADLE_DISTRIBUTION_URL (
+    copy /y "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" "%APP_HOME%\gradle\wrapper\gradle-wrapper-local.jar" >NUL
+    findstr /v /b /i /c:"distributionUrl=" "%APP_HOME%\gradle\wrapper\gradle-wrapper.properties" > "%APP_HOME%\gradle\wrapper\gradle-wrapper-local.properties"
+    >> "%APP_HOME%\gradle\wrapper\gradle-wrapper-local.properties" echo distributionUrl=%GRADLE_DISTRIBUTION_URL%
+    set "GRADLE_WRAPPER_JAR=%APP_HOME%\gradle\wrapper\gradle-wrapper-local.jar"
+)
+
 
 
 @rem Execute Gradle
 @rem endlocal doesn't take effect until after the line is parsed and variables are expanded
 @rem which allows us to clear the local environment before executing the java command
-endlocal & "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" %* & call :exitWithErrorLevel
+endlocal & "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -jar "%GRADLE_WRAPPER_JAR%" %* & call :exitWithErrorLevel
 
 :exitWithErrorLevel
 @rem Use "%COMSPEC%" /c exit to allow operators to work properly in scripts
