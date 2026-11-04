@@ -1041,6 +1041,8 @@
   "tooltip.elements-plus.custom_component.scale": "\nScale: %s",
   "command.elements-plus.circuit.player_only": "Only a player can run this command",
   "command.elements-plus.circuit.given": "Received circuit: %s (%s)",
+  "command.elements-plus.circuit.given_chip": "Received chip: %s (%s)",
+  "command.elements-plus.circuit.chip_unavailable": "This circuit cannot be made into a chip: %s",
   "command.elements-plus.circuit.unknown": "Circuit not found: %s",
   "command.elements-plus.circuit.unknown_id": "No circuit with UUID %s",
   "command.elements-plus.circuit.invalid_id": "Invalid UUID: %s",

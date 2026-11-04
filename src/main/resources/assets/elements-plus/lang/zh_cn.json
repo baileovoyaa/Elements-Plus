@@ -1040,6 +1040,8 @@
   "tooltip.elements-plus.custom_component.scale": "\n规模：%s",
   "command.elements-plus.circuit.player_only": "只有玩家可以执行此命令",
   "command.elements-plus.circuit.given": "已获取电路：%s (%s)",
+  "command.elements-plus.circuit.given_chip": "已获取芯片：%s (%s)",
+  "command.elements-plus.circuit.chip_unavailable": "该电路无法制造成芯片：%s",
   "command.elements-plus.circuit.unknown": "找不到电路：%s",
   "command.elements-plus.circuit.unknown_id": "找不到 UUID 为 %s 的电路",
   "command.elements-plus.circuit.invalid_id": "无效的 UUID：%s",

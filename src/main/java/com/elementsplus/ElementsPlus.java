@@ -2,6 +2,7 @@ package com.elementsplus;
 
 import com.elementsplus.blocks.entity.ExperimentTableBlockEntity;
 import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
+import com.elementsplus.core.circuit.ChipManufacture;
 import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.storage.CircuitStorage;
@@ -434,7 +435,11 @@ public class ElementsPlus implements ModInitializer {
             var circuitCommand = Commands.literal("circuit")
                     .then(Commands.literal("give")
                             .then(Commands.argument("id", StringArgumentType.string())
-                                    .executes(ElementsPlus::giveCircuit)))
+                                    .executes(ElementsPlus::giveCircuitDiagram)
+                                    .then(Commands.literal("diagram")
+                                            .executes(ElementsPlus::giveCircuitDiagram))
+                                    .then(Commands.literal("chip")
+                                            .executes(ElementsPlus::giveCircuitChip))))
                     .then(Commands.literal("list")
                             .then(Commands.literal("all").executes(ElementsPlus::listAllCircuits))
                             .then(Commands.literal("player")
@@ -547,9 +552,17 @@ public class ElementsPlus implements ModInitializer {
         return 1;
     }
 
-    private static int giveCircuit(CommandContext<CommandSourceStack> source) {
+    private static int giveCircuitDiagram(CommandContext<CommandSourceStack> source) {
+        return giveCircuit(source, false);
+    }
+
+    private static int giveCircuitChip(CommandContext<CommandSourceStack> source) {
+        return giveCircuit(source, true);
+    }
+
+    private static int giveCircuit(CommandContext<CommandSourceStack> source, boolean chip) {
         String query = StringArgumentType.getString(source, "id");
-        StoredCircuit record = findCircuit(source, query);
+        StoredCircuit record = findCircuit(source, query, chip);
         if (record == null) {
             return 0;
         }
@@ -558,19 +571,42 @@ public class ElementsPlus implements ModInitializer {
             source.getSource().sendFailure(Component.translatable("command.elements-plus.circuit.player_only"));
             return 0;
         }
-        ItemStack stack = new ItemStack(ModItems.CIRCUIT_DIAGRAM);
-        stack.remove(ModDataComponents.CIRCUIT_DIAGRAM);
-        CircuitItemData.bindCompiled(stack, record);
+        ItemStack stack;
+        if (chip) {
+            stack = createChip(record);
+            if (stack.isEmpty()) {
+                source.getSource().sendFailure(Component.translatable(
+                        "command.elements-plus.circuit.chip_unavailable", displayCircuitName(record)));
+                return 0;
+            }
+        } else {
+            stack = new ItemStack(ModItems.CIRCUIT_DIAGRAM);
+            stack.remove(ModDataComponents.CIRCUIT_DIAGRAM);
+            CircuitItemData.bindCompiled(stack, record);
+        }
         if (!player.getInventory().add(stack)) {
             player.drop(stack, false);
         }
-        source.getSource().sendSuccess(() -> Component.translatable("command.elements-plus.circuit.given",
+        source.getSource().sendSuccess(() -> Component.translatable(
+                chip ? "command.elements-plus.circuit.given_chip" : "command.elements-plus.circuit.given",
                 displayCircuitName(record), record.id().toString()), false);
         return 1;
     }
 
+    /**
+     * 命令给予的芯片。内置元件统一给小规模芯片且不写入电路 UUID——内置元件的芯片只需
+     * 记录元件 id，同一元件的多个已编译电路是等价的；自定义元件按电路图规模给对应芯片，
+     * 并记录电路 UUID 以区分同名元件。
+     */
+    private static ItemStack createChip(StoredCircuit record) {
+        if (record.isCustom()) {
+            return ChipManufacture.makeChip(record.diagram().scale, record.componentId(), record.id());
+        }
+        return ChipManufacture.makeChip(CircuitDiagram.Scale.SMALL, record.equivalentId());
+    }
+
     @Nullable
-    private static StoredCircuit findCircuit(CommandContext<CommandSourceStack> source, String query) {
+    private static StoredCircuit findCircuit(CommandContext<CommandSourceStack> source, String query, boolean chip) {
         try {
             UUID id = UUID.fromString(query);
             StoredCircuit exact = CircuitStorage.get().get(id);
@@ -588,9 +624,13 @@ public class ElementsPlus implements ModInitializer {
             return null;
         }
         if (matches.size() > 1) {
+            // 内置元件芯片不记录 UUID，同一元件的多个已编译电路完全等价，直接取第一个即可。
+            if (chip && matches.stream().noneMatch(StoredCircuit::isCustom)) {
+                return matches.get(0);
+            }
             source.getSource().sendFailure(Component.translatable("command.elements-plus.circuit.duplicate", query));
             for (StoredCircuit match : matches) {
-                source.getSource().sendSuccess(() -> circuitEntry(source, match), false);
+                source.getSource().sendSuccess(() -> circuitEntry(source, match, chip), false);
             }
             return null;
         }
@@ -636,13 +676,13 @@ public class ElementsPlus implements ModInitializer {
         }
         source.getSource().sendSuccess(() -> Component.translatable("command.elements-plus.circuit.list_header", records.size()), false);
         for (StoredCircuit record : records) {
-            source.getSource().sendSuccess(() -> circuitEntry(source, record), false);
+            source.getSource().sendSuccess(() -> circuitEntry(source, record, false), false);
         }
         return records.size();
     }
 
-    private static Component circuitEntry(CommandContext<CommandSourceStack> source, StoredCircuit record) {
-        String command = "/elements-plus circuit give " + record.id();
+    private static Component circuitEntry(CommandContext<CommandSourceStack> source, StoredCircuit record, boolean chip) {
+        String command = "/elements-plus circuit give " + record.id() + (chip ? " chip" : "");
         Component id = Component.literal(record.id().toString())
                 .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
                         .withUnderlined(true));

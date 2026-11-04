@@ -199,6 +199,23 @@ if "$cygwin" || "$msys" ; then
 fi
 
 
+# Optional local override of the Gradle distribution URL (e.g. a mirror).
+# Precedence: GRADLE_DISTRIBUTION_URL environment variable, then the
+# "gradle.distributionUrl" entry in local.properties (not committed).
+# The generated wrapper scripts have no built-in support for this, so a copy
+# of the wrapper jar plus a matching properties file is used instead.
+GRADLE_WRAPPER_JAR=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+gradle_distribution_url=${GRADLE_DISTRIBUTION_URL:-}
+if [ -z "$gradle_distribution_url" ] && [ -f "$APP_HOME/local.properties" ] ; then
+    gradle_distribution_url=$( sed -n 's/^[[:space:]]*gradle\.distributionUrl[[:space:]]*=[[:space:]]*//p' "$APP_HOME/local.properties" | tail -n 1 | tr -d '\r' )
+fi
+if [ -n "$gradle_distribution_url" ] ; then
+    GRADLE_WRAPPER_JAR=$APP_HOME/gradle/wrapper/gradle-wrapper-local.jar
+    cp "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" "$GRADLE_WRAPPER_JAR"
+    grep -v '^[[:space:]]*distributionUrl[[:space:]]*=' "$APP_HOME/gradle/wrapper/gradle-wrapper.properties" > "$APP_HOME/gradle/wrapper/gradle-wrapper-local.properties"
+    printf 'distributionUrl=%s\n' "$gradle_distribution_url" >> "$APP_HOME/gradle/wrapper/gradle-wrapper-local.properties"
+fi
+
 # Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
 DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
 
@@ -210,7 +227,7 @@ DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
 
 set -- \
         "-Dorg.gradle.appname=$APP_BASE_NAME" \
-        -jar "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" \
+        -jar "$GRADLE_WRAPPER_JAR" \
         "$@"
 
 # Stop when "xargs" is not available.
