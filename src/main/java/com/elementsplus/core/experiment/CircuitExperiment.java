@@ -428,11 +428,14 @@ public class CircuitExperiment extends BaseExperiment {
      */
     private Map<String, PinValue> buildRuntimeInputs(Context context, CombinationalTestCase testCase) {
         if (testCase instanceof RandomizedCombinationalTestCase randomized) {
-            RandomSource random = RandomSource.create();
-            if (context.blockEntity != null) {
-                var level = context.blockEntity.getLevel();
-                if (level != null) {
-                    random = level.getRandom();
+            RandomSource random = context.random;
+            if (random == null) {
+                random = RandomSource.create();
+                if (context.blockEntity != null) {
+                    var level = context.blockEntity.getLevel();
+                    if (level != null) {
+                        random = level.getRandom();
+                    }
                 }
             }
             return randomized.randomize(random);
@@ -655,6 +658,9 @@ public class CircuitExperiment extends BaseExperiment {
     }
 
     private static long worldSeed(Context context) {
+        if (context.hasWorldSeed) {
+            return context.worldSeed;
+        }
         if (context.blockEntity != null
                 && context.blockEntity.getLevel() instanceof ServerLevel serverLevel) {
             return serverLevel.getSeed();

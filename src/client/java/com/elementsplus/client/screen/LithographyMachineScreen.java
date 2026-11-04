@@ -916,21 +916,33 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
         CircuitDiagram diagram = null;
         CircuitDiagram.Scale chipScale = null;
+        boolean creativeInput = ChipManufacture.isCreativeComponent(inputStack);
+        boolean creativeAllowed = ChipManufacture.canUseCreativeComponent(Minecraft.getInstance().player);
         com.elementsplus.core.circuit.storage.StoredCircuit record = null;
         if (!diagramStack.isEmpty() && diagramStack.is(ModItems.CIRCUIT_DIAGRAM)
                 && com.elementsplus.core.circuit.CircuitItemData.isCompiled(diagramStack)
                 && !inputStack.isEmpty()) {
-            chipScale = ChipManufacture.emptyChipScale(inputStack);
             record = com.elementsplus.core.circuit.CircuitItemData.stored(diagramStack);
             diagram = record == null ? null : record.diagram();
-            if (chipScale == null || diagram == null || !ChipManufacture.canHoldScale(chipScale, diagram.scale)) {
-                diagram = null;
-                chipScale = null;
+            if (creativeInput) {
+                if (!creativeAllowed || diagram == null
+                        || !ChipManufacture.canAcceptScale(inputStack, diagram.scale)) {
+                    diagram = null;
+                }
+            } else {
+                chipScale = ChipManufacture.emptyChipScale(inputStack);
+                if (chipScale == null || diagram == null
+                        || !ChipManufacture.canHoldScale(chipScale, diagram.scale)) {
+                    diagram = null;
+                    chipScale = null;
+                }
             }
         }
-        if (diagram != null && chipScale != null) {
+        if (diagram != null && (creativeInput || chipScale != null)) {
             List<ItemStack> inventory = menu.getPlayerInventory().items;
-            List<ChipManufacture.MaterialRequirement> requirements = ChipManufacture.computeRequirements(
+            List<ChipManufacture.MaterialRequirement> requirements = creativeInput
+                    ? List.of()
+                    : ChipManufacture.computeRequirements(
                     diagram, record == null ? null : record.componentId());
             for (ChipManufacture.MaterialRequirement requirement : requirements) {
                 Object icon;

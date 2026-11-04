@@ -6,6 +6,7 @@ import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.storage.CircuitStorage;
 import com.elementsplus.core.circuit.storage.StoredCircuit;
+import com.elementsplus.core.config.ElementsPlusServerConfig;
 import com.elementsplus.core.dispenser.MyCustomBottleBehavior;
 import com.elementsplus.core.experiment.BaseExperiment;
 import com.elementsplus.core.experiment.BuiltinExperimentChapters;
@@ -27,6 +28,7 @@ import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
 import com.elementsplus.network.ExperimentTableStatusPayload;
 import com.elementsplus.network.LithographyTabPayload;
 import com.elementsplus.network.ReturnCarriedPayload;
+import com.elementsplus.network.ServerConfigSyncPayload;
 import com.elementsplus.network.SyringeChargePayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
@@ -131,10 +133,15 @@ public class ElementsPlus implements ModInitializer {
         ScaleUpgradeRecipe.TYPE_ID.toString();
 
         ServerLifecycleEvents.SERVER_STARTED.register(CircuitStorage.get()::load);
+        ServerLifecycleEvents.SERVER_STARTED.register(ElementsPlusServerConfig::load);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> ElementsPlusServerConfig.unload());
         PayloadTypeRegistry.playS2C().register(CircuitStorageSyncPayload.TYPE, CircuitStorageSyncPayload.STREAM_CODEC);
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-                ServerPlayNetworking.send(handler.player,
-                        new CircuitStorageSyncPayload(CircuitStorage.get().ordered())));
+        PayloadTypeRegistry.playS2C().register(ServerConfigSyncPayload.TYPE, ServerConfigSyncPayload.STREAM_CODEC);
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayNetworking.send(handler.player,
+                    new CircuitStorageSyncPayload(CircuitStorage.get().ordered()));
+            ServerPlayNetworking.send(handler.player, serverConfigPayload());
+        });
 
         PayloadTypeRegistry.playC2S().register(ReturnCarriedPayload.TYPE, ReturnCarriedPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ReturnCarriedPayload.TYPE, (payload, context) ->
@@ -440,13 +447,23 @@ public class ElementsPlus implements ModInitializer {
                                     .then(Commands.argument("id", StringArgumentType.string())
                                             .executes(ElementsPlus::showCircuitById))));
 
+            var configCommand = Commands.literal("config")
+                    .executes(ElementsPlus::listServerConfig)
+                    .then(Commands.argument("option", StringArgumentType.word())
+                            .suggests(ElementsPlus::suggestConfigOptions)
+                            .executes(ElementsPlus::queryServerConfig)
+                            .then(Commands.argument("value", StringArgumentType.word())
+                                    .suggests(ElementsPlus::suggestConfigValues)
+                                    .executes(ElementsPlus::setServerConfig)));
+
             dispatcher.register(Commands.literal("elements-plus").requires((source) -> source.hasPermission(2))
                     .then(Commands.literal("debug").executes((source) -> {
                         doSomething(source);
                         return 1;
                     }))
                     .then(experimentsCommand)
-                    .then(circuitCommand));
+                    .then(circuitCommand)
+                    .then(configCommand));
         });
 
         // 修复延迟加载带来的数据回滚问题
@@ -649,6 +666,126 @@ public class ElementsPlus implements ModInitializer {
         MinecraftServer server = source.getSource().getServer();
         ServerPlayer player = server == null ? null : server.getPlayerList().getPlayer(author);
         return player == null ? author.toString() : player.getGameProfile().getName();
+    }
+
+    private static int listServerConfig(CommandContext<CommandSourceStack> source) {
+        source.getSource().sendSuccess(
+                () -> Component.translatable("command.elements-plus.config.header"), false);
+        for (String option : ElementsPlusServerConfig.OPTIONS) {
+            source.getSource().sendSuccess(() -> Component.translatable(
+                    "command.elements-plus.config.entry",
+                    option,
+                    ElementsPlusServerConfig.valueOf(option),
+                    Component.translatable("config.elements-plus." + option + ".description")), false);
+        }
+        return 1;
+    }
+
+    private static int queryServerConfig(CommandContext<CommandSourceStack> source) {
+        String option = StringArgumentType.getString(source, "option");
+        if (!ElementsPlusServerConfig.isOption(option)) {
+            source.getSource().sendFailure(Component.translatable(
+                    "command.elements-plus.config.unknown", option));
+            return 0;
+        }
+        source.getSource().sendSuccess(() -> Component.translatable(
+                "command.elements-plus.config.query", option, ElementsPlusServerConfig.valueOf(option)), false);
+        return 1;
+    }
+
+    private static int setServerConfig(CommandContext<CommandSourceStack> source) {
+        String option = StringArgumentType.getString(source, "option");
+        String raw = StringArgumentType.getString(source, "value");
+        if (!ElementsPlusServerConfig.isOption(option)) {
+            source.getSource().sendFailure(Component.translatable(
+                    "command.elements-plus.config.unknown", option));
+            return 0;
+        }
+
+        String previous = ElementsPlusServerConfig.valueOf(option);
+        boolean saved;
+        if (ElementsPlusServerConfig.CUSTOM_COMPONENT_NESTING_LIMIT.equals(option)) {
+            int value;
+            try {
+                value = Integer.parseInt(raw);
+            } catch (NumberFormatException e) {
+                source.getSource().sendFailure(Component.translatable(
+                        "command.elements-plus.config.invalid_integer", option, raw));
+                return 0;
+            }
+            saved = ElementsPlusServerConfig.setNestingLimit(value);
+        } else if (ElementsPlusServerConfig.ALLOW_INFINITE_IN_FINITE_CIRCUIT.equals(option)
+                || ElementsPlusServerConfig.ASYNC_EXPERIMENT_TESTS.equals(option)
+                || ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)) {
+            if (!"true".equalsIgnoreCase(raw) && !"false".equalsIgnoreCase(raw)) {
+                source.getSource().sendFailure(Component.translatable(
+                        "command.elements-plus.config.invalid_boolean", option, raw));
+                return 0;
+            }
+            boolean value = Boolean.parseBoolean(raw);
+            if (ElementsPlusServerConfig.ASYNC_EXPERIMENT_TESTS.equals(option)) {
+                saved = ElementsPlusServerConfig.setAsyncExperimentTests(value);
+            } else if (ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)) {
+                saved = ElementsPlusServerConfig.setAllowSurvivalCreativeComponent(value);
+            } else {
+                saved = ElementsPlusServerConfig.setAllowInfiniteInFiniteCircuit(value);
+            }
+        } else {
+            source.getSource().sendFailure(Component.translatable(
+                    "command.elements-plus.config.unknown", option));
+            return 0;
+        }
+
+        if (!saved) {
+            source.getSource().sendFailure(Component.translatable("command.elements-plus.config.save_failed"));
+            return 0;
+        }
+
+        String current = ElementsPlusServerConfig.valueOf(option);
+        source.getSource().sendSuccess(() -> Component.translatable(
+                "command.elements-plus.config.set", option, previous, current), true);
+        MinecraftServer server = source.getSource().getServer();
+        if (server != null) {
+            ServerConfigSyncPayload payload = serverConfigPayload();
+            for (ServerPlayer player : PlayerLookup.all(server)) {
+                ServerPlayNetworking.send(player, payload);
+            }
+        }
+        return 1;
+    }
+
+    private static ServerConfigSyncPayload serverConfigPayload() {
+        return new ServerConfigSyncPayload(
+                ElementsPlusServerConfig.customComponentNestingLimit(),
+                ElementsPlusServerConfig.allowInfiniteInFiniteCircuit(),
+                ElementsPlusServerConfig.asyncExperimentTests(),
+                ElementsPlusServerConfig.allowSurvivalCreativeComponent());
+    }
+
+    private static CompletableFuture<Suggestions> suggestConfigOptions(CommandContext<CommandSourceStack> source,
+                                                                       SuggestionsBuilder builder) {
+        for (String option : ElementsPlusServerConfig.OPTIONS) {
+            builder.suggest(option, Component.translatable("config.elements-plus." + option));
+        }
+        return builder.buildFuture();
+    }
+
+    private static CompletableFuture<Suggestions> suggestConfigValues(CommandContext<CommandSourceStack> source,
+                                                                      SuggestionsBuilder builder) {
+        String option = StringArgumentType.getString(source, "option");
+        if (ElementsPlusServerConfig.ALLOW_INFINITE_IN_FINITE_CIRCUIT.equals(option)
+                || ElementsPlusServerConfig.ASYNC_EXPERIMENT_TESTS.equals(option)
+                || ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)) {
+            builder.suggest("true");
+            builder.suggest("false");
+        } else if (ElementsPlusServerConfig.CUSTOM_COMPONENT_NESTING_LIMIT.equals(option)) {
+            builder.suggest("1");
+            builder.suggest("0");
+            builder.suggest("-1");
+            builder.suggest("4");
+            builder.suggest("-3");
+        }
+        return builder.buildFuture();
     }
 
     private static CompletableFuture<Suggestions> suggestExperiments(CommandContext<CommandSourceStack> source, SuggestionsBuilder builder) {

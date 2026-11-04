@@ -636,6 +636,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     public void onServerData(BlockPos pos, String selectedName, String selectedExperimentName,
                              Set<String> unlocked, Set<String> completed, long worldSeed) {
+        if (tablePos != null && !pos.equals(tablePos)) {
+            return;
+        }
         this.tablePos = pos;
         this.worldSeed = worldSeed;
         unlockedChapters.clear();

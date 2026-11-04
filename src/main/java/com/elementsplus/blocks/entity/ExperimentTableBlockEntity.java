@@ -7,6 +7,8 @@ import com.elementsplus.core.circuit.CustomComponentCompiler;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.storage.CircuitStorage;
 import com.elementsplus.core.circuit.storage.StoredCircuit;
+import com.elementsplus.core.config.ElementsPlusServerConfig;
+import com.elementsplus.core.experiment.AsyncExperimentRunner;
 import com.elementsplus.core.experiment.BaseExperiment;
 import com.elementsplus.core.experiment.BuiltinExperimentChapters;
 import com.elementsplus.core.experiment.BuiltinExperiments;
@@ -59,7 +61,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     private String selectedExperiment = null;
 
     private ExperimentStatus status = ExperimentStatus.IDLE;
-    private boolean paused = false;
+    private volatile boolean paused = false;
     private BaseExperiment activeExperiment = null;
     private UUID initiator = null;
     private int testIndex = 0;
@@ -71,9 +73,17 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     private SequentialFailureInfo sequentialFailure = null;
     private Object experimentState = null;
     private ItemStack startedStack = null;
+    private AsyncExperimentRunner asyncExperiment = null;
+    private boolean suppressStatusSync = false;
 
     public ExperimentTableBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntityTypes.EXPERIMENT_TABLE, blockPos, blockState);
+    }
+
+    @Override
+    public void setRemoved() {
+        stopAsyncExperiment();
+        super.setRemoved();
     }
 
     public String getSelectedChapter() {
@@ -94,7 +104,13 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     public void setSelectedExperiment(String selectedExperiment) {
         if (!Objects.equals(this.selectedExperiment, selectedExperiment)) {
             this.selectedExperiment = selectedExperiment;
-            this.setChanged();
+            if (status != ExperimentStatus.IDLE) {
+                // 切换实验后，旧实验的结果和进度不再适用于新实验。
+                resetExperimentState();
+                syncStatus();
+            } else {
+                this.setChanged();
+            }
         }
     }
 
@@ -170,15 +186,94 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             return;
         }
         if (status == ExperimentStatus.IDLE) {
+            stopAsyncExperiment();
             return;
         }
-        if (startedStack == null || this.getItem(0) != startedStack) {
+        if (startedStack != null && this.getItem(0) != startedStack) {
+            // 换物品后旧实验状态不再有效。
+            stopAsyncExperiment();
             resetExperimentState();
             syncStatus();
             return;
         }
-        if (status == ExperimentStatus.BUSY && !paused) {
+        if (status == ExperimentStatus.BUSY && (startedStack == null || activeExperiment == null)) {
+            stopAsyncExperiment();
+            resetExperimentState();
+            syncStatus();
+            return;
+        }
+
+        if (asyncExperiment != null) {
+            tickAsyncExperiment();
+        }
+        if (status == ExperimentStatus.BUSY && !paused && asyncExperiment == null) {
+            if (ElementsPlusServerConfig.asyncExperimentTests()) {
+                startAsyncExperiment();
+            } else {
+                stepExperiment();
+            }
+        }
+    }
+
+    private void startAsyncExperiment() {
+        if (asyncExperiment != null || activeExperiment == null) {
+            return;
+        }
+        if (activeExperiment.getTestCaseCount() <= 0) {
+            // 没有测例的实验保持原有同步行为，避免进入 BUSY 后无法推进。
             stepExperiment();
+            return;
+        }
+        long worldSeed = this.level instanceof ServerLevel serverLevel ? serverLevel.getSeed() : 0L;
+        asyncExperiment = new AsyncExperimentRunner(activeExperiment, this.getItem(0), testIndex,
+                experimentState, time, initiator, worldSeed);
+        asyncExperiment.setPaused(paused);
+    }
+
+    private void tickAsyncExperiment() {
+        AsyncExperimentRunner run = asyncExperiment;
+        if (run == null) {
+            return;
+        }
+
+        int previousTestIndex = testIndex;
+        int updates;
+        boolean done;
+        suppressStatusSync = true;
+        try {
+            updates = run.drain(this);
+            done = run.isDone();
+            if (done && run.isFailed() && this.getItem(0) == startedStack) {
+                ItemStack failedStack = run.itemStack();
+                if (failedStack != null && failedStack != startedStack) {
+                    this.getItems().set(0, failedStack);
+                    this.startedStack = failedStack;
+                    this.setChanged();
+                    updates++;
+                }
+            }
+        } finally {
+            suppressStatusSync = false;
+        }
+
+        this.testIndex = run.testIndex();
+        if (this.testIndex != previousTestIndex) {
+            updates++;
+        }
+        if (done) {
+            asyncExperiment = null;
+        }
+        if (updates > 0) {
+            // 后台线程无论跑了多少测例，每个服务器 tick 最多同步一次。
+            syncStatus();
+        }
+    }
+
+    private void stopAsyncExperiment() {
+        AsyncExperimentRunner run = asyncExperiment;
+        asyncExperiment = null;
+        if (run != null) {
+            run.stop();
         }
     }
 
@@ -214,6 +309,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         if (status == ExperimentStatus.BUSY) {
             return;
         }
+        stopAsyncExperiment();
         BaseExperiment experiment = experimentName == null ? null : BuiltinExperiments.byId(experimentName);
         if (experiment == null || experiment == BuiltinExperiments.CUSTOM_COMPONENT) {
             return;
@@ -276,7 +372,9 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         if (status == ExperimentStatus.BUSY) {
             return;
         }
+        stopAsyncExperiment();
         ItemStack stack = this.getItem(0);
+        startedStack = stack;
         CircuitDiagram diagram = stack.get(com.elementsplus.ModDataComponents.CIRCUIT_DIAGRAM);
         if (diagram == null || CircuitItemData.isCompiled(stack)
                 || stack.has(com.elementsplus.ModDataComponents.EQUIVALENT_COMPONENT)) {
@@ -315,9 +413,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         level.playSound(null, getBlockPos(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
         this.setChanged();
         syncStatus();
-        for (ServerPlayer tracking : PlayerLookup.tracking(this)) {
-            ServerPlayNetworking.send(tracking, screenDataFor(tracking));
-        }
+        sendScreenDataToOpenViewers();
         if (level.getServer() != null) {
             CircuitStorageSyncPayload storageSync = new CircuitStorageSyncPayload(CircuitStorage.get().ordered());
             for (ServerPlayer online : level.getServer().getPlayerList().getPlayers()) {
@@ -329,6 +425,9 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     public void pauseExperiment() {
         if (status == ExperimentStatus.BUSY && !paused) {
             paused = true;
+            if (asyncExperiment != null) {
+                asyncExperiment.setPaused(true);
+            }
             this.setChanged();
             syncStatus();
         }
@@ -337,6 +436,9 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     public void resumeExperiment() {
         if (status == ExperimentStatus.BUSY && paused) {
             paused = false;
+            if (asyncExperiment != null) {
+                asyncExperiment.setPaused(false);
+            }
             this.setChanged();
             syncStatus();
         }
@@ -351,6 +453,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     }
 
     private void resetExperimentState() {
+        stopAsyncExperiment();
         status = ExperimentStatus.IDLE;
         paused = false;
         activeExperiment = null;
@@ -399,9 +502,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
                 }
             }
             if (this.level instanceof ServerLevel serverLevel) {
-                for (ServerPlayer tracking : PlayerLookup.tracking(this)) {
-                    ServerPlayNetworking.send(tracking, screenDataFor(tracking));
-                }
+                sendScreenDataToOpenViewers();
                 if (this.level.getServer() != null) {
                     CircuitStorageSyncPayload storageSync = new CircuitStorageSyncPayload(CircuitStorage.get().ordered());
                     for (ServerPlayer online : this.level.getServer().getPlayerList().getPlayers()) {
@@ -499,6 +600,18 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         );
     }
 
+    /**
+     * 只把屏幕数据发给真正打开了这张实验桌的玩家。
+     * 附近其他打开着别的实验桌的玩家不能收到，否则客户端会把界面切到这张桌子。
+     */
+    private void sendScreenDataToOpenViewers() {
+        for (ServerPlayer tracking : PlayerLookup.tracking(this)) {
+            if (worldPosition.equals(ExperimentTableMenu.getOpenTable(tracking.getUUID()))) {
+                ServerPlayNetworking.send(tracking, screenDataFor(tracking));
+            }
+        }
+    }
+
     private ExperimentTableScreenDataPayload screenDataFor(ServerPlayer player) {
         Set<String> unlocked = new HashSet<>();
         for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player))) {
@@ -510,7 +623,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     }
 
     public void syncStatus() {
-        if (this.level == null || this.level.isClientSide) {
+        if (suppressStatusSync || this.level == null || this.level.isClientSide) {
             return;
         }
         ExperimentTableStatusPayload payload = buildStatusPayload();

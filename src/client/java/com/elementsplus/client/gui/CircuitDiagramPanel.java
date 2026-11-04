@@ -19,6 +19,7 @@ import com.elementsplus.core.circuit.component.ConstAnalog8ComponentInstance;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
+import com.elementsplus.core.config.ElementsPlusServerConfig;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.UpdateCircuitDiagramPayload;
@@ -892,11 +893,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return true;
         }
         CircuitDiagram.Scale parent = diagramScale();
-        if (parent == null || parent.isInfinite()) {
-            return true;
-        }
-        CircuitDiagram.Scale child = component.getCustomScale();
-        return !child.isInfinite() && child.chunks < parent.chunks;
+        return parent == null || ElementsPlusServerConfig.canNest(parent, component.getCustomScale());
     }
 
     private void playSound(SoundInstance soundInstance) {

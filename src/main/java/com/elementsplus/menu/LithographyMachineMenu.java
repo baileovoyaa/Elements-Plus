@@ -23,6 +23,8 @@ import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+
 public class LithographyMachineMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private final Inventory playerInventory;
@@ -136,19 +138,20 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
     }
 
     /**
-     * 制造分支前提：diagram 槽的电路图带 EQUIVALENT_COMPONENT，输入槽放空芯片，且空芯片规模能容纳电路图规模。
+     * 制造分支前提：diagram 槽的电路图带 EQUIVALENT_COMPONENT，输入槽放空芯片或创造模式元件，
+     * 且输入物能容纳电路图规模。创造模式元件接受任意规模，但仍受生存模式使用配置限制。
      */
     private boolean isManufactureEligible(ItemStack diagram, ItemStack input) {
         if (diagram.isEmpty() || !diagram.is(ModItems.CIRCUIT_DIAGRAM) || !CircuitItemData.isCompiled(diagram)) {
             return false;
         }
-        CircuitDiagram.Scale chipScale = ChipManufacture.emptyChipScale(input);
-        if (chipScale == null) {
+        if (ChipManufacture.isCreativeComponent(input)
+                && !ChipManufacture.canUseCreativeComponent(this.playerInventory.player)) {
             return false;
         }
         StoredCircuit record = CircuitItemData.stored(diagram);
         return record != null && record.componentId() != null
-                && ChipManufacture.canHoldScale(chipScale, record.diagram().scale);
+                && ChipManufacture.canAcceptScale(input, record.diagram().scale);
     }
 
     /**
@@ -209,28 +212,32 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
     private void updateChipResult(ItemStack diagram, ItemStack input) {
         StoredCircuit record = CircuitItemData.stored(diagram);
         CircuitDiagram circuit = record == null ? null : record.diagram();
-        CircuitDiagram.Scale chipScale = ChipManufacture.emptyChipScale(input);
+        boolean creativeInput = ChipManufacture.isCreativeComponent(input);
         ResourceLocation equiv = record == null ? null : record.componentId();
-        if (circuit == null || chipScale == null || equiv == null
-                || !ChipManufacture.canHoldScale(chipScale, circuit.scale)) {
+        boolean inputAllowed = !creativeInput
+                || ChipManufacture.canUseCreativeComponent(this.playerInventory.player);
+        if (circuit == null || equiv == null || !inputAllowed
+                || !ChipManufacture.canAcceptScale(input, circuit.scale)) {
             outputGenerated = false;
             if (!this.container.getItem(2).isEmpty()) {
                 this.container.setItem(2, ItemStack.EMPTY);
             }
             return;
         }
-        boolean sufficient = ChipManufacture.allSufficient(
-                this.playerInventory.items,
-                ChipManufacture.computeRequirements(circuit, equiv));
+        List<ChipManufacture.MaterialRequirement> requirements = creativeInput
+                ? List.of()
+                : ChipManufacture.computeRequirements(circuit, equiv);
+        boolean sufficient = creativeInput || ChipManufacture.allSufficient(this.playerInventory.items, requirements);
         ItemStack expected = sufficient
-                ? ChipManufacture.makeChip(chipScale, equiv, record.isCustom() ? record.id() : null)
+                ? ChipManufacture.makeManufactureOutput(input, circuit.scale, equiv,
+                        record.isCustom() ? record.id() : null)
                 : ItemStack.EMPTY;
         ItemStack current = this.container.getItem(2);
         if (ItemStack.isSameItemSameComponents(current, expected)) {
             return;
         }
         if (!current.isEmpty()) {
-            // 输出槽与预期不符（如源电路被编辑）→ 直接覆写，不消耗空芯片
+            // 输出槽与预期不符（如源电路被编辑）→ 直接覆写，不消耗输入物
             this.container.setItem(2, expected);
             return;
         }
@@ -238,19 +245,23 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         outputGenerated = !expected.isEmpty();
     }
 
-    /** 取出制造产物：扣 1 个空芯片 + 物品栏内所需原料，然后重算输出。 */
+    /** 取出制造产物：扣 1 个空芯片/创造模式元件，普通芯片再扣物品栏内所需原料，然后重算输出。 */
     private void consumeManufactureForTake() {
-        if (!this.container.getItem(1).isEmpty()) {
+        ItemStack input = this.container.getItem(1);
+        boolean creativeInput = ChipManufacture.isCreativeComponent(input);
+        if (!input.isEmpty()) {
             this.container.removeItem(1, 1);
         }
-        ItemStack diagramStack = this.container.getItem(0);
-        CircuitDiagram circuit = CircuitItemData.diagram(diagramStack);
-        StoredCircuit record = CircuitItemData.stored(diagramStack);
-        if (circuit != null) {
-            ResourceLocation chipEquivalent = record == null ? null : record.componentId();
-            for (ChipManufacture.MaterialRequirement requirement
-                    : ChipManufacture.computeRequirements(circuit, chipEquivalent)) {
-                ChipManufacture.consume(this.playerInventory, requirement);
+        if (!creativeInput) {
+            ItemStack diagramStack = this.container.getItem(0);
+            CircuitDiagram circuit = CircuitItemData.diagram(diagramStack);
+            StoredCircuit record = CircuitItemData.stored(diagramStack);
+            if (circuit != null) {
+                ResourceLocation chipEquivalent = record == null ? null : record.componentId();
+                for (ChipManufacture.MaterialRequirement requirement
+                        : ChipManufacture.computeRequirements(circuit, chipEquivalent)) {
+                    ChipManufacture.consume(this.playerInventory, requirement);
+                }
             }
         }
         markPlayerInventoryChanged();

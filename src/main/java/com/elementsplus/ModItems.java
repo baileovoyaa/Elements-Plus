@@ -227,7 +227,7 @@ public class ModItems {
     }, "circuit_diagram");
 
     // 等效元件（可作为电路图放置源）
-    public static final Item CREATIVE_COMPONENT = register(new Item(new Item.Properties()) {
+    public static final Item CREATIVE_COMPONENT = register(new ChipItem(new Item.Properties()) {
         @Override
         public @NotNull Component getName(ItemStack itemStack) {
             CircuitComponent circuitComponent = CircuitComponentRegistry.byId(itemStack.get(ModDataComponents.EQUIVALENT_COMPONENT));

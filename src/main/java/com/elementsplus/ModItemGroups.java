@@ -117,7 +117,8 @@ public class ModItemGroups {
         infiniteDiagram.set(ModDataComponents.CIRCUIT_DIAGRAM, infinite);
         addItemStacksToTab("circuit", infiniteDiagram);
 
-        // 创造模式元件
+        // 空的创造模式元件 + 对应各元件的创造模式元件
+        addItemStacksToTab("circuit", new ItemStack(ModItems.CREATIVE_COMPONENT));
         for (CircuitComponent component : BuiltinCircuitComponents.getAll()) {
             if (component.getIngredientSupplier() != null && component.getIngredientSupplier() instanceof CircuitComponent.ComponentIngredientSupplier) {
                 addItemStacksToTab("circuit", new ItemStack(Holder.direct(ModItems.CREATIVE_COMPONENT), 1, DataComponentPatch.builder().set(ModDataComponents.EQUIVALENT_COMPONENT, component.getId()).build()));

@@ -2,6 +2,7 @@ package com.elementsplus.core.circuit;
 
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
+import com.elementsplus.core.config.ElementsPlusServerConfig;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
 import com.elementsplus.core.circuit.component.Output8ComponentInstance;
 import com.elementsplus.core.circuit.component.OutputComponentInstance;
@@ -196,8 +197,7 @@ public final class CustomComponentCompiler {
                     continue;
                 }
                 CircuitDiagram.Scale child = component.component.getCustomScale();
-                if (!diagram.scale.isInfinite()
-                        && (child.isInfinite() || child.chunks >= diagram.scale.chunks)) {
+                if (!ElementsPlusServerConfig.canNest(diagram.scale, child)) {
                     reasons.add(Component.translatable("gui.elements-plus.custom_component.error.nested_scale"));
                     break;
                 }

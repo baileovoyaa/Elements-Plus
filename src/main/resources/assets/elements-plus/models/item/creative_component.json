@@ -1,6 +1,14 @@
 {
   "parent": "item/generated",
   "textures": {
-    "layer0": "elements-plus:item/creative_component"
-  }
+    "layer0": "elements-plus:item/creative_component_base"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "element-plus.creative_component": 1.0
+      },
+      "model": "elements-plus:item/creative_component_filled"
+    }
+  ]
 }

@@ -13,7 +13,9 @@ import com.elementsplus.entity.SyringeProjectile;
 import com.elementsplus.item.SyringeItem;
 import com.elementsplus.network.AdvancementActionPayload;
 import com.elementsplus.network.CircuitStorageSyncPayload;
+import com.elementsplus.core.config.ElementsPlusServerConfig;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
+import com.elementsplus.network.ServerConfigSyncPayload;
 import com.elementsplus.network.ExperimentTableSelectionChangePayload;
 import com.elementsplus.network.ExperimentTableStatusPayload;
 import com.elementsplus.network.SyringeChargePayload;
@@ -98,8 +100,20 @@ public class ElementsPlusClient implements ClientModInitializer {
                 }
         );
 
+        ItemProperties.register(
+                ModItems.CREATIVE_COMPONENT,
+                ResourceLocation.withDefaultNamespace("element-plus.creative_component"),
+                (itemStack, clientWorld, livingEntity, seed) ->
+                        itemStack.has(ModDataComponents.EQUIVALENT_COMPONENT) ? 1.0f : 0.0f
+        );
+
         ClientPlayNetworking.registerGlobalReceiver(CircuitStorageSyncPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> CircuitStorage.get().replaceAll(payload.circuits())));
+
+        ClientPlayNetworking.registerGlobalReceiver(ServerConfigSyncPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> ElementsPlusServerConfig.applySynced(
+                        payload.customComponentNestingLimit(), payload.allowInfiniteInFiniteCircuit(),
+                        payload.asyncExperimentTests(), payload.allowSurvivalCreativeComponent())));
 
         ClientPlayNetworking.registerGlobalReceiver(ToolboxSyncPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> applyToolbox(payload.toolbox())));

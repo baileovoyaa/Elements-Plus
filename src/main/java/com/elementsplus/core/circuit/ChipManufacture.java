@@ -3,9 +3,11 @@ package com.elementsplus.core.circuit;
 import com.elementsplus.ModDataComponents;
 import com.elementsplus.ModItems;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
+import com.elementsplus.core.config.ElementsPlusServerConfig;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -51,6 +53,25 @@ public final class ChipManufacture {
         return null;
     }
 
+    /** 创造模式元件可以代替任意规模的空芯片。 */
+    public static boolean isCreativeComponent(ItemStack stack) {
+        return stack != null && !stack.isEmpty() && stack.is(ModItems.CREATIVE_COMPONENT);
+    }
+
+    /** 创造模式元件默认只有创造模式玩家可用；服务端配置可放开给生存模式。 */
+    public static boolean canUseCreativeComponent(@Nullable Player player) {
+        return player != null
+                && (player.isCreative() || ElementsPlusServerConfig.allowSurvivalCreativeComponent());
+    }
+
+    /** 输入物能否容纳该规模的电路图。创造模式元件接受任意规模，包括无限规模。 */
+    public static boolean canAcceptScale(ItemStack input, @Nullable CircuitDiagram.Scale diagramScale) {
+        if (diagramScale == null) return false;
+        if (isCreativeComponent(input)) return true;
+        CircuitDiagram.Scale chipScale = emptyChipScale(input);
+        return chipScale != null && canHoldScale(chipScale, diagramScale);
+    }
+
     /** 规模对应的成品芯片；不在 SMALL..HUGE 时返回 null。 */
     public static Item chipItemForScale(CircuitDiagram.Scale scale) {
         return switch (scale) {
@@ -62,12 +83,13 @@ public final class ChipManufacture {
         };
     }
 
-    /** 是否是四种成品芯片之一。 */
+    /** 是否是成品芯片（包括创造模式元件）。 */
     public static boolean isChipItem(ItemStack stack) {
         if (stack.isEmpty()) return false;
         Item item = stack.getItem();
         return item == ModItems.SMALL_CHIP || item == ModItems.MEDIUM_CHIP
-                || item == ModItems.LARGE_CHIP || item == ModItems.HUGE_CHIP;
+                || item == ModItems.LARGE_CHIP || item == ModItems.HUGE_CHIP
+                || item == ModItems.CREATIVE_COMPONENT;
     }
 
     /** 空芯片规模能否容纳电路图规模；无限规模电路图不可制造。 */
@@ -207,6 +229,35 @@ public final class ChipManufacture {
                 }
             }
         }
+    }
+
+    /** 生成创造模式元件；会覆盖输入元件原有的等效元件。 */
+    public static ItemStack makeCreativeComponent(@Nullable ResourceLocation equivalentComponent,
+                                                  @Nullable UUID circuitId) {
+        if (equivalentComponent == null) return ItemStack.EMPTY;
+        ItemStack stack = new ItemStack(ModItems.CREATIVE_COMPONENT);
+        stack.set(ModDataComponents.EQUIVALENT_COMPONENT, equivalentComponent);
+        if (circuitId != null) {
+            stack.set(ModDataComponents.COMPILED_CIRCUIT, circuitId);
+        }
+        return stack;
+    }
+
+    /**
+     * 根据制造输入生成成品。
+     * 创造模式元件接受任意规模且无需材料；普通空芯片受自身规模限制。
+     */
+    public static ItemStack makeManufactureOutput(ItemStack input, CircuitDiagram.Scale diagramScale,
+                                                  @Nullable ResourceLocation equivalentComponent,
+                                                  @Nullable UUID circuitId) {
+        if (isCreativeComponent(input)) {
+            return makeCreativeComponent(equivalentComponent, circuitId);
+        }
+        CircuitDiagram.Scale chipScale = emptyChipScale(input);
+        if (chipScale == null || !canHoldScale(chipScale, diagramScale)) {
+            return ItemStack.EMPTY;
+        }
+        return makeChip(chipScale, equivalentComponent, circuitId);
     }
 
     /** 生成成品芯片。 */

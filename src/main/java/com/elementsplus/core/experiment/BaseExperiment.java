@@ -2,6 +2,7 @@ package com.elementsplus.core.experiment;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -25,6 +26,11 @@ public abstract class BaseExperiment {
          * 由宿主在 tick 之间保存。
          */
         public Object experimentState;
+        /** 异步运行时使用的世界种子快照，避免后台线程访问方块实体。 */
+        public long worldSeed;
+        public boolean hasWorldSeed;
+        /** 异步运行时使用独立随机源，避免后台线程访问服务器随机源。 */
+        public RandomSource random;
 
         private final ExperimentHost host;
 
