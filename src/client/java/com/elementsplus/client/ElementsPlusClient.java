@@ -6,12 +6,15 @@ import com.elementsplus.ModEntities;
 import com.elementsplus.ModItems;
 import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.gui.CircuitDiagramPanel;
+import com.elementsplus.client.screen.CircuitAlbumScreen;
 import com.elementsplus.client.screen.ExperimentTableScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
 import com.elementsplus.core.circuit.storage.CircuitStorage;
+import com.elementsplus.core.experiment.BuiltinExperimentChapters;
 import com.elementsplus.entity.SyringeProjectile;
 import com.elementsplus.item.SyringeItem;
 import com.elementsplus.network.AdvancementActionPayload;
+import com.elementsplus.network.CircuitAlbumDataPayload;
 import com.elementsplus.network.CircuitStorageSyncPayload;
 import com.elementsplus.core.config.ElementsPlusServerConfig;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
@@ -115,6 +118,14 @@ public class ElementsPlusClient implements ClientModInitializer {
                         payload.customComponentNestingLimit(), payload.allowInfiniteInFiniteCircuit(),
                         payload.asyncExperimentTests(), payload.allowSurvivalCreativeComponent())));
 
+        ClientPlayNetworking.registerGlobalReceiver(CircuitAlbumDataPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> {
+                    if (Minecraft.getInstance().screen instanceof CircuitAlbumScreen screen) {
+                        screen.onData(payload.containerId(), payload.capacity(), payload.contents(),
+                                payload.carried(), payload.lockedInventoryIndex());
+                    }
+                }));
+
         ClientPlayNetworking.registerGlobalReceiver(ToolboxSyncPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> applyToolbox(payload.toolbox())));
 
@@ -165,10 +176,15 @@ public class ElementsPlusClient implements ClientModInitializer {
             }
         });
 
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
-                ClientPlayNetworking.send(new ToolboxRequestPayload()));
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            ClientPlayNetworking.send(new ToolboxRequestPayload());
+            if (client.level != null) {
+                BuiltinExperimentChapters.ensureLoaded(client.level.registryAccess());
+            }
+        });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             CircuitStorage.get().clear();
+            BuiltinExperimentChapters.clear();
             SENT_ADVANCEMENT_CRITERIA.clear();
             lastSyringeCharging = false;
         });

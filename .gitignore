@@ -48,3 +48,7 @@ script/output/
 
 *.patch
 *.bundle
+
+node_modules/
+docs/.vitepress/dist
+docs/.vitepress/cache

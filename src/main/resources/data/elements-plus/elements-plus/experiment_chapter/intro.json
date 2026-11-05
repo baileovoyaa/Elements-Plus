@@ -1,0 +1,38 @@
+{
+  "dependencies": [],
+  "sections": [
+    {
+      "type": "image",
+      "image": "elements-plus:textures/gui/experiment_table/chapters/intro/intro.png",
+      "width": 3167,
+      "height": 1061
+    },
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 1
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 6,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "bold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 2,
+      "lines": 1
+    }
+  ]
+}

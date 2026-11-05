@@ -1,61 +1,263 @@
 package com.elementsplus.core.experiment;
 
 import com.elementsplus.ElementsPlus;
-import com.elementsplus.ModItems;
+import com.mojang.serialization.Codec;
+import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.tags.TagKey;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
-import java.util.function.Function;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
-import static net.minecraft.ChatFormatting.*;
-
+/**
+ * 数据驱动的实验章节。
+ *
+ * <p>章节定义位于 {@code data/*}{@code /elements-plus/experiment_chapter/*.json}，
+ * 章节顺序由标签 {@code elements-plus:index} 决定：
+ * {@code data/elements-plus/tags/elements-plus/experiment_chapter/index.json}。</p>
+ */
 public class BuiltinExperimentChapters {
-    public static final Set<ExperimentChapter> BUILTIN_EXPERIMENT_CHAPTERS = new LinkedHashSet<>();
+    public static final ResourceKey<Registry<ExperimentChapterDefinition>> CHAPTER_REGISTRY =
+            ResourceKey.createRegistryKey(ElementsPlus.id("experiment_chapter"));
+    public static final TagKey<ExperimentChapterDefinition> ORDER_TAG =
+            TagKey.create(CHAPTER_REGISTRY, ElementsPlus.id("index"));
 
-    // ========== 通用构建入口 ==========
-    private static ExperimentChapter chapter(
-            String id,
-            ResourceLocation icon,
-            Function<SectionContext, List<ExperimentChapter.Section>> body,
-            Set<ExperimentChapter> dependencies
-    ) {
-        SectionContext ctx = new SectionContext("experiment.elements-plus.group." + id + ".");
-        return new ExperimentChapter(id, icon, body.apply(ctx), dependencies);
+    private static final Codec<ExperimentChapterDefinition> CHAPTER_CODEC = ExperimentChapterDefinition.CODEC;
+    private static boolean initialized;
+
+    /** 当前服务端/客户端已解析的章节列表，顺序来自 index 标签。 */
+    public static volatile List<ExperimentChapter> BUILTIN_EXPERIMENT_CHAPTERS = List.of();
+    private static volatile Map<ResourceLocation, ExperimentChapter> chaptersById = Map.of();
+
+    private BuiltinExperimentChapters() {
     }
 
-    // ========== 章节上下文：自动派生前缀 + 自动递增 section 序号 ==========
-    public static final class SectionContext {
-        private final String prefix;
-        private int nextSection = 0;
+    /** 注册同步的自定义动态注册表。应在模组初始化时调用一次。 */
+    public static void initialize() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
+        DynamicRegistries.registerSynced(CHAPTER_REGISTRY, CHAPTER_CODEC);
+    }
 
-        private SectionContext(String prefix) {
-            this.prefix = prefix;
+    /**
+     * 从注册表重新构建章节对象。服务端启动时调用；客户端在首次打开实验桌时补加载。
+     */
+    public static void reload(RegistryAccess registryAccess) {
+        Registry<ExperimentChapterDefinition> definitions =
+                registryAccess.registry(CHAPTER_REGISTRY).orElse(null);
+        if (definitions == null) {
+            clear();
+            ElementsPlus.LOGGER.warn("Experiment chapter registry is not available yet");
+            return;
+        }
+        List<ResourceLocation> order = new ArrayList<>();
+        LinkedHashSet<ResourceLocation> seenOrder = new LinkedHashSet<>();
+        definitions.getTag(ORDER_TAG).ifPresent(tag -> {
+            for (var holder : tag) {
+                holder.unwrapKey().map(ResourceKey::location).ifPresent(id -> {
+                    if (seenOrder.add(id)) {
+                        order.add(id);
+                    }
+                });
+            }
+        });
+        for (ResourceKey<ExperimentChapterDefinition> key : definitions.registryKeySet()) {
+            if (seenOrder.add(key.location())) {
+                order.add(key.location());
+            }
         }
 
-        public ExperimentChapter.TextSection text(int lineCount, ArgSpec... specs) {
-            String keyPrefix = prefix + "section" + nextSection++;
-            return buildTextSection(keyPrefix, lineCount, specs);
+        Map<ResourceLocation, ExperimentChapter> byId = new LinkedHashMap<>();
+        List<ExperimentChapter> chapters = new ArrayList<>();
+        for (ResourceLocation id : order) {
+            ExperimentChapterDefinition definition = definitions.get(id);
+            if (definition == null) {
+                continue;
+            }
+            ExperimentChapter chapter = buildChapter(id, definition);
+            byId.put(id, chapter);
+            chapters.add(chapter);
         }
 
-        public ExperimentChapter.ExperimentSection experiments(BaseExperiment... experiments) {
-            return new ExperimentChapter.ExperimentSection(List.of(experiments));
+        // 第二遍解析依赖，此时所有章节对象已经存在。
+        for (ResourceLocation id : byId.keySet()) {
+            ExperimentChapterDefinition definition = definitions.get(id);
+            if (definition == null) {
+                continue;
+            }
+            ExperimentChapter chapter = byId.get(id);
+            for (ResourceLocation dependencyId : definition.dependencies()) {
+                ExperimentChapter dependency = byId.get(dependencyId);
+                if (dependency == null) {
+                    ElementsPlus.LOGGER.warn("Experiment chapter {} references unknown dependency {}",
+                            id, dependencyId);
+                } else {
+                    chapter.dependencies.add(dependency);
+                }
+            }
         }
 
-        public ExperimentChapter.ImageSection image(ResourceLocation image, int width, int height) {
-            return new ExperimentChapter.ImageSection(image, width, height);
-        }
+        BUILTIN_EXPERIMENT_CHAPTERS = List.copyOf(chapters);
+        chaptersById = Map.copyOf(byId);
+        ElementsPlus.LOGGER.info("Loaded {} data-driven experiment chapters", chapters.size());
+    }
 
-        public ExperimentChapter.DynamicTextSection dynamicText(
-                java.util.function.LongFunction<List<Component>> text) {
-            return new ExperimentChapter.DynamicTextSection(text);
+    /** 客户端可能在服务端章节尚未加载的本 JVM 中使用；为空时从当前 registry access 补加载。 */
+    public static void ensureLoaded(RegistryAccess registryAccess) {
+        if (BUILTIN_EXPERIMENT_CHAPTERS.isEmpty()) {
+            reload(registryAccess);
         }
     }
 
-    // ========== 行 / 参数描述 ==========
+    /** 客户端断开连接时清空，避免下次连接其他服务器时沿用旧章节。 */
+    public static void clear() {
+        BUILTIN_EXPERIMENT_CHAPTERS = List.of();
+        chaptersById = Map.of();
+    }
+
+    private static ExperimentChapter buildChapter(ResourceLocation id, ExperimentChapterDefinition definition) {
+        // 内置章节沿用短名称以保持现有语言键；自定义命名空间使用完整 id，避免同名冲突。
+        String name = id.getNamespace().equals(ElementsPlus.MOD_ID) ? id.getPath() : id.toString();
+        List<ExperimentChapter.Section> sections = new ArrayList<>();
+        for (ExperimentChapterDefinition.SectionDefinition section : definition.sections()) {
+            if (section instanceof ExperimentChapterDefinition.TextSectionDefinition text) {
+                sections.add(buildTextSection(name, text));
+            } else if (section instanceof ExperimentChapterDefinition.ExperimentSectionDefinition experiments) {
+                sections.add(buildExperimentSection(experiments));
+            } else if (section instanceof ExperimentChapterDefinition.ImageSectionDefinition image) {
+                sections.add(new ExperimentChapter.ImageSection(image.image(), image.width(), image.height()));
+            } else if (section instanceof ExperimentChapterDefinition.DynamicTextSectionDefinition dynamic) {
+                sections.add(new ExperimentChapter.DynamicTextSection(
+                        seed -> buildDynamicText(dynamic.provider(), seed)));
+            }
+        }
+        ResourceLocation icon = definition.icon().orElse(null);
+        return new ExperimentChapter(name, icon, sections, new LinkedHashSet<>());
+    }
+
+    private static ExperimentChapter.TextSection buildTextSection(
+            String chapterName, ExperimentChapterDefinition.TextSectionDefinition definition) {
+        String prefix = "experiment.elements-plus.group." + chapterName + ".section" + definition.section();
+        List<ArgSpec> specs = new ArrayList<>();
+        for (ExperimentChapterDefinition.LineDefinition line : definition.args()) {
+            List<ParamSpec> params = new ArrayList<>();
+            for (ExperimentChapterDefinition.ParamDefinition param : line.params()) {
+                if (param.component().isPresent()) {
+                    params.add(new ParamSpec(param.component().get()));
+                } else {
+                    params.add(new ParamSpec(parseFormats(param.style())));
+                }
+            }
+            List<ChatFormatting> formats = parseFormats(line.style());
+            specs.add(new ArgSpec(line.line(), params, formats.toArray(ChatFormatting[]::new)));
+        }
+        return buildTextSection(prefix, definition.lines(), specs.toArray(ArgSpec[]::new));
+    }
+
+    private static ExperimentChapter.ExperimentSection buildExperimentSection(
+            ExperimentChapterDefinition.ExperimentSectionDefinition definition) {
+        List<BaseExperiment> experiments = new ArrayList<>();
+        for (String raw : definition.experiments()) {
+            BaseExperiment experiment = resolveExperiment(raw);
+            if (experiment != null) {
+                experiments.add(experiment);
+            }
+        }
+        Set<BaseExperiment> optional = new LinkedHashSet<>();
+        for (String raw : definition.optional()) {
+            BaseExperiment experiment = resolveExperiment(raw);
+            if (experiment != null) {
+                optional.add(experiment);
+            }
+        }
+        ExperimentChapter.ExperimentSection section = new ExperimentChapter.ExperimentSection(experiments);
+        if (!optional.isEmpty()) {
+            section.optional(optional.toArray(BaseExperiment[]::new));
+        }
+        return section;
+    }
+
+    @Nullable
+    private static BaseExperiment resolveExperiment(String raw) {
+        ResourceLocation id = parseId(raw);
+        if (id == null) {
+            ElementsPlus.LOGGER.warn("Invalid experiment id in experiment chapter: {}", raw);
+            return null;
+        }
+        BaseExperiment experiment = BuiltinExperiments.byId(id.getPath());
+        if (experiment == null) {
+            ElementsPlus.LOGGER.warn("Unknown experiment in experiment chapter: {}", raw);
+        }
+        return experiment;
+    }
+
+    @Nullable
+    private static ResourceLocation parseId(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return raw.indexOf(':') >= 0
+                ? ResourceLocation.tryParse(raw)
+                : ResourceLocation.tryParse(ElementsPlus.MOD_ID + ":" + raw);
+    }
+
+    private static List<ChatFormatting> parseFormats(List<String> names) {
+        List<ChatFormatting> formats = new ArrayList<>();
+        for (String name : names) {
+            try {
+                formats.add(ChatFormatting.valueOf(name.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException e) {
+                ElementsPlus.LOGGER.warn("Unknown ChatFormatting in experiment chapter: {}", name);
+            }
+        }
+        return formats;
+    }
+
+    private static List<Component> buildDynamicText(ResourceLocation provider, long seed) {
+        if (provider.equals(ElementsPlus.id("rom_values"))) {
+            return buildRomValueLines(seed);
+        }
+        ElementsPlus.LOGGER.warn("Unknown dynamic experiment chapter text provider: {}", provider);
+        return List.of(Component.literal("Unknown dynamic text provider: " + provider));
+    }
+
+    private static List<Component> buildRomValueLines(long worldSeed) {
+        byte[] values = MemoryExperimentData.romValues(worldSeed);
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.translatable(
+                "experiment.elements-plus.group.multi_byte_memory.rom_values"));
+        for (int row = 0; row < 4; row++) {
+            StringBuilder sb = new StringBuilder();
+            for (int col = 0; col < 4; col++) {
+                if (col > 0) sb.append("  ");
+                int address = row * 4 + col;
+                sb.append(String.format("%02X: %02X", address, values[address] & 0xFF));
+            }
+            lines.add(Component.literal(sb.toString()).withColor(0xE0E0E0));
+        }
+        return lines;
+    }
+
+    // ========== 文本参数构建 ==========
 
     /**
      * 一个文本参数：要么是一组样式（会生成 key.argN 翻译键来自动着色），
@@ -99,10 +301,8 @@ public class BuiltinExperimentChapters {
         return new ArgSpec(line, List.of(params));
     }
 
-    // ========== 实际生成 TextSection ==========
     private static ExperimentChapter.TextSection buildTextSection(
-            String keyPrefix, int lineCount, ArgSpec... specs
-    ) {
+            String keyPrefix, int lineCount, ArgSpec... specs) {
         Map<Integer, ArgSpec> byLine = new HashMap<>();
         for (ArgSpec s : specs) byLine.put(s.line(), s);
 
@@ -125,480 +325,7 @@ public class BuiltinExperimentChapters {
         return new ExperimentChapter.TextSection(lines);
     }
 
-    public static final ExperimentChapter INTRO = register(chapter("intro", null, ch -> List.of(
-            ch.image(ElementsPlus.id("textures/gui/experiment_table/chapters/intro/intro.png"), 3167, 1061),
-            ch.text(1),
-            ch.text(6, line(0, style(BOLD))),
-            ch.text(1)
-    ), Set.of()));
-
-    public static final ExperimentChapter AMPLIFIER = register(chapter("amplifier", null, ch -> List.of(
-            ch.text(5,
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD))
-            ),
-            ch.text(2),
-            ch.experiments(BuiltinExperiments.AMPLIFIER),
-            ch.text(5,
-                    line(1, style(GRAY)),
-                    line(2, style(BLUE)),
-                    line(3, style(GREEN)),
-                    line(4, style(RED))
-            )
-    ), Set.of(INTRO)));
-
-    public static final ExperimentChapter FIRST_GATE = register(chapter("first_gate", null, ch -> List.of(
-            ch.text(12,
-                    line(5, style(BOLD)),
-                    line(9, component(ModItems.COPPER_WIRE.getDefaultInstance().getDisplayName()), component(ModItems.GOLD_WIRE.getDefaultInstance().getDisplayName()))
-            ),
-            ch.text(5,
-                    line(2, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(3, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.NOT_GATE),
-            ch.text(4,
-                    line(0, style(BLUE)),
-                    line(1, style(BLUE)),
-                    line(2, style(ITALIC, RED), style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.ANALOG_NOT).optional()
-    ), Set.of(AMPLIFIER)));
-
-    public static final ExperimentChapter BASIC_GATE = register(chapter("basic_gate", null, ch -> List.of(
-            ch.text(6,
-                    line(2, style(GOLD)),
-                    line(3, style(GOLD)),
-                    line(4, style(GOLD)),
-                    line(5, style(GOLD))
-            ),
-            ch.experiments(
-                    BuiltinExperiments.OR_GATE,
-                    BuiltinExperiments.NOR_GATE,
-                    BuiltinExperiments.NAND_GATE,
-                    BuiltinExperiments.AND_GATE),
-            ch.text(2),
-            ch.text(3,
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD))
-            ),
-            ch.experiments(
-                    BuiltinExperiments.AND_GATE_SC,
-                    BuiltinExperiments.OR_GATE_SC
-            ).optional()
-    ), Set.of(FIRST_GATE)));
-
-    public static final ExperimentChapter ADVANCED_GATE = register(chapter("advanced_gate", null, ch -> List.of(
-            ch.text(3),
-            ch.text(4,
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.XOR_GATE, BuiltinExperiments.XNOR_GATE),
-            ch.text(4,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD)),
-                    line(3, style(GOLD))
-            )
-    ), Set.of(BASIC_GATE)));
-
-    public static final ExperimentChapter THREE_WAY_LOGIC_GATE = register(chapter("three_way_logic_gate", null, ch -> List.of(
-            ch.text(7,
-                    line(2, style(GOLD)),
-                    line(3, style(GOLD)),
-                    line(4, style(GOLD)),
-                    line(5, style(GOLD))
-            ),
-            ch.experiments(
-                    BuiltinExperiments.OR_GATE_3,
-                    BuiltinExperiments.AND_GATE_3,
-                    BuiltinExperiments.XOR_GATE_3,
-                    BuiltinExperiments.XNOR_GATE_3
-            )
-    ), Set.of(ADVANCED_GATE)));
-
-    public static final ExperimentChapter MULTIPLEXER = register(chapter("multiplexer", null, ch -> List.of(
-            ch.text(4,
-                    line(0, style(GOLD)),
-                    line(1, style(BLUE)).withStyle(RED),
-                    line(2, style(GOLD)),
-                    line(3, style(BLUE))
-            ),
-            ch.experiments(BuiltinExperiments.MUX_2),
-            ch.text(7, line(0, style(GOLD))),
-            ch.experiments(BuiltinExperiments.MUX_4),
-            ch.text(3,
-                    line(0, style(GOLD), style(BLUE)),
-                    line(1, style(BLUE), style(GOLD)).withStyle(DARK_PURPLE),
-                    line(2, style(BLUE))
-            ),
-            ch.experiments(BuiltinExperiments.MUX_2_8, BuiltinExperiments.MUX_4_8),
-            ch.text(2,
-                    line(0, style(GOLD)),
-                    line(1, style(BLUE))
-            ),
-            ch.experiments(BuiltinExperiments.TRI_STATE_BUFFER_8),
-            ch.text(1, line(0, style(GOLD), style(BLUE), style(GOLD), style(GOLD))),
-            ch.experiments(
-                    BuiltinExperiments.MUX_ANALOG_2,
-                    BuiltinExperiments.MUX_ANALOG_4,
-                    BuiltinExperiments.MUX_ANALOG_2_8,
-                    BuiltinExperiments.MUX_ANALOG_4_8,
-                    BuiltinExperiments.TRI_STATE_BUFFER_ANALOG_8
-            ).optional()
-    ), Set.of(ADVANCED_GATE)));
-
-    public static final ExperimentChapter ENCODER_DECODER = register(chapter("encoder_decoder", null, ch -> List.of(
-            ch.text(8,
-                    line(0, style(GOLD)).withStyle(DARK_PURPLE),
-                    line(1, style(GOLD), style(GOLD)),
-                    line(3, style(ITALIC, RED)),
-                    line(4, style(BLUE)),
-                    line(5, style(GOLD)),
-                    line(6, style(GOLD)),
-                    line(7, style(GOLD))
-            ),
-            ch.experiments(
-                    BuiltinExperiments.DECODER_2_4,
-                    BuiltinExperiments.DECODER_3_8,
-                    BuiltinExperiments.DECODER_4_16
-            ).optional(BuiltinExperiments.DECODER_4_16),
-            ch.text(6,
-                    line(1, style(ITALIC, RED)),
-                    line(3, style(GOLD)),
-                    line(4, style(GOLD)),
-                    line(5, style(GOLD))
-            ),
-            ch.experiments(
-                    BuiltinExperiments.ENCODER_4_2,
-                    BuiltinExperiments.ENCODER_8_3,
-                    BuiltinExperiments.ENCODER_16_4
-            ).optional(BuiltinExperiments.ENCODER_16_4),
-            ch.text(1, line(0, style(GOLD))),
-            ch.experiments(
-                    BuiltinExperiments.PRIORITY_ENCODER_4_2,
-                    BuiltinExperiments.PRIORITY_ENCODER_8_3,
-                    BuiltinExperiments.PRIORITY_ENCODER_16_4
-            ).optional()
-    ), Set.of(ADVANCED_GATE)));
-
-    public static final ExperimentChapter ONE_BIT_ADDER = register(chapter("one_bit_adder", null, ch -> List.of(
-            ch.text(4,
-                    line(2, style(BLUE)),
-                    line(3, style(BLUE))
-            ),
-            ch.text(7,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.HALF_ADDER),
-            ch.text(11,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.FULL_ADDER)
-    ), Set.of(ADVANCED_GATE)));
-
-    public static final ExperimentChapter BUS = register(chapter("bus", null, ch -> List.of(
-            ch.text(6,
-                    line(0, style(BLUE)),
-                    line(3, style(GOLD), style(GOLD), style(GOLD), style(GOLD))
-            ),
-            ch.text(3,
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.CONST_8, BuiltinExperiments.MASK_8),
-            ch.text(1),
-            ch.text(2,
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.CONST_ANALOG_8).optional(),
-            ch.text(1)
-    ), Set.of(ONE_BIT_ADDER)));
-
-    public static final ExperimentChapter MULTI_BIT_ADDER = register(chapter("multi_bit_adder", null, ch -> List.of(
-            ch.text(1),
-            ch.text(3,
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.ADDER_8)
-    ), Set.of(BUS)));
-
-    public static final ExperimentChapter BITWISE_OPERATOR = register(chapter("bitwise_operator", null, ch -> List.of(
-            ch.text(3,
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD))
-            ),
-            ch.experiments(
-                    BuiltinExperiments.BITWISE_AND,
-                    BuiltinExperiments.BITWISE_OR,
-                    BuiltinExperiments.BITWISE_NOT,
-                    BuiltinExperiments.BITWISE_NAND,
-                    BuiltinExperiments.BITWISE_NOR,
-                    BuiltinExperiments.BITWISE_XOR,
-                    BuiltinExperiments.BITWISE_XNOR
-            ),
-            ch.text(2),
-            ch.text(4,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD)),
-                    line(3, style(GOLD))
-            ),
-            ch.experiments(
-                    BuiltinExperiments.OR_GATE_8,
-                    BuiltinExperiments.AND_GATE_8,
-                    BuiltinExperiments.XOR_GATE_8,
-                    BuiltinExperiments.XNOR_GATE_8
-            ).optional()
-    ), Set.of(MULTI_BIT_ADDER)));
-
-    public static final ExperimentChapter COMPARATOR = register(chapter("comparator", null, ch -> List.of(
-            ch.text(3,
-                    line(0, style(GOLD)),
-                    line(2, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.COMPARATOR),
-            ch.text(2,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.COMPARATOR_8),
-            ch.text(2,
-                    line(0, style(BLUE)),
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.COMPARATOR_SIGNED_8),
-            ch.text(2,
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.COMPARATOR_ANALOG).optional()
-    ), Set.of(MULTI_BIT_ADDER)));
-
-    public static final ExperimentChapter MULTI_BIT_SUBTRACT = register(chapter("multi_bit_subtract", null, ch -> List.of(
-            ch.text(3,
-                    line(0, style(ITALIC, RED)),
-                    line(1, style(BLUE)),
-                    line(2, style(ITALIC, RED))
-            ),
-            ch.text(3,
-                    line(0, style(ITALIC, RED)),
-                    line(1, style(BOLD))
-            ),
-            ch.text(6, line(4, style(ITALIC, RED))),
-            ch.text(8,
-                    line(5, style(ITALIC, RED)),
-                    line(7, style(ITALIC, RED))
-            ),
-            ch.text(2, line(0, style(GOLD))),
-            ch.experiments(BuiltinExperiments.NEG),
-            ch.text(1, line(0, style(GOLD)))
-    ), Set.of(BITWISE_OPERATOR)));
-
-    public static final ExperimentChapter BITWISE_SHIFTER = register(chapter("bitwise_shifter", null, ch -> List.of(
-            ch.text(3,
-                    line(0, style(BLUE), style(BLUE)),
-                    line(1, style(GOLD)),
-                    line(2, style(ITALIC, RED), style(ITALIC, RED))
-            ),
-            ch.text(3,
-                    line(0, style(BLUE), style(BLUE)),
-                    line(1, style(GOLD), style(BLUE)),
-                    line(2, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.BITWISE_SHIFT, BuiltinExperiments.BITWISE_SHIFT_ARITHMETIC),
-            ch.text(2,
-                    line(0, style(GOLD), style(ITALIC, RED), style(ITALIC, RED)),
-                    line(1, style(GOLD), style(BLUE))
-            ),
-            ch.experiments(BuiltinExperiments.BITWISE_ROTATE).optional(),
-            ch.text(1, line(0, style(GOLD), style(ITALIC, RED), style(ITALIC, RED), style(ITALIC, RED))),
-            ch.experiments(BuiltinExperiments.BITWISE_SHIFT_ANALOG, BuiltinExperiments.BITWISE_ROTATE_ANALOG).optional()
-    ), Set.of(MULTI_BIT_SUBTRACT)));
-
-    public static final ExperimentChapter MULTIPLIER_DIVISOR = register(chapter("multiplier_divisor", null, ch -> List.of(
-            ch.text(3,
-                    line(0).withStyle(BOLD),
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD))
-            ),
-            ch.text(2,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD), style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.MULTIPLIER_LITE, BuiltinExperiments.MULTIPLIER),
-            ch.text(1),
-            ch.text(2,
-                    line(0, style(BLUE)),
-                    line(1, style(BOLD))
-            ),
-            ch.text(2, line(0, style(GOLD))),
-            ch.experiments(BuiltinExperiments.DIVIDER).optional()
-    ), Set.of(BITWISE_SHIFTER)));
-
-    public static final ExperimentChapter ALU_BASIC = register(chapter("alu_basic", null, ch -> List.of(
-            ch.text(2),
-            ch.text(8,
-                    line(0, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(1, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(2, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(3, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(4, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(5, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(6, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(7, style(ITALIC, RED))
-            ),
-            ch.text(2, line(0, style(GOLD))),
-            ch.experiments(BuiltinExperiments.ALU)
-    ), Set.of(BITWISE_SHIFTER)));
-
-    public static final ExperimentChapter ALU_ADVANCED = register(chapter("alu_advanced", null, ch -> List.of(
-            ch.text(2, line(0, style(GOLD), style(GOLD))),
-            ch.text(8,
-                    line(0, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(1, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(2, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(3, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(4, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(5, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(6, style(ITALIC, RED), style(ITALIC, RED)),
-                    line(7, style(ITALIC, RED), style(ITALIC, RED))
-            ),
-            ch.text(2, line(0, style(GOLD))),
-            ch.experiments(BuiltinExperiments.ALU_ADVANCED)
-    ), Set.of(ALU_BASIC, MULTIPLIER_DIVISOR)));
-
-    public static final ExperimentChapter CUSTOM_COMPONENT = register(chapter("custom_component", null, ch -> List.of(
-            ch.text(4),
-            ch.experiments(BuiltinExperiments.CUSTOM_COMPONENT),
-            ch.text(1)
-    ), Set.of(ALU_BASIC)));
-
-    public static final ExperimentChapter FLIP_FLOP = register(chapter("flip_flop", null, ch -> List.of(
-            ch.text(9,
-                    line(0, style(BLUE)),
-                    line(1, style(BLUE), style(BLUE)),
-                    line(2, style(BLUE)),
-                    line(3, style(BLUE), style(BLUE)),
-                    line(4, style(GOLD)),
-                    line(7, style(GOLD)),
-                    line(8, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.TFF),
-            ch.text(1),
-            ch.text(2,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.TFF_PRIME).optional()
-    ), Set.of(ALU_BASIC)));
-
-    public static final ExperimentChapter REGISTER = register(chapter("register", null, ch -> List.of(
-            ch.text(4,
-                    line(2, style(GOLD)),
-                    line(3, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.REGISTER),
-            ch.text(2,
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.REGISTER_8),
-            ch.text(2,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.REGISTER_ANALOG).optional()
-    ), Set.of(FLIP_FLOP)));
-
-    private static List<Component> buildRomValueLines(long worldSeed) {
-        byte[] values = MemoryExperimentData.romValues(worldSeed);
-        List<Component> lines = new ArrayList<>();
-        lines.add(Component.translatable(
-                "experiment.elements-plus.group.multi_byte_memory.rom_values"));
-        for (int row = 0; row < 4; row++) {
-            StringBuilder sb = new StringBuilder();
-            for (int col = 0; col < 4; col++) {
-                if (col > 0) sb.append("  ");
-                int address = row * 4 + col;
-                sb.append(String.format("%02X: %02X", address, values[address] & 0xFF));
-            }
-            lines.add(Component.literal(sb.toString()).withColor(0xE0E0E0));
-        }
-        return lines;
-    }
-
-    public static final ExperimentChapter ANALOG_DIGITAL_CONVERTER = register(chapter("analog_digital_converter", null, ch -> List.of(
-            ch.text(6,
-                    line(1, style(BLUE)),
-                    line(2, style(BLUE)),
-                    line(4, style(GOLD)),
-                    line(5, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.ADC, BuiltinExperiments.DAC)
-    ), Set.of(MULTIPLEXER, ENCODER_DECODER, MULTI_BIT_ADDER)));
-
-    public static final ExperimentChapter COUNTER = register(chapter("counter", null, ch -> List.of(
-            ch.text(5,
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.RIPPLE_COUNTER_8),
-            ch.text(6,
-                    line(2, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.COUNTER_8),
-            ch.text(2,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD))
-            ),
-            ch.experiments(BuiltinExperiments.SAWTOOTH_GENERATOR).optional(),
-            ch.text(1,
-                    line(0, style(GOLD))
-            )
-    ), Set.of(REGISTER)));
-
-    public static final ExperimentChapter MULTI_BYTE_MEMORY = register(chapter("multi_byte_memory", null, ch -> List.of(
-            ch.text(4,
-                    line(0, style(BLUE)),
-                    line(1, style(BLUE), style(BLUE), style(GOLD)),
-                    line(2).withStyle(BOLD)
-            ),
-            ch.text(13,
-                    line(0, style(GOLD)),
-                    line(1, style(GOLD)),
-                    line(8, style(BOLD)),
-                    line(9, style(BOLD))
-            ),
-            ch.experiments(BuiltinExperiments.RAM_4),
-            ch.text(6,
-                    line(1, style(GOLD)),
-                    line(2, style(GOLD)),
-                    line(3, style(GOLD)),
-                    line(5, style(BLUE))
-            ),
-            ch.experiments(BuiltinExperiments.RAM_16, BuiltinExperiments.RAM_64, BuiltinExperiments.RAM_256),
-            ch.text(8,
-                    line(0, style(GOLD)),
-                    line(6, style(GOLD))
-            ),
-            ch.text(1),
-            ch.dynamicText(seed -> buildRomValueLines(seed)),
-            ch.text(1),
-            ch.experiments(BuiltinExperiments.ROM_256).optional(),
-            ch.text(6,
-                    line(0, style(GOLD)),
-                    line(2, style(BLUE)),
-                    line(3, style(BLUE))
-            )
-    ), Set.of(REGISTER)));
-
-    public static ExperimentChapter register(ExperimentChapter experimentChapter) {
-        BUILTIN_EXPERIMENT_CHAPTERS.add(experimentChapter);
-        return experimentChapter;
-    }
+    // ========== 解锁 / 查询 ==========
 
     /** 某章节及其全部前置章节的必做实验。 */
     public static Set<BaseExperiment> requiredExperimentsFor(ExperimentChapter chapter) {
@@ -645,6 +372,7 @@ public class BuiltinExperimentChapters {
         return false;
     }
 
+    @Nullable
     public static ExperimentChapter byName(String name) {
         for (ExperimentChapter c : BUILTIN_EXPERIMENT_CHAPTERS) {
             if (c.name.equals(name)) {

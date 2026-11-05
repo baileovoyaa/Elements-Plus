@@ -1,6 +1,7 @@
 package com.elementsplus;
 
 import com.elementsplus.menu.AdvancedCraftingTableMenu;
+import com.elementsplus.menu.CircuitAlbumMenu;
 import com.elementsplus.menu.CrystallizerMenu;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
@@ -23,6 +24,7 @@ public class ModMenuTypes {
     public static final MenuType<PressureMachineMenu> PRESSURE_MACHINE = register("pressure_machine", PressureMachineMenu::new);
     public static final MenuType<LithographyMachineMenu> LITHOGRAPHY_MACHINE = register("lithography_machine", LithographyMachineMenu::new);
     public static final MenuType<ExperimentTableMenu> EXPERIMENT_TABLE = register("experiment_table", ExperimentTableMenu::new);
+    public static final MenuType<CircuitAlbumMenu> CIRCUIT_ALBUM = register("circuit_album", CircuitAlbumMenu::new);
 
     private static <T extends AbstractContainerMenu> MenuType<T> register(String string, MenuType.MenuSupplier<T> menuSupplier) {
         return Registry.register(BuiltInRegistries.MENU, ResourceLocation.fromNamespaceAndPath(MOD_ID, string), new MenuType<>(menuSupplier, FeatureFlags.VANILLA_SET));

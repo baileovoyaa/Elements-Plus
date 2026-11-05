@@ -1,0 +1,63 @@
+{
+  "dependencies": [
+    "elements-plus:advanced_gate"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 7,
+      "args": [
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 4,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 5,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:or_gate_3",
+        "elements-plus:and_gate_3",
+        "elements-plus:xor_gate_3",
+        "elements-plus:xnor_gate_3"
+      ]
+    }
+  ]
+}

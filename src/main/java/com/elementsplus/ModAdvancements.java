@@ -45,8 +45,9 @@ public final class ModAdvancements {
         }
 
         Set<String> completed = PlayerExperimentsAttachment.get(player);
-        if (completed.containsAll(names(BuiltinExperimentChapters.requiredExperimentsFor(
-                BuiltinExperimentChapters.ALU_BASIC)))) {
+        var aluBasic = BuiltinExperimentChapters.byName("alu_basic");
+        if (aluBasic != null && completed.containsAll(names(
+                BuiltinExperimentChapters.requiredExperimentsFor(aluBasic)))) {
             award(player, "logical_conclusion", "alu_basic_complete");
         }
         if (completed.containsAll(names(BuiltinExperimentChapters.allExperimentsIncludingOptional()))) {

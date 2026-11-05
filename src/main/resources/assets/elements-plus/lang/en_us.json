@@ -187,6 +187,8 @@
   "config.elements-plus.async_experiment_tests.description": "Defaults to false, so test cases advance with the server tick. When enabled, test cases run at full speed on a separate thread without blocking the main loop, syncing progress at most once per tick.",
   "config.elements-plus.allow_survival_creative_component": "Allow survival players to use creative components",
   "config.elements-plus.allow_survival_creative_component.description": "Defaults to false. When disabled, non-creative players cannot use creative components to manufacture chips. Creative-mode players can always use them.",
+  "config.elements-plus.circuit_album_capacity": "Circuit album capacity",
+  "config.elements-plus.circuit_album_capacity.description": "Maximum number of circuit diagrams stored in a circuit album. Defaults to 50. Lowering it does not eject existing diagrams; new diagrams cannot be added once the limit is reached.",
 
   "item.elements-plus.silver_ingot": "Silver Ingot",
 
@@ -413,6 +415,16 @@
   "item.elements-plus.plastic": "Plastic",
   "item.elements-plus.creative_component": "Creative Mode [%s] Component",
   "item.elements-plus.creative_component.empty": "Creative Mode Component",
+  "item.elements-plus.circuit_album": "Circuit Album",
+  "item.elements-plus.disk": "Disk",
+  "container.elements-plus.circuit_album": "Circuit Album",
+  "gui.elements-plus.circuit_album.search": "Search circuits",
+  "gui.elements-plus.circuit_album.search_hint": "Search by item, component, scale, or UUID",
+  "gui.elements-plus.circuit_album.inventory": "Inventory",
+  "gui.elements-plus.circuit_album.header.item": "Item",
+  "gui.elements-plus.circuit_album.header.component": "Component",
+  "gui.elements-plus.circuit_album.header.scale": "Scale",
+  "gui.elements-plus.circuit_album.header.uuid": "UUID",
 
   "tooltip.elements-plus.circuit_diagram.scale": "Scale: %s",
   "circuit_diagram.scale.small": "Small",

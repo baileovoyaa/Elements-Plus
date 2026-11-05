@@ -6,9 +6,13 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class ModDataComponents {
@@ -44,6 +48,34 @@ public class ModDataComponents {
             DataComponentType.<ResourceLocation>builder()
                     .persistent(ResourceLocation.CODEC.fieldOf("id").codec())
                     .networkSynchronized(ResourceLocation.STREAM_CODEC)
+                    .build()
+    );
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, List<ItemStack>> ITEM_STACK_LIST_STREAM_CODEC =
+            StreamCodec.of(
+                    (buf, stacks) -> {
+                        buf.writeVarInt(stacks.size());
+                        for (ItemStack stack : stacks) {
+                            ItemStack.STREAM_CODEC.encode(buf, stack);
+                        }
+                    },
+                    buf -> {
+                        int size = buf.readVarInt();
+                        List<ItemStack> stacks = new ArrayList<>(size);
+                        for (int i = 0; i < size; i++) {
+                            stacks.add(ItemStack.STREAM_CODEC.decode(buf));
+                        }
+                        return stacks;
+                    }
+            );
+
+    /** 电路图册中保存的电路图物品列表。 */
+    public static final DataComponentType<List<ItemStack>> CIRCUIT_ALBUM_CONTENTS = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            ElementsPlus.id("circuit_album_contents"),
+            DataComponentType.<List<ItemStack>>builder()
+                    .persistent(ItemStack.CODEC.listOf())
+                    .networkSynchronized(ITEM_STACK_LIST_STREAM_CODEC)
                     .build()
     );
 

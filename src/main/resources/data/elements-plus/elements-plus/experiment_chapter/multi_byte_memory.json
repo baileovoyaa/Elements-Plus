@@ -1,0 +1,245 @@
+{
+  "dependencies": [
+    "elements-plus:register"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 4,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            },
+            {
+              "style": [
+                "blue"
+              ]
+            },
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "style": [
+            "bold"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 13,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 8,
+          "params": [
+            {
+              "style": [
+                "bold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 9,
+          "params": [
+            {
+              "style": [
+                "bold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:ram_4"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 2,
+      "lines": 6,
+      "args": [
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 5,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:ram_16",
+        "elements-plus:ram_64",
+        "elements-plus:ram_256"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 3,
+      "lines": 8,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 6,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 4,
+      "lines": 1
+    },
+    {
+      "type": "dynamic_text",
+      "provider": "elements-plus:rom_values"
+    },
+    {
+      "type": "text",
+      "section": 5,
+      "lines": 1
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:rom_256"
+      ],
+      "optional": [
+        "elements-plus:rom_256"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 6,
+      "lines": 6,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

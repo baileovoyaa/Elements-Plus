@@ -1,0 +1,137 @@
+{
+  "dependencies": [
+    "elements-plus:bitwise_shifter"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 3,
+      "args": [
+        {
+          "line": 0,
+          "style": [
+            "bold"
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 2,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            },
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:multiplier_lite",
+        "elements-plus:multiplier"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 2,
+      "lines": 1
+    },
+    {
+      "type": "text",
+      "section": 3,
+      "lines": 2,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "bold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 4,
+      "lines": 2,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:divider"
+      ],
+      "optional": [
+        "elements-plus:divider"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+{
+  "dependencies": [
+    "elements-plus:bitwise_shifter"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 2
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 8,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "params": [
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 4,
+          "params": [
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 5,
+          "params": [
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 6,
+          "params": [
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 7,
+          "params": [
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 2,
+      "lines": 2,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:alu"
+      ]
+    }
+  ]
+}

@@ -28,12 +28,14 @@ public final class ElementsPlusServerConfig {
     public static final String ALLOW_INFINITE_IN_FINITE_CIRCUIT = "allow_infinite_in_finite_circuit";
     public static final String ASYNC_EXPERIMENT_TESTS = "async_experiment_tests";
     public static final String ALLOW_SURVIVAL_CREATIVE_COMPONENT = "allow_survival_creative_component";
+    public static final String CIRCUIT_ALBUM_CAPACITY = "circuit_album_capacity";
 
     public static final List<String> OPTIONS = List.of(
             CUSTOM_COMPONENT_NESTING_LIMIT,
             ALLOW_INFINITE_IN_FINITE_CIRCUIT,
             ASYNC_EXPERIMENT_TESTS,
-            ALLOW_SURVIVAL_CREATIVE_COMPONENT
+            ALLOW_SURVIVAL_CREATIVE_COMPONENT,
+            CIRCUIT_ALBUM_CAPACITY
     );
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -41,11 +43,13 @@ public final class ElementsPlusServerConfig {
     private static final boolean DEFAULT_ALLOW_INFINITE_IN_FINITE = false;
     private static final boolean DEFAULT_ASYNC_EXPERIMENT_TESTS = false;
     private static final boolean DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT = false;
+    private static final int DEFAULT_CIRCUIT_ALBUM_CAPACITY = 50;
 
     private static volatile int customComponentNestingLimit = DEFAULT_NESTING_LIMIT;
     private static volatile boolean allowInfiniteInFiniteCircuit = DEFAULT_ALLOW_INFINITE_IN_FINITE;
     private static volatile boolean asyncExperimentTests = DEFAULT_ASYNC_EXPERIMENT_TESTS;
     private static volatile boolean allowSurvivalCreativeComponent = DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT;
+    private static volatile int circuitAlbumCapacity = DEFAULT_CIRCUIT_ALBUM_CAPACITY;
     private static volatile @Nullable Path configFile;
 
     private ElementsPlusServerConfig() {
@@ -67,6 +71,10 @@ public final class ElementsPlusServerConfig {
         return allowSurvivalCreativeComponent;
     }
 
+    public static int circuitAlbumCapacity() {
+        return circuitAlbumCapacity;
+    }
+
     public static boolean isOption(String option) {
         return OPTIONS.contains(option);
     }
@@ -77,6 +85,7 @@ public final class ElementsPlusServerConfig {
             case ALLOW_INFINITE_IN_FINITE_CIRCUIT -> Boolean.toString(allowInfiniteInFiniteCircuit);
             case ASYNC_EXPERIMENT_TESTS -> Boolean.toString(asyncExperimentTests);
             case ALLOW_SURVIVAL_CREATIVE_COMPONENT -> Boolean.toString(allowSurvivalCreativeComponent);
+            case CIRCUIT_ALBUM_CAPACITY -> Integer.toString(circuitAlbumCapacity);
             default -> "";
         };
     }
@@ -137,6 +146,16 @@ public final class ElementsPlusServerConfig {
         return false;
     }
 
+    public static boolean setCircuitAlbumCapacity(int value) {
+        int previous = circuitAlbumCapacity;
+        circuitAlbumCapacity = Math.max(0, value);
+        if (save()) {
+            return true;
+        }
+        circuitAlbumCapacity = previous;
+        return false;
+    }
+
     /**
      * 收到服务端同步的配置时调用。客户端只使用这些值进行预览校验。
      */
@@ -158,6 +177,7 @@ public final class ElementsPlusServerConfig {
         allowInfiniteInFiniteCircuit = DEFAULT_ALLOW_INFINITE_IN_FINITE;
         asyncExperimentTests = DEFAULT_ASYNC_EXPERIMENT_TESTS;
         allowSurvivalCreativeComponent = DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT;
+        circuitAlbumCapacity = DEFAULT_CIRCUIT_ALBUM_CAPACITY;
 
         if (!Files.exists(configFile)) {
             save();
@@ -182,6 +202,10 @@ public final class ElementsPlusServerConfig {
                     && root.get(ALLOW_SURVIVAL_CREATIVE_COMPONENT).isJsonPrimitive()) {
                 allowSurvivalCreativeComponent = root.get(ALLOW_SURVIVAL_CREATIVE_COMPONENT).getAsBoolean();
             }
+            if (root.has(CIRCUIT_ALBUM_CAPACITY)
+                    && root.get(CIRCUIT_ALBUM_CAPACITY).isJsonPrimitive()) {
+                circuitAlbumCapacity = Math.max(0, root.get(CIRCUIT_ALBUM_CAPACITY).getAsInt());
+            }
         } catch (Exception e) {
             ElementsPlus.LOGGER.warn("Failed to load server config {}", configFile, e);
             return;
@@ -201,6 +225,7 @@ public final class ElementsPlusServerConfig {
         root.addProperty(ALLOW_INFINITE_IN_FINITE_CIRCUIT, allowInfiniteInFiniteCircuit);
         root.addProperty(ASYNC_EXPERIMENT_TESTS, asyncExperimentTests);
         root.addProperty(ALLOW_SURVIVAL_CREATIVE_COMPONENT, allowSurvivalCreativeComponent);
+        root.addProperty(CIRCUIT_ALBUM_CAPACITY, circuitAlbumCapacity);
         try {
             Files.createDirectories(file.getParent());
             Files.writeString(file, GSON.toJson(root) + System.lineSeparator(), StandardCharsets.UTF_8);
@@ -218,5 +243,6 @@ public final class ElementsPlusServerConfig {
         allowInfiniteInFiniteCircuit = DEFAULT_ALLOW_INFINITE_IN_FINITE;
         asyncExperimentTests = DEFAULT_ASYNC_EXPERIMENT_TESTS;
         allowSurvivalCreativeComponent = DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT;
+        circuitAlbumCapacity = DEFAULT_CIRCUIT_ALBUM_CAPACITY;
     }
 }

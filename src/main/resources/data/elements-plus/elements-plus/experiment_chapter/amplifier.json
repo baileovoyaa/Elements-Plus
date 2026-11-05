@@ -1,0 +1,92 @@
+{
+  "dependencies": [
+    "elements-plus:intro"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 5,
+      "args": [
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 2
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:amplifier"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 2,
+      "lines": 5,
+      "args": [
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gray"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "params": [
+            {
+              "style": [
+                "green"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 4,
+          "params": [
+            {
+              "style": [
+                "red"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

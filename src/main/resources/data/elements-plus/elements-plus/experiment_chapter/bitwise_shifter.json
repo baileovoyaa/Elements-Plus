@@ -1,0 +1,209 @@
+{
+  "dependencies": [
+    "elements-plus:multi_bit_subtract"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 3,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            },
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 3,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            },
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            },
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:bitwise_shift",
+        "elements-plus:bitwise_shift_arithmetic"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 2,
+      "lines": 2,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            },
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:bitwise_rotate"
+      ],
+      "optional": [
+        "elements-plus:bitwise_rotate"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 3,
+      "lines": 1,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            },
+            {
+              "style": [
+                "italic",
+                "red"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:bitwise_shift_analog",
+        "elements-plus:bitwise_rotate_analog"
+      ],
+      "optional": [
+        "elements-plus:bitwise_shift_analog",
+        "elements-plus:bitwise_rotate_analog"
+      ]
+    }
+  ]
+}

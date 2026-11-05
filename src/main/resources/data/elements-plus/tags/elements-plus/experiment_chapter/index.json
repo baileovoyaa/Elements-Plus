@@ -1,0 +1,29 @@
+{
+  "replace": false,
+  "values": [
+    "elements-plus:intro",
+    "elements-plus:amplifier",
+    "elements-plus:first_gate",
+    "elements-plus:basic_gate",
+    "elements-plus:advanced_gate",
+    "elements-plus:three_way_logic_gate",
+    "elements-plus:multiplexer",
+    "elements-plus:encoder_decoder",
+    "elements-plus:one_bit_adder",
+    "elements-plus:bus",
+    "elements-plus:multi_bit_adder",
+    "elements-plus:bitwise_operator",
+    "elements-plus:comparator",
+    "elements-plus:multi_bit_subtract",
+    "elements-plus:bitwise_shifter",
+    "elements-plus:multiplier_divisor",
+    "elements-plus:alu_basic",
+    "elements-plus:alu_advanced",
+    "elements-plus:custom_component",
+    "elements-plus:flip_flop",
+    "elements-plus:register",
+    "elements-plus:analog_digital_converter",
+    "elements-plus:counter",
+    "elements-plus:multi_byte_memory"
+  ]
+}

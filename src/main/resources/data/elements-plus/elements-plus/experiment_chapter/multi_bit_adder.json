@@ -1,0 +1,45 @@
+{
+  "dependencies": [
+    "elements-plus:bus"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 1
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 3,
+      "args": [
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:adder_8"
+      ]
+    }
+  ]
+}

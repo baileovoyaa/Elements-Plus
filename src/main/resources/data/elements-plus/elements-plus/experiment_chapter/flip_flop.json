@@ -1,0 +1,141 @@
+{
+  "dependencies": [
+    "elements-plus:alu_basic"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 9,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            },
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            },
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 4,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 7,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 8,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:tff"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 1
+    },
+    {
+      "type": "text",
+      "section": 2,
+      "lines": 2,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:tff_prime"
+      ],
+      "optional": [
+        "elements-plus:tff_prime"
+      ]
+    }
+  ]
+}

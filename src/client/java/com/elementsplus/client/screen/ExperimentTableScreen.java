@@ -117,6 +117,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     protected void init() {
+        if (Minecraft.getInstance().level != null) {
+            BuiltinExperimentChapters.ensureLoaded(Minecraft.getInstance().level.registryAccess());
+        }
         updateScreenSize();
         sequentialDialog = null;
         customComponentDialog = null;

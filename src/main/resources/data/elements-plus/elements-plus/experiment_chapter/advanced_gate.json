@@ -1,0 +1,93 @@
+{
+  "dependencies": [
+    "elements-plus:basic_gate"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 3
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 4,
+      "args": [
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:xor_gate",
+        "elements-plus:xnor_gate"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 2,
+      "lines": 4,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

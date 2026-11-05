@@ -3,13 +3,15 @@ title: "实验章节索引"
 category: "用户文档"
 ---
 
-章节内容可以在实验桌内看到，以下是所有实验章节内容。
+章节内容可以在实验桌内看到，以下是所有内置实验章节内容。
 
 > [!NOTE]
 > 
 > 请使用支持的渲染器以正常显示文字颜色
 >
 > <font color=gold>金色文字</font> <font color=blue>蓝色文字</font>
+
+> 想添加或修改章节？参见[自定义实验章节](../custom-experiment-chapters.md)。
 
 - [介绍](intro.md)
 - [放大器](amplifier.md)

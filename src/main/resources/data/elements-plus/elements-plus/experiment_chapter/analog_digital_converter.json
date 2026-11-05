@@ -1,0 +1,63 @@
+{
+  "dependencies": [
+    "elements-plus:multiplexer",
+    "elements-plus:encoder_decoder",
+    "elements-plus:multi_bit_adder"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 6,
+      "args": [
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": [
+                "blue"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 4,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        },
+        {
+          "line": 5,
+          "params": [
+            {
+              "style": [
+                "gold"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:adc",
+        "elements-plus:dac"
+      ]
+    }
+  ]
+}

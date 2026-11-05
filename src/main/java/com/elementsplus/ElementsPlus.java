@@ -15,9 +15,13 @@ import com.elementsplus.core.experiment.BuiltinExperiments;
 import com.elementsplus.core.experiment.ExperimentChapter;
 import com.elementsplus.item.SyringeChargeManager;
 import com.elementsplus.item.SyringeItem;
+import com.elementsplus.menu.CircuitAlbumMenu;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.AdvancementActionPayload;
+import com.elementsplus.network.CircuitAlbumActionPayload;
+import com.elementsplus.network.CircuitAlbumDataPayload;
+import com.elementsplus.network.CircuitAlbumRequestPayload;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
 import com.elementsplus.network.CopyCompiledSettingPayload;
 import com.elementsplus.network.CircuitStorageSyncPayload;
@@ -119,6 +123,7 @@ public class ElementsPlus implements ModInitializer {
         ModBlockEntityTypes.initialize();
         ModMenuTypes.initialize();
         ModSounds.initialize();
+        BuiltinExperimentChapters.initialize();
 
         FabricBrewingRecipeRegistryBuilder.BUILD.register(builder -> {
             // 粗制的药水 + 钢管 -> 防锈药水
@@ -134,6 +139,13 @@ public class ElementsPlus implements ModInitializer {
         ScaleUpgradeRecipe.TYPE_ID.toString();
 
         ServerLifecycleEvents.SERVER_STARTED.register(CircuitStorage.get()::load);
+        ServerLifecycleEvents.SERVER_STARTED.register(server ->
+                BuiltinExperimentChapters.reload(server.registryAccess()));
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
+            if (success) {
+                BuiltinExperimentChapters.reload(server.registryAccess());
+            }
+        });
         ServerLifecycleEvents.SERVER_STARTED.register(ElementsPlusServerConfig::load);
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> ElementsPlusServerConfig.unload());
         PayloadTypeRegistry.playS2C().register(CircuitStorageSyncPayload.TYPE, CircuitStorageSyncPayload.STREAM_CODEC);
@@ -143,6 +155,29 @@ public class ElementsPlus implements ModInitializer {
                     new CircuitStorageSyncPayload(CircuitStorage.get().ordered()));
             ServerPlayNetworking.send(handler.player, serverConfigPayload());
         });
+
+        PayloadTypeRegistry.playS2C().register(CircuitAlbumDataPayload.TYPE, CircuitAlbumDataPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(CircuitAlbumRequestPayload.TYPE, CircuitAlbumRequestPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(CircuitAlbumActionPayload.TYPE, CircuitAlbumActionPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(CircuitAlbumRequestPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    if (context.player().containerMenu instanceof CircuitAlbumMenu menu
+                            && menu.containerId == payload.containerId()) {
+                        menu.sendContents(context.player());
+                    }
+                }));
+        ServerPlayNetworking.registerGlobalReceiver(CircuitAlbumActionPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    if (!(context.player().containerMenu instanceof CircuitAlbumMenu menu)
+                            || menu.containerId != payload.containerId()) {
+                        return;
+                    }
+                    switch (payload.action()) {
+                        case INSERT_CARRIED -> menu.insertCarried(context.player());
+                        case TAKE_TO_CURSOR -> menu.takeToCursor(context.player(), payload.index());
+                        case TAKE_TO_INVENTORY -> menu.takeToInventory(context.player(), payload.index());
+                    }
+                }));
 
         PayloadTypeRegistry.playC2S().register(ReturnCarriedPayload.TYPE, ReturnCarriedPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ReturnCarriedPayload.TYPE, (payload, context) ->
@@ -744,7 +779,8 @@ public class ElementsPlus implements ModInitializer {
 
         String previous = ElementsPlusServerConfig.valueOf(option);
         boolean saved;
-        if (ElementsPlusServerConfig.CUSTOM_COMPONENT_NESTING_LIMIT.equals(option)) {
+        if (ElementsPlusServerConfig.CUSTOM_COMPONENT_NESTING_LIMIT.equals(option)
+                || ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)) {
             int value;
             try {
                 value = Integer.parseInt(raw);
@@ -753,7 +789,9 @@ public class ElementsPlus implements ModInitializer {
                         "command.elements-plus.config.invalid_integer", option, raw));
                 return 0;
             }
-            saved = ElementsPlusServerConfig.setNestingLimit(value);
+            saved = ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)
+                    ? ElementsPlusServerConfig.setCircuitAlbumCapacity(value)
+                    : ElementsPlusServerConfig.setNestingLimit(value);
         } else if (ElementsPlusServerConfig.ALLOW_INFINITE_IN_FINITE_CIRCUIT.equals(option)
                 || ElementsPlusServerConfig.ASYNC_EXPERIMENT_TESTS.equals(option)
                 || ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)) {
@@ -824,6 +862,9 @@ public class ElementsPlus implements ModInitializer {
             builder.suggest("-1");
             builder.suggest("4");
             builder.suggest("-3");
+        } else if (ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)) {
+            builder.suggest("50");
+            builder.suggest("100");
         }
         return builder.buildFuture();
     }

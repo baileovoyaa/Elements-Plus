@@ -8,6 +8,7 @@ import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.storage.CircuitStorage;
 import com.elementsplus.core.circuit.storage.StoredCircuit;
 import com.elementsplus.item.ChipItem;
+import com.elementsplus.item.CircuitAlbumItem;
 import com.elementsplus.item.SyringeItem;
 import com.elementsplus.item.WrenchItem;
 import net.minecraft.ChatFormatting;
@@ -186,6 +187,7 @@ public class ModItems {
 
     // 电路载体
     public static final Item CIRCUIT_BOARD = register(new Item(new Item.Properties().stacksTo(1)), "circuit_board");
+    public static final Item CIRCUIT_ALBUM = register(new CircuitAlbumItem(new Item.Properties().stacksTo(1)), "circuit_album");
     public static final Item CIRCUIT_DIAGRAM = register(new Item(new Item.Properties()
             .stacksTo(1)
             .component(ModDataComponents.CIRCUIT_DIAGRAM, CircuitDiagram.EMPTY.copy())) {
@@ -271,6 +273,8 @@ public class ModItems {
     public static final Item COMPUTER = register(new Item(new Item.Properties()), "computer");
     public static final Item WASTE_BOTTLE = register(new Item(new Item.Properties()), "waste_bottle");
     public static final Item PLASTIC = register(new Item(new Item.Properties()), "plastic");
+
+    public static final Item DISK = register(new Item(new Item.Properties().stacksTo(1)), "disk");
 
     public static void initialize() {
         // 物品已在静态块中注册
