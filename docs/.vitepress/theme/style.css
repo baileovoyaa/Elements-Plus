@@ -1,0 +1,50 @@
+/* ```epp-experiments 实验块（渲染逻辑见 .vitepress/experiments.mjs） */
+
+.vp-doc .epp-experiments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.vp-doc .epp-experiment {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background-color: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  font-size: 14px;
+  line-height: 1.5;
+  text-decoration: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.vp-doc .epp-experiment:hover {
+  border-color: var(--vp-c-brand-1);
+  background-color: var(--vp-c-bg-alt);
+}
+
+.vp-doc .epp-experiment-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  image-rendering: pixelated;
+}
+
+.vp-doc .epp-experiment-name {
+  font-weight: 500;
+}
+
+.vp-doc .epp-experiment-badge {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background-color: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}

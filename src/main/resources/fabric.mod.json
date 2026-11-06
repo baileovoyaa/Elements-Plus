@@ -8,10 +8,10 @@
     "baileovo"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://baileovoyaa.github.io/Elements-Plus",
+    "sources": "https://github.com/baileovoyaa/Elements-Plus"
   },
-  "license": "CC0-1.0",
+  "license": "MIT",
   "icon": "assets/elements-plus/icon.png",
   "environment": "*",
   "entrypoints": {

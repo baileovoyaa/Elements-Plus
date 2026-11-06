@@ -3,7 +3,7 @@ title: "介绍"
 category: "用户文档"
 ---
 
-![intro.zh_cn.png](../../../src/main/resources/assets/elements-plus/textures/gui/experiment_table/chapters/intro/intro.zh_cn.png)
+![intro.zh_cn.png](/textures/gui/experiment_table/chapters/intro/intro.zh_cn.png)
 
 欢迎来到 ElementsPlus 实验桌！
 

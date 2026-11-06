@@ -52,3 +52,6 @@ script/output/
 node_modules/
 docs/.vitepress/dist
 docs/.vitepress/cache
+
+# 由 script/sync-docs-textures.mjs 从 src/main/resources 生成
+docs/public/textures/

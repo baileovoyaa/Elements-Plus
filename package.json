@@ -3,7 +3,9 @@
     "vitepress": "^2.0.0-alpha.21"
   },
   "scripts": {
+    "predocs:dev": "node script/sync-docs-textures.mjs",
     "docs:dev": "vitepress dev docs",
+    "predocs:build": "node script/sync-docs-textures.mjs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   }

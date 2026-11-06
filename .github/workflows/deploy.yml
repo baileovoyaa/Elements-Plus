@@ -3,7 +3,15 @@ name: Deploy VitePress
 on:
   push:
     branches: [main]
-    paths: ['docs/**']          # 仅在 docs/ 变更时触发
+    paths:
+      - 'docs/**'                                   # 文档正文、配置、主题
+      - 'CONTRIBUTING.md'                           # 被 docs/contributing.md 内联
+      - 'src/main/resources/assets/**/textures/**'  # 贴图；是否真的部署由 check job 决定
+      - 'script/docs-textures.mjs'
+      - 'script/sync-docs-textures.mjs'
+      - 'script/check-docs-textures.mjs'
+      - 'package.json'
+      - 'package-lock.json'
   workflow_dispatch:
 
 permissions:
@@ -16,7 +24,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # 只改了一张没被文档引用的贴图时，跳过 build/deploy
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.decide.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0          # 需要和 push 之前的 commit 对比
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: 判断改动是否影响站点内容
+        id: decide
+        env:
+          FORCE_DEPLOY: ${{ github.event_name == 'workflow_dispatch' }}
+        run: node script/check-docs-textures.mjs --since "${{ github.event.before }}"
+
   build:
+    needs: check
+    if: needs.check.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
