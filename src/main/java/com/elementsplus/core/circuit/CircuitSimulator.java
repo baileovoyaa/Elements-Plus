@@ -1482,15 +1482,55 @@ public class CircuitSimulator {
                 || cc == BuiltinCircuitComponents.BITWISE_SHIFT_ARITHMETIC
                 || cc == BuiltinCircuitComponents.BITWISE_ROTATE
                 || cc == BuiltinCircuitComponents.BITWISE_SHIFT_ANALOG
-                || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG) {
-            // 8 位位移器 / 算术位移器 / 循环位移器：A 左移 B 位，B 视作有符号数（补码），为负则右移。
+                || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG
+                || cc == BuiltinCircuitComponents.BITWISE_LEFT_SHIFT
+                || cc == BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT
+                || cc == BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ARITHMETIC
+                || cc == BuiltinCircuitComponents.BITWISE_LEFT_ROTATE
+                || cc == BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE
+                || cc == BuiltinCircuitComponents.BITWISE_LEFT_SHIFT_ANALOG
+                || cc == BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ANALOG
+                || cc == BuiltinCircuitComponents.BITWISE_LEFT_ROTATE_ANALOG
+                || cc == BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE_ANALOG) {
+            // 双向版本把 B 视为有符号数；单向版本只取 B 的低 3 位作为移位量。
+            boolean unidirectional = cc == BuiltinCircuitComponents.BITWISE_LEFT_SHIFT
+                    || cc == BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT
+                    || cc == BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ARITHMETIC
+                    || cc == BuiltinCircuitComponents.BITWISE_LEFT_ROTATE
+                    || cc == BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE
+                    || cc == BuiltinCircuitComponents.BITWISE_LEFT_SHIFT_ANALOG
+                    || cc == BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ANALOG
+                    || cc == BuiltinCircuitComponents.BITWISE_LEFT_ROTATE_ANALOG
+                    || cc == BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE_ANALOG;
             long a = inPort(node, 0);
-            int shift = signedFromTuple(inPort(node, 1));
-            boolean arithmetic = cc == BuiltinCircuitComponents.BITWISE_SHIFT_ARITHMETIC;
-            boolean rotate = cc == BuiltinCircuitComponents.BITWISE_ROTATE
-                    || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG;
-            boolean analog = cc == BuiltinCircuitComponents.BITWISE_SHIFT_ANALOG
-                    || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG;
+            int shift;
+            boolean arithmetic;
+            boolean rotate;
+            boolean analog;
+            if (unidirectional) {
+                int amount = tupleToInt(inPort(node, 1)) & 0x7;
+                boolean left = cc == BuiltinCircuitComponents.BITWISE_LEFT_SHIFT
+                        || cc == BuiltinCircuitComponents.BITWISE_LEFT_ROTATE
+                        || cc == BuiltinCircuitComponents.BITWISE_LEFT_SHIFT_ANALOG
+                        || cc == BuiltinCircuitComponents.BITWISE_LEFT_ROTATE_ANALOG;
+                shift = left ? amount : -amount;
+                arithmetic = cc == BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ARITHMETIC;
+                rotate = cc == BuiltinCircuitComponents.BITWISE_LEFT_ROTATE
+                        || cc == BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE
+                        || cc == BuiltinCircuitComponents.BITWISE_LEFT_ROTATE_ANALOG
+                        || cc == BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE_ANALOG;
+                analog = cc == BuiltinCircuitComponents.BITWISE_LEFT_SHIFT_ANALOG
+                        || cc == BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ANALOG
+                        || cc == BuiltinCircuitComponents.BITWISE_LEFT_ROTATE_ANALOG
+                        || cc == BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE_ANALOG;
+            } else {
+                shift = signedFromTuple(inPort(node, 1));
+                arithmetic = cc == BuiltinCircuitComponents.BITWISE_SHIFT_ARITHMETIC;
+                rotate = cc == BuiltinCircuitComponents.BITWISE_ROTATE
+                        || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG;
+                analog = cc == BuiltinCircuitComponents.BITWISE_SHIFT_ANALOG
+                        || cc == BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG;
+            }
             long shifted = arithmetic ? analogArithmeticShift(a, shift)
                     : (rotate ? analogRotate(a, shift) : analogShift(a, shift));
             long t = analog ? shifted : amplifyTuple(shifted);

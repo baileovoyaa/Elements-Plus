@@ -453,6 +453,53 @@ public class BuiltinCircuitComponents {
         setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
         setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
     }});
+    // 单向位移器：只使用 B 的低 3 位作为移位量
+    public static final CircuitComponent BITWISE_LEFT_SHIFT = register(new CircuitComponent(ElementsPlus.id("bitwise_left_shift"), Component.translatable("circuit.elements-plus.component.bitwise_left_shift"), null, ElementsPlus.id("textures/circuit/bitwise_left_shift.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent BITWISE_RIGHT_SHIFT = register(new CircuitComponent(ElementsPlus.id("bitwise_right_shift"), Component.translatable("circuit.elements-plus.component.bitwise_right_shift"), null, ElementsPlus.id("textures/circuit/bitwise_right_shift.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent BITWISE_RIGHT_SHIFT_ARITHMETIC = register(new CircuitComponent(ElementsPlus.id("bitwise_right_shift_arithmetic"), Component.translatable("circuit.elements-plus.component.bitwise_right_shift_arithmetic"), null, ElementsPlus.id("textures/circuit/bitwise_right_shift_arithmetic.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent BITWISE_LEFT_ROTATE = register(new CircuitComponent(ElementsPlus.id("bitwise_left_rotate"), Component.translatable("circuit.elements-plus.component.bitwise_left_rotate"), null, ElementsPlus.id("textures/circuit/bitwise_left_rotate.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent BITWISE_RIGHT_ROTATE = register(new CircuitComponent(ElementsPlus.id("bitwise_right_rotate"), Component.translatable("circuit.elements-plus.component.bitwise_right_rotate"), null, ElementsPlus.id("textures/circuit/bitwise_right_rotate.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    // 单向模拟位移器：保留通道信号强度
+    public static final CircuitComponent BITWISE_LEFT_SHIFT_ANALOG = register(new CircuitComponent(ElementsPlus.id("bitwise_left_shift_analog"), Component.translatable("circuit.elements-plus.component.bitwise_left_shift_analog"), null, ElementsPlus.id("textures/circuit/bitwise_left_shift_analog.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent BITWISE_RIGHT_SHIFT_ANALOG = register(new CircuitComponent(ElementsPlus.id("bitwise_right_shift_analog"), Component.translatable("circuit.elements-plus.component.bitwise_right_shift_analog"), null, ElementsPlus.id("textures/circuit/bitwise_right_shift_analog.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent BITWISE_LEFT_ROTATE_ANALOG = register(new CircuitComponent(ElementsPlus.id("bitwise_left_rotate_analog"), Component.translatable("circuit.elements-plus.component.bitwise_left_rotate_analog"), null, ElementsPlus.id("textures/circuit/bitwise_left_rotate_analog.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent BITWISE_RIGHT_ROTATE_ANALOG = register(new CircuitComponent(ElementsPlus.id("bitwise_right_rotate_analog"), Component.translatable("circuit.elements-plus.component.bitwise_right_rotate_analog"), null, ElementsPlus.id("textures/circuit/bitwise_right_rotate_analog.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
     // 乘除器
     public static final CircuitComponent MULTIPLIER = register(new CircuitComponent(ElementsPlus.id("multiplier"), Component.translatable("circuit.elements-plus.component.multiplier"), null, ElementsPlus.id("textures/circuit/multiplier.png"), 1, 2) {{
         setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);

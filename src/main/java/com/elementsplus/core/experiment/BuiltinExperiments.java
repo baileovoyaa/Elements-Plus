@@ -953,6 +953,53 @@ public class BuiltinExperiments {
         return tests;
     }
 
+    /** 单向移位器只使用 B 的低 3 位；这些值同时覆盖高位被忽略的情况。 */
+    private static final int[] UNIDIRECTIONAL_SHIFT_AMOUNTS = {
+            0, 1, 2, 3, 4, 5, 6, 7,
+            8, 9, 15, 16, 31, 0x80, 0xFF,
+    };
+
+    private static List<TestCase> buildUnidirectionalShifterTests(boolean left, boolean rotate, boolean analog) {
+        List<TestCase> tests = new ArrayList<>();
+        if (analog) {
+            for (byte[] sample : SHIFT_ANALOG_SAMPLES) {
+                for (int raw : UNIDIRECTIONAL_SHIFT_AMOUNTS) {
+                    int amount = raw & 0x7;
+                    int shift = left ? amount : -amount;
+                    tests.add(new ConstantCombinationalTestCase(
+                            Map.of("A", new PinValue(sample.clone()), "B", new PinValue(pin8(raw))),
+                            Map.of("Y", new PinValue(shiftLanes(sample, shift, rotate, true)))));
+                }
+            }
+        } else {
+            for (int sample : SHIFT_DIGITAL_SAMPLES) {
+                byte[] data = pin8(sample);
+                for (int raw : UNIDIRECTIONAL_SHIFT_AMOUNTS) {
+                    int amount = raw & 0x7;
+                    int shift = left ? amount : -amount;
+                    tests.add(new ConstantCombinationalTestCase(
+                            Map.of("A", new PinValue(data.clone()), "B", new PinValue(pin8(raw))),
+                            Map.of("Y", new PinValue(shiftLanes(data, shift, rotate, false)))));
+                }
+            }
+        }
+        return tests;
+    }
+
+    private static List<TestCase> buildUnidirectionalArithmeticRightTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int sample : SHIFT_DIGITAL_SAMPLES) {
+            byte[] data = pin8(sample);
+            for (int raw : UNIDIRECTIONAL_SHIFT_AMOUNTS) {
+                int amount = raw & 0x7;
+                tests.add(new ConstantCombinationalTestCase(
+                        Map.of("A", new PinValue(data.clone()), "B", new PinValue(pin8(raw))),
+                        Map.of("Y", new PinValue(arithmeticShiftLanes(data, -amount)))));
+            }
+        }
+        return tests;
+    }
+
     public static final CircuitExperiment BITWISE_AND = register("bitwise_and", BuiltinCircuitComponents.BITWISE_AND.getIcon(),
             new CircuitExperiment(buildBitwise8Tests((a, b) -> a & b), BuiltinCircuitComponents.BITWISE_AND));
 
@@ -1004,6 +1051,38 @@ public class BuiltinExperiments {
 
     public static final CircuitExperiment BITWISE_ROTATE_ANALOG = register("bitwise_rotate_analog", BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG.getIcon(),
             new CircuitExperiment(buildShifterTests(true, true), BuiltinCircuitComponents.BITWISE_ROTATE_ANALOG));
+
+    public static final CircuitExperiment BITWISE_LEFT_SHIFT = register("bitwise_left_shift", BuiltinCircuitComponents.BITWISE_LEFT_SHIFT.getIcon(),
+            new CircuitExperiment(buildUnidirectionalShifterTests(true, false, false), BuiltinCircuitComponents.BITWISE_LEFT_SHIFT));
+
+    public static final CircuitExperiment BITWISE_RIGHT_SHIFT = register("bitwise_right_shift", BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT.getIcon(),
+            new CircuitExperiment(buildUnidirectionalShifterTests(false, false, false), BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT));
+
+    public static final CircuitExperiment BITWISE_RIGHT_SHIFT_ARITHMETIC = register("bitwise_right_shift_arithmetic",
+            BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ARITHMETIC.getIcon(),
+            new CircuitExperiment(buildUnidirectionalArithmeticRightTests(), BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ARITHMETIC));
+
+    public static final CircuitExperiment BITWISE_LEFT_ROTATE = register("bitwise_left_rotate", BuiltinCircuitComponents.BITWISE_LEFT_ROTATE.getIcon(),
+            new CircuitExperiment(buildUnidirectionalShifterTests(true, true, false), BuiltinCircuitComponents.BITWISE_LEFT_ROTATE));
+
+    public static final CircuitExperiment BITWISE_RIGHT_ROTATE = register("bitwise_right_rotate", BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE.getIcon(),
+            new CircuitExperiment(buildUnidirectionalShifterTests(false, true, false), BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE));
+
+    public static final CircuitExperiment BITWISE_LEFT_SHIFT_ANALOG = register("bitwise_left_shift_analog",
+            BuiltinCircuitComponents.BITWISE_LEFT_SHIFT_ANALOG.getIcon(),
+            new CircuitExperiment(buildUnidirectionalShifterTests(true, false, true), BuiltinCircuitComponents.BITWISE_LEFT_SHIFT_ANALOG));
+
+    public static final CircuitExperiment BITWISE_RIGHT_SHIFT_ANALOG = register("bitwise_right_shift_analog",
+            BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ANALOG.getIcon(),
+            new CircuitExperiment(buildUnidirectionalShifterTests(false, false, true), BuiltinCircuitComponents.BITWISE_RIGHT_SHIFT_ANALOG));
+
+    public static final CircuitExperiment BITWISE_LEFT_ROTATE_ANALOG = register("bitwise_left_rotate_analog",
+            BuiltinCircuitComponents.BITWISE_LEFT_ROTATE_ANALOG.getIcon(),
+            new CircuitExperiment(buildUnidirectionalShifterTests(true, true, true), BuiltinCircuitComponents.BITWISE_LEFT_ROTATE_ANALOG));
+
+    public static final CircuitExperiment BITWISE_RIGHT_ROTATE_ANALOG = register("bitwise_right_rotate_analog",
+            BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE_ANALOG.getIcon(),
+            new CircuitExperiment(buildUnidirectionalShifterTests(false, true, true), BuiltinCircuitComponents.BITWISE_RIGHT_ROTATE_ANALOG));
 
     // ================= 乘除器 =================
 

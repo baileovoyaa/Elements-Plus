@@ -10,3 +10,11 @@ category: "用户文档"
 # Modrinth
 
 # Curseforge
+
+# 自行构建
+
+> [!WARNING]
+> 开发版本的 Elements Plus 可能会存在不稳定的问题。
+
+1. 克隆[仓库](https://github.com/baileovoyaa/Elements-Plus)
+2. 运行 `./gradlew build`
