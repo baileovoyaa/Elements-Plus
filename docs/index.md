@@ -20,7 +20,7 @@ features:
     details: 面向玩家、整合包作者和服务器管理员，提供<b>使用</b>此模组的详细操作指南和参考文档。
     link: /user
   - title: 开发者文档
-    details: 面向模组开发者，提供构建指导和代码实现细节等，也包含开发中计划。
+    details: 面向模组开发者，提供贡献指南和代码实现细节等，也包含开发中计划。
     link: /dev
   - title: GitHub
     details: 在 GitHub 上查看模组仓库

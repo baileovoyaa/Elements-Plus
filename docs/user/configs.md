@@ -57,6 +57,7 @@ Elements Plus 的配置分为两类：
 | `allow_infinite_in_finite_circuit` | 布尔 | `false` | 是否允许把无限规模的自定义元件放入有限规模的电路。无论此项如何，任何元件都可以放入无限规模电路。 |
 | `async_experiment_tests` | 布尔 | `false` | 实验测例是否异步运行。`false` 时测例随服务器 tick 同步推进；`true` 时在独立线程全速运行，不阻塞主循环，每 tick 最多同步一次进度。适合测例数量很多的实验。 |
 | `allow_survival_creative_component` | 布尔 | `false` | 是否允许生存模式玩家使用「创造模式元件」。关闭时只有创造模式玩家可以使用；创造模式元件可以代替任意规模（包括无限规模）的空芯片参与芯片制造，且不需要其他原料。（注：即使开启，生存模式默认无获取创造模式元件途径，仅供特殊玩法需求） |
+| `circuit_album_capacity` | 整数 | `50` | 电路图册最多可保存的电路数量。达到上限后无法继续插入；调低该值不会移除图册中已有的电路，只会阻止继续插入。`0` 表示不允许插入。 |
 
 默认内容如下：
 
@@ -65,14 +66,15 @@ Elements Plus 的配置分为两类：
   "custom_component_nesting_limit": 1,
   "allow_infinite_in_finite_circuit": false,
   "async_experiment_tests": false,
-  "allow_survival_creative_component": false
+  "allow_survival_creative_component": false,
+  "circuit_album_capacity": 50
 }
 ```
 
 ### 修改服务端配置
 
 - **游戏内/控制台**：使用命令 `/elements-plus config`（列出全部配置项）、`/elements-plus config <配置项>`（查询）或 `/elements-plus config <配置项> <值>`（修改）。需要权限等级 2（管理员/OP）。修改会立即生效、写入存档配置文件，并同步给所有在线客户端。
-- **手动编辑**：直接修改 `serverconfig/elements-plus-server.json` 后重启服务器或重新加载存档生效。`custom_component_nesting_limit` 为整数，其余配置项为 `true` / `false`。
+- **手动编辑**：直接修改 `serverconfig/elements-plus-server.json` 后重启服务器或重新加载存档生效。`custom_component_nesting_limit` 和 `circuit_album_capacity` 为整数，其余配置项为 `true` / `false`。
 - 客户端加入服务器时会收到一份配置副本，仅用于放置或编译自定义元件时在界面上提前显示校验结果；实际以服务端校验为准。
 
 命令的完整用法见[命令](commands.md)。
