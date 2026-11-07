@@ -18,7 +18,7 @@ Elements Plus 的所有命令都位于 `/elements-plus` 之下，并且需要**�
 | `/elements-plus experiments list <player>` | 列出玩家已完成的实验 |
 | `/elements-plus experiments chapter forceunlock <players> [chapter] [true\|false]` | 查询或修改玩家的章节强制解锁状态 |
 | `/elements-plus experiments chapter <grant\|revoke> <players> all [include_optional]` | 按所有章节批量完成或撤销实验 |
-| `/elements-plus experiments chapter <grant\|revoke> <players> <only\|until\|before> <chapter> [include_optional]` | 按章节范围批量完成或撤销实验 |
+| `/elements-plus experiments chapter <grant\|revoke> <players> <only\|until\|before\|from\|after> <chapter> [include_optional]` | 按章节范围批量完成或撤销实验 |
 | `/elements-plus experiments chapter list <player> [unlocked\|completed\|perfect]` | 列出玩家已解锁、已完成或已完美的章节 |
 | `/elements-plus circuit give <id> [diagram\|chip]` | 获取电路图（默认）或芯片 |
 | `/elements-plus circuit list all` | 列出所有已编译电路 |
@@ -108,10 +108,20 @@ Elements Plus 的所有命令都位于 `/elements-plus` 之下，并且需要**�
 
 只处理该章节直接或间接依赖的所有章节中的实验，不包含该章节本身。
 
+#### `/elements-plus experiments chapter grant|revoke <players> from <chapter> [include_optional]`
+
+处理该章节及所有直接或间接依赖它的后续章节中的实验。
+
+#### `/elements-plus experiments chapter grant|revoke <players> after <chapter> [include_optional]`
+
+只处理所有直接或间接依赖该章节的后续章节中的实验，不包含该章节本身。
+
 ```text
 /elements-plus experiments chapter grant @s only first_gate
-/elements-plus experiments chapter grant @s until adder_8 true
+/elements-plus experiments chapter grant @s until multi_bit_adder true
 /elements-plus experiments chapter revoke @a all
+/elements-plus experiments chapter revoke @s from multi_bit_adder true
+/elements-plus experiments chapter revoke @s after first_gate
 ```
 
 ### `/elements-plus experiments chapter list <player> [unlocked|completed|perfect]`

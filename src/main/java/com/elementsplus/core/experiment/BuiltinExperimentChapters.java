@@ -519,4 +519,26 @@ public class BuiltinExperimentChapters {
         return result;
     }
 
+    /** 章节自身和/或直接、间接依赖它的后续章节。 */
+    public static Set<ExperimentChapter> chaptersDependingOn(ExperimentChapter chapter, boolean includeSelf) {
+        Set<ExperimentChapter> result = new LinkedHashSet<>();
+        if (chapter == null) {
+            return result;
+        }
+        Deque<ExperimentChapter> queue = new ArrayDeque<>();
+        if (includeSelf) {
+            result.add(chapter);
+        }
+        queue.add(chapter);
+        while (!queue.isEmpty()) {
+            ExperimentChapter current = queue.poll();
+            for (ExperimentChapter candidate : BUILTIN_EXPERIMENT_CHAPTERS) {
+                if (candidate.dependencies.contains(current) && result.add(candidate)) {
+                    queue.add(candidate);
+                }
+            }
+        }
+        return result;
+    }
+
 }

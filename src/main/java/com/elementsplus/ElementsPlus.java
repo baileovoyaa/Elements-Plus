@@ -681,6 +681,8 @@ public class ElementsPlus implements ModInitializer {
             case "only" -> List.of(chapter);
             case "until" -> BuiltinExperimentChapters.chaptersWithDependencies(chapter, true);
             case "before" -> BuiltinExperimentChapters.chaptersWithDependencies(chapter, false);
+            case "from" -> BuiltinExperimentChapters.chaptersDependingOn(chapter, true);
+            case "after" -> BuiltinExperimentChapters.chaptersDependingOn(chapter, false);
             default -> throw new SimpleCommandExceptionType(Component.translatable(
                     "command.elements-plus.experiments.chapter.unknown_mode", mode)).create();
         };
@@ -1190,6 +1192,8 @@ public class ElementsPlus implements ModInitializer {
         builder.suggest("only");
         builder.suggest("until");
         builder.suggest("before");
+        builder.suggest("from");
+        builder.suggest("after");
         return builder.buildFuture();
     }
 
