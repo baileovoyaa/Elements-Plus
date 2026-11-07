@@ -1,6 +1,7 @@
 package com.elementsplus.core.circuit;
 
 import com.elementsplus.core.circuit.CircuitComponent.PinType;
+import com.elementsplus.core.circuit.component.BitExtract8ComponentInstance;
 import com.elementsplus.core.circuit.component.CapacitorComponentInstance;
 import com.elementsplus.core.circuit.component.Const8ComponentInstance;
 import com.elementsplus.core.circuit.component.ConstAnalog8ComponentInstance;
@@ -1406,6 +1407,18 @@ public class CircuitSimulator {
                 tuple |= (long) (instance.getLane(b) & 0xF) << (4 * b);
             }
             return tuple << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.BIT_EXTRACT_8) {
+            int bit = ((BitExtract8ComponentInstance) component.instance).getBitIndex();
+            int lane = (int) ((inPort(node, 0) >> (4 * bit)) & 0xF);
+            return (long) lane << outputSlot(cc, Direction.EAST, 0).bitStart();
+        } else if (cc == BuiltinCircuitComponents.BIT_INDEX_8
+                || cc == BuiltinCircuitComponents.BIT_INDEX_ANALOG_8) {
+            int index = tupleToInt(inPort(node, 1)) & 0x7;
+            int lane = (int) ((inPort(node, 0) >> (4 * index)) & 0xF);
+            if (cc == BuiltinCircuitComponents.BIT_INDEX_8) {
+                lane = lane != 0 ? 15 : 0;
+            }
+            return (long) lane << outputSlot(cc, Direction.EAST, 0).bitStart();
         } else if (cc == BuiltinCircuitComponents.COMPARATOR
                 || cc == BuiltinCircuitComponents.COMPARATOR_8
                 || cc == BuiltinCircuitComponents.COMPARATOR_SIGNED_8

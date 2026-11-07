@@ -12,9 +12,7 @@
           "line": 0,
           "params": [
             {
-              "style": [
-                "blue"
-              ]
+              "style": ["blue"]
             }
           ]
         },
@@ -22,24 +20,16 @@
           "line": 3,
           "params": [
             {
-              "style": [
-                "gold"
-              ]
+              "style": ["gold"]
             },
             {
-              "style": [
-                "gold"
-              ]
+              "style": ["gold"]
             },
             {
-              "style": [
-                "gold"
-              ]
+              "style": ["gold"]
             },
             {
-              "style": [
-                "gold"
-              ]
+              "style": ["gold"]
             }
           ]
         }
@@ -54,9 +44,7 @@
           "line": 1,
           "params": [
             {
-              "style": [
-                "gold"
-              ]
+              "style": ["gold"]
             }
           ]
         },
@@ -64,9 +52,7 @@
           "line": 2,
           "params": [
             {
-              "style": [
-                "gold"
-              ]
+              "style": ["gold"]
             }
           ]
         }
@@ -87,15 +73,21 @@
     {
       "type": "text",
       "section": 3,
-      "lines": 2,
+      "lines": 3,
       "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": ["gold"]
+            }
+          ]
+        },
         {
           "line": 1,
           "params": [
             {
-              "style": [
-                "gold"
-              ]
+              "style": ["gold"]
             }
           ]
         }
@@ -104,15 +96,50 @@
     {
       "type": "experiments",
       "experiments": [
-        "elements-plus:const_analog_8"
+        "elements-plus:bit_extract_8",
+        "elements-plus:bit_index_8"
       ],
       "optional": [
-        "elements-plus:const_analog_8"
+        "elements-plus:bit_index_8"
       ]
     },
     {
       "type": "text",
       "section": 4,
+      "lines": 3,
+      "args": [
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": ["gold"]
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": ["gold"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:const_analog_8",
+        "elements-plus:bit_index_analog_8"
+      ],
+      "optional": [
+        "elements-plus:const_analog_8",
+        "elements-plus:bit_index_analog_8"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 5,
       "lines": 1
     }
   ]

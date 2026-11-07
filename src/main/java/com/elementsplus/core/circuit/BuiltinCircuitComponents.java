@@ -330,6 +330,22 @@ public class BuiltinCircuitComponents {
         setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
         setInstanceFactory(ConstAnalog8ComponentInstance::new);
     }});
+    // 取位器/索引器
+    public static final CircuitComponent BIT_EXTRACT_8 = register(new CircuitComponent(ElementsPlus.id("bit_extract_8"), Component.translatable("circuit.elements-plus.component.bit_extract_8"), Component.translatable("circuit.elements-plus.component.bit_extract_8.description"), ElementsPlus.id("textures/circuit/bit_extract_8.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y");
+        setInstanceFactory(BitExtract8ComponentInstance::new);
+    }});
+    public static final CircuitComponent BIT_INDEX_8 = register(new CircuitComponent(ElementsPlus.id("bit_index_8"), Component.translatable("circuit.elements-plus.component.bit_index_8"), Component.translatable("circuit.elements-plus.component.bit_index_8.description"), ElementsPlus.id("textures/circuit/bit_index_8.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y");
+    }});
+    public static final CircuitComponent BIT_INDEX_ANALOG_8 = register(new CircuitComponent(ElementsPlus.id("bit_index_analog_8"), Component.translatable("circuit.elements-plus.component.bit_index_analog_8"), Component.translatable("circuit.elements-plus.component.bit_index_analog_8.description"), ElementsPlus.id("textures/circuit/bit_index_analog_8.png"), 1, 1) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.NORTH, 0, PinType.INPUT, "B", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y");
+    }});
     // 模数转换
     public static final CircuitComponent DAC = register(new CircuitComponent(ElementsPlus.id("dac"), Component.translatable("circuit.elements-plus.component.dac"), null, ElementsPlus.id("textures/circuit/dac.png"), 1, 1) {{
         setPin(Direction.WEST, 0, PinType.INPUT, "D", 8);

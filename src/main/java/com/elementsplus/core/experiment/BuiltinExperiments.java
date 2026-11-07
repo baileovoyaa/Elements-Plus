@@ -627,6 +627,84 @@ public class BuiltinExperiments {
                     Map.of(),
                     Map.of("Y", new PinValue(analogLanes(BUS_ANALOG_DEFAULT_LANES))))), BuiltinCircuitComponents.CONST_ANALOG_8));
 
+    // ================= 取位器/索引器 =================
+    private static final int[] BUS_BIT_SAMPLES = {
+            0x00, 0xFF, 0x01, 0x80, 0xAA, 0x55, 0x0F, 0xF0, 0x96, 0x69,
+    };
+
+    private static final byte[][] BUS_BIT_ANALOG_SAMPLES = {
+            analogLanes(0, 1, 2, 3, 4, 5, 6, 7),
+            analogLanes(15, 13, 11, 9, 0, 2, 4, 6),
+            analogLanes(15, 0, 7, 0, 3, 0, 0, 9),
+            analogLanes(1, 2, 3, 4, 5, 6, 7, 8),
+            analogLanes(15, 15, 15, 15, 0, 0, 0, 0),
+    };
+
+    /** B 的低 3 位有效，同时覆盖高 5 位非零的情况。 */
+    private static final int[] BUS_BIT_INDEX_VALUES = {
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16, 31, 0xFF,
+    };
+
+    private static List<TestCase> buildBitExtractTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int sample : BUS_BIT_SAMPLES) {
+            boolean bit = ((sample >> 3) & 1) != 0;
+            tests.add(new ConstantCombinationalTestCase(
+                    Map.of("A", new PinValue(pin8(sample))),
+                    Map.of("Y", new PinValue(bit ? 15 : 0))));
+        }
+        for (byte[] sample : BUS_BIT_ANALOG_SAMPLES) {
+            tests.add(new ConstantCombinationalTestCase(
+                    Map.of("A", new PinValue(sample.clone())),
+                    Map.of("Y", new PinValue(sample[3] & 0xF))));
+        }
+        return tests;
+    }
+
+    private static List<TestCase> buildBitIndexTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int sample : BUS_BIT_SAMPLES) {
+            for (int raw : BUS_BIT_INDEX_VALUES) {
+                int index = raw & 0x7;
+                boolean bit = ((sample >> index) & 1) != 0;
+                tests.add(new ConstantCombinationalTestCase(
+                        Map.of("A", new PinValue(pin8(sample)), "B", new PinValue(pin8(raw))),
+                        Map.of("Y", new PinValue(bit ? 15 : 0))));
+            }
+        }
+        for (byte[] sample : BUS_BIT_ANALOG_SAMPLES) {
+            for (int raw : BUS_BIT_INDEX_VALUES) {
+                int index = raw & 0x7;
+                tests.add(new ConstantCombinationalTestCase(
+                        Map.of("A", new PinValue(sample.clone()), "B", new PinValue(pin8(raw))),
+                        Map.of("Y", new PinValue(sample[index] != 0 ? 15 : 0))));
+            }
+        }
+        return tests;
+    }
+
+    private static List<TestCase> buildBitIndexAnalogTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (byte[] sample : BUS_BIT_ANALOG_SAMPLES) {
+            for (int raw : BUS_BIT_INDEX_VALUES) {
+                int index = raw & 0x7;
+                tests.add(new ConstantCombinationalTestCase(
+                        Map.of("A", new PinValue(sample.clone()), "B", new PinValue(pin8(raw))),
+                        Map.of("Y", new PinValue(sample[index] & 0xF))));
+            }
+        }
+        return tests;
+    }
+
+    public static final CircuitExperiment BIT_EXTRACT_8 = register("bit_extract_8", BuiltinCircuitComponents.BIT_EXTRACT_8.getIcon(),
+            new CircuitExperiment(buildBitExtractTests(), BuiltinCircuitComponents.BIT_EXTRACT_8));
+
+    public static final CircuitExperiment BIT_INDEX_8 = register("bit_index_8", BuiltinCircuitComponents.BIT_INDEX_8.getIcon(),
+            new CircuitExperiment(buildBitIndexTests(), BuiltinCircuitComponents.BIT_INDEX_8));
+
+    public static final CircuitExperiment BIT_INDEX_ANALOG_8 = register("bit_index_analog_8", BuiltinCircuitComponents.BIT_INDEX_ANALOG_8.getIcon(),
+            new CircuitExperiment(buildBitIndexAnalogTests(), BuiltinCircuitComponents.BIT_INDEX_ANALOG_8));
+
     // ================= 比较器 =================
     private static final int[] COMPARATOR_8_VALUES = {0, 1, 2, 3, 15, 16, 127, 255};
     private static final int[] COMPARATOR_1_VALUES = {0, 1, 8, 15};
