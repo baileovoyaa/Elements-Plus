@@ -61,6 +61,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     private int layoutLeftPos;
     private int layoutImageWidth;
     private final Set<String> unlockedChapters = new HashSet<>();
+    private final Set<String> forcedChapters = new HashSet<>();
     private final Set<String> completedExperiments = new HashSet<>();
     private List<ChapterEntryButton> chapterButtons = new ArrayList<>();
 
@@ -638,7 +639,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     public void onServerData(BlockPos pos, String selectedName, String selectedExperimentName,
-                             Set<String> unlocked, Set<String> completed, long worldSeed) {
+                             Set<String> unlocked, Set<String> forced, Set<String> completed, long worldSeed) {
         if (tablePos != null && !pos.equals(tablePos)) {
             return;
         }
@@ -646,6 +647,8 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.worldSeed = worldSeed;
         unlockedChapters.clear();
         unlockedChapters.addAll(unlocked);
+        forcedChapters.clear();
+        forcedChapters.addAll(forced);
         completedExperiments.clear();
         completedExperiments.addAll(completed);
         if (selectedChapter != null) {
@@ -806,7 +809,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         public void renderString(GuiGraphics guiGraphics, Font font, int i) {
             int left = this.getX() + 3;
             int right = this.getX() + this.getWidth() - 3;
-            int color = locked ? 0xFF808080 : i;
+            int color = locked ? 0xFF808080 : (forcedChapters.contains(chapter.name) ? 0xFFFF55FF : i);
             guiGraphics.enableScissor(left, this.getY(), right, this.getY() + this.getHeight());
             guiGraphics.drawString(font, this.getMessage(), left, this.getY() + (this.getHeight() - 9) / 2, color);
             guiGraphics.disableScissor();

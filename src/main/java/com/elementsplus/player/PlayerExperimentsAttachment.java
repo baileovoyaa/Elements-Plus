@@ -30,8 +30,21 @@ public final class PlayerExperimentsAttachment {
                     .copyOnDeath()
                     .buildAndRegister(ElementsPlus.id("completed_experiments"));
 
+    /** 玩家被强制解锁的章节名称；这些章节不受依赖关系限制。 */
+    public static final AttachmentType<Set<String>> FORCED_CHAPTER_UNLOCKS =
+            AttachmentRegistry.<Set<String>>builder()
+                    .persistent(CODEC)
+                    .copyOnDeath()
+                    .buildAndRegister(ElementsPlus.id("forced_chapter_unlocks"));
+
     private static Set<String> linkedSet(List<String> list) {
         return new LinkedHashSet<>(list);
+    }
+
+    /** 加入服务器时同时恢复两个实验相关附件。 */
+    public static void ensureLoaded(Player player) {
+        get(player);
+        getForced(player);
     }
 
     public static Set<String> get(Player player) {
@@ -40,7 +53,7 @@ public final class PlayerExperimentsAttachment {
             return completed;
         }
 
-        Set<String> restored = loadFromSavedData(player);
+        Set<String> restored = loadFromSavedData(player, COMPLETED_EXPERIMENTS);
         if (restored != null) {
             player.setAttached(COMPLETED_EXPERIMENTS, restored);
             return restored;
@@ -51,8 +64,25 @@ public final class PlayerExperimentsAttachment {
         return fresh;
     }
 
-    /** Reads the persistent attachment out of the player's saved data (playerdata/{uuid}.dat). */
-    private static Set<String> loadFromSavedData(Player player) {
+    public static Set<String> getForced(Player player) {
+        Set<String> forced = player.getAttached(FORCED_CHAPTER_UNLOCKS);
+        if (forced != null) {
+            return forced;
+        }
+
+        Set<String> restored = loadFromSavedData(player, FORCED_CHAPTER_UNLOCKS);
+        if (restored != null) {
+            player.setAttached(FORCED_CHAPTER_UNLOCKS, restored);
+            return restored;
+        }
+
+        Set<String> fresh = new LinkedHashSet<>();
+        player.setAttached(FORCED_CHAPTER_UNLOCKS, fresh);
+        return fresh;
+    }
+
+    /** Reads a persistent attachment out of the player's saved data (playerdata/{uuid}.dat). */
+    private static Set<String> loadFromSavedData(Player player, AttachmentType<Set<String>> attachment) {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return null;
         }
@@ -73,7 +103,7 @@ public final class PlayerExperimentsAttachment {
         }
 
         CompoundTag attachments = saved.get().getCompound(AttachmentTarget.NBT_ATTACHMENT_KEY);
-        String key = COMPLETED_EXPERIMENTS.identifier().toString();
+        String key = attachment.identifier().toString();
         if (!attachments.contains(key)) {
             return null;
         }

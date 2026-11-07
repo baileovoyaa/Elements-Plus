@@ -15,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -383,6 +384,10 @@ public class BuiltinExperimentChapters {
     }
 
     public static Set<ExperimentChapter> getUnlockedByName(Set<String> passedIds) {
+        return getUnlockedByName(passedIds, Set.of());
+    }
+
+    public static Set<ExperimentChapter> getUnlockedByName(Set<String> passedIds, Set<String> forcedNames) {
         Set<BaseExperiment> passed = new HashSet<>();
         for (String id : passedIds) {
             BaseExperiment experiment = BuiltinExperiments.byId(id);
@@ -390,10 +395,14 @@ public class BuiltinExperimentChapters {
                 passed.add(experiment);
             }
         }
-        return getUnlocked(passed);
+        return getUnlocked(passed, forcedNames);
     }
 
     public static Set<ExperimentChapter> getUnlocked(Set<BaseExperiment> passed) {
+        return getUnlocked(passed, Set.of());
+    }
+
+    public static Set<ExperimentChapter> getUnlocked(Set<BaseExperiment> passed, Set<String> forcedNames) {
         // 1. 预计算每个章节的实验是否已经全部通过
         Map<ExperimentChapter, Boolean> chapterOk = new HashMap<>();
         for (ExperimentChapter c : BUILTIN_EXPERIMENT_CHAPTERS) {
@@ -415,12 +424,20 @@ public class BuiltinExperimentChapters {
             predRemain.put(c, c.dependencies.size());
         }
 
+        Set<ExperimentChapter> forced = new HashSet<>();
+        for (String name : forcedNames) {
+            ExperimentChapter chapter = byName(name);
+            if (chapter != null) {
+                forced.add(chapter);
+            }
+        }
+
         Set<ExperimentChapter> unlocked = new HashSet<>();
         Deque<ExperimentChapter> queue = new ArrayDeque<>();
 
-        // 4. 无前驱的章节直接解锁
+        // 4. 无前驱的章节直接解锁；被强制解锁的章节不受依赖限制
         for (ExperimentChapter c : BUILTIN_EXPERIMENT_CHAPTERS) {
-            if (predRemain.get(c) == 0) {
+            if (predRemain.get(c) == 0 || forced.contains(c)) {
                 unlocked.add(c);
                 queue.add(c);
             }
@@ -460,6 +477,46 @@ public class BuiltinExperimentChapters {
         }
 
         return unlocked;
+    }
+
+    /** 收集若干章节的实验；includeOptional 为 false 时排除各章节的选做实验。 */
+    public static Set<BaseExperiment> experimentsForChapters(
+            Collection<ExperimentChapter> chapters, boolean includeOptional) {
+        Set<BaseExperiment> result = new HashSet<>();
+        for (ExperimentChapter chapter : chapters) {
+            for (ExperimentChapter.Section section : chapter.sections) {
+                if (!(section instanceof ExperimentChapter.ExperimentSection experimentSection)) {
+                    continue;
+                }
+                for (BaseExperiment experiment : experimentSection.experiments) {
+                    if (includeOptional || experimentSection.optional == null
+                            || !experimentSection.optional.contains(experiment)) {
+                        result.add(experiment);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /** 章节自身和/或它直接、间接依赖的章节。 */
+    public static Set<ExperimentChapter> chaptersWithDependencies(ExperimentChapter chapter, boolean includeSelf) {
+        Set<ExperimentChapter> result = new LinkedHashSet<>();
+        Deque<ExperimentChapter> queue = new ArrayDeque<>();
+        if (includeSelf && chapter != null) {
+            result.add(chapter);
+        }
+        if (chapter != null) {
+            queue.addAll(chapter.dependencies);
+        }
+        while (!queue.isEmpty()) {
+            ExperimentChapter current = queue.poll();
+            if (!result.add(current)) {
+                continue;
+            }
+            queue.addAll(current.dependencies);
+        }
+        return result;
     }
 
 }

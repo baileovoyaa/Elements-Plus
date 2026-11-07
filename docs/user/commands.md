@@ -16,6 +16,10 @@ Elements Plus 的所有命令都位于 `/elements-plus` 之下，并且需要**�
 | `/elements-plus experiments grant <players> <experiment>` | 将实验标记为已完成 |
 | `/elements-plus experiments revoke <players> <experiment>` | 撤销实验的完成标记 |
 | `/elements-plus experiments list <player>` | 列出玩家已完成的实验 |
+| `/elements-plus experiments chapter forceunlock <players> [chapter] [true\|false]` | 查询或修改玩家的章节强制解锁状态 |
+| `/elements-plus experiments chapter <grant\|revoke> <players> all [include_optional]` | 按所有章节批量完成或撤销实验 |
+| `/elements-plus experiments chapter <grant\|revoke> <players> <only\|until\|before> <chapter> [include_optional]` | 按章节范围批量完成或撤销实验 |
+| `/elements-plus experiments chapter list <player> [unlocked\|completed\|perfect]` | 列出玩家已解锁、已完成或已完美的章节 |
 | `/elements-plus circuit give <id> [diagram\|chip]` | 获取电路图（默认）或芯片 |
 | `/elements-plus circuit list all` | 列出所有已编译电路 |
 | `/elements-plus circuit list player <player>` | 列出某个玩家创建的电路 |
@@ -54,6 +58,75 @@ Elements Plus 的所有命令都位于 `/elements-plus` 之下，并且需要**�
 
 ```
 /elements-plus experiments list Steve
+```
+
+### 章节强制解锁：forceunlock
+
+强制解锁状态属于玩家个人，会随玩家数据保存并在死亡后保留。被强制解锁的章节不受前置章节是否完成限制，但不会自动完成章节中的实验；在实验桌的章节列表中，其名称显示为紫色。
+
+#### `/elements-plus experiments chapter forceunlock <players>`
+
+列出目标玩家所有被强制解锁的章节。
+
+#### `/elements-plus experiments chapter forceunlock <players> <chapter>`
+
+查询目标玩家某个章节的强制解锁状态。`<chapter>` 使用章节名称，例如 `first_gate`；输入 `*` 时列出该玩家所有强制解锁的章节。
+
+#### `/elements-plus experiments chapter forceunlock <players> <chapter> <true|false>`
+
+设置或取消章节的强制解锁。`*` 表示所有章节。
+
+```text
+/elements-plus experiments chapter forceunlock @s first_gate true
+/elements-plus experiments chapter forceunlock @a * false
+/elements-plus experiments chapter forceunlock @s
+```
+
+### 章节实验批量完成/撤销
+
+`grant` 表示标记为已完成，`revoke` 表示撤销完成标记。`include_optional` 为 `true` 时包含选做实验，默认 `false`。
+
+#### `/elements-plus experiments chapter grant <players> all [include_optional]`
+
+完成所有章节中出现过的实验。
+
+- `all`：所有被任意章节包含的实验。
+
+#### `/elements-plus experiments chapter revoke <players> all [include_optional]`
+
+撤销所有章节中出现过的实验标记，参数含义同上。
+
+#### `/elements-plus experiments chapter grant|revoke <players> only <chapter> [include_optional]`
+
+只处理指定章节中的实验。
+
+#### `/elements-plus experiments chapter grant|revoke <players> until <chapter> [include_optional]`
+
+处理该章节以及它直接或间接依赖的所有章节中的实验。
+
+#### `/elements-plus experiments chapter grant|revoke <players> before <chapter> [include_optional]`
+
+只处理该章节直接或间接依赖的所有章节中的实验，不包含该章节本身。
+
+```text
+/elements-plus experiments chapter grant @s only first_gate
+/elements-plus experiments chapter grant @s until adder_8 true
+/elements-plus experiments chapter revoke @a all
+```
+
+### `/elements-plus experiments chapter list <player> [unlocked|completed|perfect]`
+
+列出玩家的章节及状态，默认列出已解锁章节。状态含义：
+
+- `unlocked`：已解锁的章节（包括强制解锁）。
+- `completed`：已完成所有必做实验的章节。
+- `perfect`：已完成所有必做实验和选做实验的章节。
+
+每条记录显示为 `- 章节名（状态）`。如果章节是强制解锁的，章节名显示为紫色。
+
+```text
+/elements-plus experiments chapter list Steve
+/elements-plus experiments chapter list Steve perfect
 ```
 
 ## 电路：circuit

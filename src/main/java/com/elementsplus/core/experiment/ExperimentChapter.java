@@ -91,6 +91,28 @@ public class ExperimentChapter {
         return experiments;
     }
 
+    /** 章节包含的所有实验，包括选做实验。 */
+    public Set<BaseExperiment> getAllExperiments() {
+        Set<BaseExperiment> experiments = new HashSet<>();
+        for (Section section : sections) {
+            if (section instanceof ExperimentSection experimentSection) {
+                experiments.addAll(experimentSection.experiments);
+            }
+        }
+        return experiments;
+    }
+
+    /** 章节中的选做实验。 */
+    public Set<BaseExperiment> getOptionalExperiments() {
+        Set<BaseExperiment> experiments = new HashSet<>();
+        for (Section section : sections) {
+            if (section instanceof ExperimentSection experimentSection && experimentSection.optional != null) {
+                experiments.addAll(experimentSection.optional);
+            }
+        }
+        return experiments;
+    }
+
     public BaseExperiment getFirstExperiment() {
         for (Section section : sections) {
             if (section instanceof ExperimentSection experimentSection) {

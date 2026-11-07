@@ -44,15 +44,20 @@ import com.elementsplus.player.PlayerToolboxAttachment;
 import com.elementsplus.recipe.CrystallizerRecipe;
 import com.elementsplus.recipe.MetalCatalystRecipe;
 import com.elementsplus.recipe.ScaleUpgradeRecipe;
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
+import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -67,10 +72,12 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.registry.FabricBrewingRecipeRegistryBuilder;
 import net.fabricmc.fabric.api.registry.OxidizableBlocksRegistry;
+import net.minecraft.ChatFormatting;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.synchronization.SingletonArgumentInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -124,6 +131,10 @@ public class ElementsPlus implements ModInitializer {
         ModMenuTypes.initialize();
         ModSounds.initialize();
         BuiltinExperimentChapters.initialize();
+        ArgumentTypeRegistry.registerArgumentType(
+                ElementsPlus.id("chapter"),
+                ChapterArgumentType.class,
+                SingletonArgumentInfo.contextFree(ChapterArgumentType::chapter));
 
         FabricBrewingRecipeRegistryBuilder.BUILD.register(builder -> {
             // 粗制的药水 + 钢管 -> 防锈药水
@@ -282,12 +293,14 @@ public class ElementsPlus implements ModInitializer {
                     if (pos == null || !(player.level().getBlockEntity(pos) instanceof ExperimentTableBlockEntity table)) {
                         return;
                     }
+                    Set<String> completed = PlayerExperimentsAttachment.get(player);
+                    Set<String> forced = PlayerExperimentsAttachment.getForced(player);
                     Set<String> unlocked = new HashSet<>();
-                    for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player))) {
+                    for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(completed, forced)) {
                         unlocked.add(chapter.name);
                     }
                     long worldSeed = player.serverLevel().getSeed();
-                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), table.getSelectedExperiment(), unlocked, PlayerExperimentsAttachment.get(player), worldSeed));
+                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), table.getSelectedExperiment(), unlocked, forced, completed, worldSeed));
                     ServerPlayNetworking.send(player, table.buildStatusPayload());
                 }));
 
@@ -298,7 +311,8 @@ public class ElementsPlus implements ModInitializer {
                     if (!(player.level().getBlockEntity(pos) instanceof ExperimentTableBlockEntity table)) {
                         return;
                     }
-                    Set<ExperimentChapter> unlocked = BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player));
+                    Set<ExperimentChapter> unlocked = BuiltinExperimentChapters.getUnlockedByName(
+                            PlayerExperimentsAttachment.get(player), PlayerExperimentsAttachment.getForced(player));
                     boolean changed = false;
                     String chapterName = payload.chapterName();
                     if (chapterName != null) {
@@ -452,6 +466,26 @@ public class ElementsPlus implements ModInitializer {
         );
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            var chapterCommand = Commands.literal("chapter")
+                    .then(Commands.literal("forceunlock")
+                            .then(Commands.argument("players", EntityArgument.players())
+                                    .executes(ElementsPlus::listForcedChapters)
+                                    .then(Commands.argument("chapter", ChapterArgumentType.chapter())
+                                            .suggests(ElementsPlus::suggestChaptersWithAll)
+                                            .executes(ElementsPlus::queryForcedChapter)
+                                            .then(Commands.argument("value", StringArgumentType.word())
+                                                    .suggests(ElementsPlus::suggestBooleans)
+                                                    .executes(ElementsPlus::setForcedChapter)))))
+                    .then(chapterProgressCommand("grant", true))
+                    .then(chapterProgressCommand("revoke", false))
+                    .then(Commands.literal("list")
+                            .then(Commands.argument("player", EntityArgument.player())
+                                    .executes(source -> listPlayerChapters(source, "unlocked"))
+                                    .then(Commands.argument("status", StringArgumentType.word())
+                                            .suggests(ElementsPlus::suggestChapterStatuses)
+                                            .executes(source -> listPlayerChapters(source,
+                                                    StringArgumentType.getString(source, "status"))))));
+
             var experimentsCommand = Commands.literal("experiments")
                     .then(Commands.literal("grant")
                             .then(Commands.argument("players", EntityArgument.players())
@@ -465,7 +499,8 @@ public class ElementsPlus implements ModInitializer {
                                             .executes((source) -> setExperiments(source, false)))))
                     .then(Commands.literal("list")
                             .then(Commands.argument("player", EntityArgument.player())
-                                    .executes(ElementsPlus::listExperiments)));
+                                    .executes(ElementsPlus::listExperiments)))
+                    .then(chapterCommand);
 
             var circuitCommand = Commands.literal("circuit")
                     .then(Commands.literal("give")
@@ -507,7 +542,7 @@ public class ElementsPlus implements ModInitializer {
         });
 
         // 修复延迟加载带来的数据回滚问题
-        ServerPlayerEvents.JOIN.register(PlayerExperimentsAttachment::get);
+        ServerPlayerEvents.JOIN.register(PlayerExperimentsAttachment::ensureLoaded);
     }
 
     public static void doSomething(CommandContext<CommandSourceStack> source) {
@@ -585,6 +620,266 @@ public class ElementsPlus implements ModInitializer {
         source.getSource().sendSuccess(() -> Component.translatable("command.elements-plus.experiments.list",
                 player.getName(), line), false);
         return 1;
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> chapterProgressCommand(String name, boolean grant) {
+        return Commands.literal(name)
+                .then(Commands.argument("players", EntityArgument.players())
+                        .then(Commands.literal("all")
+                                .executes(source -> setAllChapterExperiments(source, grant, false))
+                                .then(Commands.argument("include_optional", StringArgumentType.word())
+                                        .suggests(ElementsPlus::suggestBooleans)
+                                        .executes(source -> setAllChapterExperiments(source, grant,
+                                                parseBoolean(source, "include_optional")))))
+                        .then(Commands.argument("mode", StringArgumentType.word())
+                                .suggests(ElementsPlus::suggestChapterScopes)
+                                .then(Commands.argument("chapter", ChapterArgumentType.chapter())
+                                        .suggests(ElementsPlus::suggestChapters)
+                                        .executes(source -> setScopedChapterExperiments(source, grant, false))
+                                        .then(Commands.argument("include_optional", StringArgumentType.word())
+                                                .suggests(ElementsPlus::suggestBooleans)
+                                                .executes(source -> setScopedChapterExperiments(source, grant,
+                                                        parseBoolean(source, "include_optional")))))));
+    }
+
+    private static boolean parseBoolean(CommandContext<CommandSourceStack> source, String name) throws CommandSyntaxException {
+        String raw = StringArgumentType.getString(source, name);
+        if ("true".equalsIgnoreCase(raw)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(raw)) {
+            return false;
+        }
+        throw new SimpleCommandExceptionType(Component.translatable(
+                "command.elements-plus.experiments.chapter.invalid_boolean", raw)).create();
+    }
+
+    private static ExperimentChapter requireChapter(String name) throws CommandSyntaxException {
+        ExperimentChapter chapter = BuiltinExperimentChapters.byName(name);
+        if (chapter == null) {
+            throw new SimpleCommandExceptionType(Component.translatable(
+                    "command.elements-plus.experiments.chapter.unknown", name)).create();
+        }
+        return chapter;
+    }
+
+    private static int setAllChapterExperiments(CommandContext<CommandSourceStack> source, boolean grant,
+                                                boolean includeOptional) throws CommandSyntaxException {
+        Collection<ServerPlayer> targets = EntityArgument.getPlayers(source, "players");
+        Set<BaseExperiment> experiments = BuiltinExperimentChapters.experimentsForChapters(
+                BuiltinExperimentChapters.BUILTIN_EXPERIMENT_CHAPTERS, includeOptional);
+        return applyChapterExperiments(source, targets, experiments, grant);
+    }
+
+    private static int setScopedChapterExperiments(CommandContext<CommandSourceStack> source, boolean grant,
+                                                   boolean includeOptional) throws CommandSyntaxException {
+        Collection<ServerPlayer> targets = EntityArgument.getPlayers(source, "players");
+        String mode = StringArgumentType.getString(source, "mode").toLowerCase(Locale.ROOT);
+        ExperimentChapter chapter = requireChapter(ChapterArgumentType.get(source, "chapter"));
+
+        Collection<ExperimentChapter> chapters = switch (mode) {
+            case "only" -> List.of(chapter);
+            case "until" -> BuiltinExperimentChapters.chaptersWithDependencies(chapter, true);
+            case "before" -> BuiltinExperimentChapters.chaptersWithDependencies(chapter, false);
+            default -> throw new SimpleCommandExceptionType(Component.translatable(
+                    "command.elements-plus.experiments.chapter.unknown_mode", mode)).create();
+        };
+
+        Set<BaseExperiment> experiments = BuiltinExperimentChapters.experimentsForChapters(chapters, includeOptional);
+        return applyChapterExperiments(source, targets, experiments, grant);
+    }
+
+    private static int applyChapterExperiments(CommandContext<CommandSourceStack> source,
+                                               Collection<ServerPlayer> targets,
+                                               Set<BaseExperiment> experiments, boolean grant) {
+        if (experiments.isEmpty()) {
+            source.getSource().sendFailure(Component.translatable(
+                    "command.elements-plus.experiments.chapter.no_experiments"));
+            return 0;
+        }
+
+        Set<String> ids = new LinkedHashSet<>();
+        for (BaseExperiment experiment : experiments) {
+            if (experiment.getName() != null) {
+                ids.add(experiment.getName());
+            }
+        }
+
+        for (ServerPlayer player : targets) {
+            Set<String> completed = PlayerExperimentsAttachment.get(player);
+            if (grant) {
+                completed.addAll(ids);
+            } else {
+                completed.removeAll(ids);
+            }
+        }
+
+        source.getSource().sendSuccess(() -> Component.translatable(
+                grant ? "command.elements-plus.experiments.chapter.granted"
+                        : "command.elements-plus.experiments.chapter.revoked",
+                targets.size(), ids.size()), true);
+        return 1;
+    }
+
+    private static int listForcedChapters(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {
+        Collection<ServerPlayer> targets = EntityArgument.getPlayers(source, "players");
+        for (ServerPlayer player : targets) {
+            Set<String> forced = PlayerExperimentsAttachment.getForced(player);
+            if (forced.isEmpty()) {
+                source.getSource().sendSuccess(() -> Component.translatable(
+                        "command.elements-plus.experiments.chapter.forceunlock.none", player.getName()), false);
+                continue;
+            }
+
+            MutableComponent names = Component.empty();
+            boolean first = true;
+            for (String name : forced) {
+                ExperimentChapter chapter = BuiltinExperimentChapters.byName(name);
+                Component display = chapter != null ? chapter.getDisplayName() : Component.literal(name);
+                if (!first) {
+                    names.append(Component.literal(", "));
+                }
+                names.append(display.copy().withStyle(ChatFormatting.LIGHT_PURPLE));
+                first = false;
+            }
+            source.getSource().sendSuccess(() -> Component.translatable(
+                    "command.elements-plus.experiments.chapter.forceunlock.list", player.getName(), names), false);
+        }
+        return 1;
+    }
+
+    private static int queryForcedChapter(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {
+        String raw = ChapterArgumentType.get(source, "chapter");
+        if ("*".equals(raw)) {
+            return listForcedChapters(source);
+        }
+        ExperimentChapter chapter = requireChapter(raw);
+        Collection<ServerPlayer> targets = EntityArgument.getPlayers(source, "players");
+        for (ServerPlayer player : targets) {
+            boolean forced = PlayerExperimentsAttachment.getForced(player).contains(chapter.name);
+            Component display = forced
+                    ? chapter.getDisplayName().copy().withStyle(ChatFormatting.LIGHT_PURPLE)
+                    : chapter.getDisplayName();
+            source.getSource().sendSuccess(() -> Component.translatable(
+                    "command.elements-plus.experiments.chapter.forceunlock.query",
+                    player.getName(), display, Component.literal(booleanText(forced))), false);
+        }
+        return 1;
+    }
+
+    private static int setForcedChapter(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {
+        Collection<ServerPlayer> targets = EntityArgument.getPlayers(source, "players");
+        String raw = ChapterArgumentType.get(source, "chapter");
+        boolean value = parseBoolean(source, "value");
+
+        List<String> chapterNames;
+        if ("*".equals(raw)) {
+            chapterNames = new ArrayList<>();
+            for (ExperimentChapter chapter : BuiltinExperimentChapters.BUILTIN_EXPERIMENT_CHAPTERS) {
+                chapterNames.add(chapter.name);
+            }
+        } else {
+            chapterNames = List.of(requireChapter(raw).name);
+        }
+
+        for (ServerPlayer player : targets) {
+            Set<String> forced = PlayerExperimentsAttachment.getForced(player);
+            if ("*".equals(raw) && !value) {
+                forced.clear();
+            } else if (value) {
+                forced.addAll(chapterNames);
+            } else {
+                forced.removeAll(chapterNames);
+            }
+        }
+
+        source.getSource().sendSuccess(() -> Component.translatable(
+                value ? "command.elements-plus.experiments.chapter.forceunlock.enabled"
+                        : "command.elements-plus.experiments.chapter.forceunlock.disabled",
+                targets.size(), chapterNames.size()), true);
+        return 1;
+    }
+
+    private static String booleanText(boolean value) {
+        return value ? "true" : "false";
+    }
+
+    private static int listPlayerChapters(CommandContext<CommandSourceStack> source, String status) throws CommandSyntaxException {
+        String normalized = status.toLowerCase(Locale.ROOT);
+        if (!List.of("unlocked", "completed", "perfect").contains(normalized)) {
+            throw new SimpleCommandExceptionType(Component.translatable(
+                    "command.elements-plus.experiments.chapter.unknown_status", status)).create();
+        }
+
+        ServerPlayer player = EntityArgument.getPlayer(source, "player");
+        Set<String> completed = PlayerExperimentsAttachment.get(player);
+        Set<String> forced = PlayerExperimentsAttachment.getForced(player);
+        Set<ExperimentChapter> unlocked = BuiltinExperimentChapters.getUnlockedByName(completed, forced);
+
+        List<ExperimentChapter> chapters = new ArrayList<>();
+        for (ExperimentChapter chapter : BuiltinExperimentChapters.BUILTIN_EXPERIMENT_CHAPTERS) {
+            boolean include = switch (normalized) {
+                case "unlocked" -> unlocked.contains(chapter);
+                case "completed" -> chapterComplete(chapter, completed);
+                case "perfect" -> chapterPerfect(chapter, completed);
+                default -> false;
+            };
+            if (include) {
+                chapters.add(chapter);
+            }
+        }
+
+        if (chapters.isEmpty()) {
+            source.getSource().sendSuccess(() -> Component.translatable(
+                    "command.elements-plus.experiments.chapter.list_empty", player.getName(),
+                    Component.translatable("command.elements-plus.experiments.chapter.status." + normalized)), false);
+            return 0;
+        }
+
+        MutableComponent lines = Component.empty();
+        for (int i = 0; i < chapters.size(); i++) {
+            ExperimentChapter chapter = chapters.get(i);
+            if (i > 0) {
+                lines.append(Component.literal("\n"));
+            }
+            Component display = forced.contains(chapter.name)
+                    ? chapter.getDisplayName().copy().withStyle(ChatFormatting.LIGHT_PURPLE)
+                    : chapter.getDisplayName();
+            String actualStatus = chapterPerfect(chapter, completed) ? "perfect"
+                    : (chapterComplete(chapter, completed) ? "completed" : "unlocked");
+            lines.append(Component.literal("- "))
+                    .append(display)
+                    .append(Component.translatable("command.elements-plus.experiments.chapter.status." + actualStatus));
+        }
+        source.getSource().sendSuccess(() -> Component.translatable(
+                "command.elements-plus.experiments.chapter.list", player.getName(), lines), false);
+        return 1;
+    }
+
+    private static boolean chapterComplete(ExperimentChapter chapter, Set<String> completed) {
+        Set<BaseExperiment> required = chapter.getExperiments();
+        if (required.isEmpty()) {
+            return false;
+        }
+        for (BaseExperiment experiment : required) {
+            if (experiment.getName() == null || !completed.contains(experiment.getName())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean chapterPerfect(ExperimentChapter chapter, Set<String> completed) {
+        Set<BaseExperiment> all = chapter.getAllExperiments();
+        if (all.isEmpty()) {
+            return false;
+        }
+        for (BaseExperiment experiment : all) {
+            if (experiment.getName() == null || !completed.contains(experiment.getName())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static int giveCircuitDiagram(CommandContext<CommandSourceStack> source) {
@@ -877,5 +1172,71 @@ public class ElementsPlus implements ModInitializer {
             }
         }
         return builder.buildFuture();
+    }
+
+    private static CompletableFuture<Suggestions> suggestChapters(CommandContext<CommandSourceStack> source, SuggestionsBuilder builder) {
+        for (ExperimentChapter chapter : BuiltinExperimentChapters.BUILTIN_EXPERIMENT_CHAPTERS) {
+            builder.suggest(chapter.name, chapter.getDisplayName());
+        }
+        return builder.buildFuture();
+    }
+
+    private static CompletableFuture<Suggestions> suggestChaptersWithAll(CommandContext<CommandSourceStack> source, SuggestionsBuilder builder) {
+        builder.suggest("*");
+        return suggestChapters(source, builder);
+    }
+
+    private static CompletableFuture<Suggestions> suggestChapterScopes(CommandContext<CommandSourceStack> source, SuggestionsBuilder builder) {
+        builder.suggest("only");
+        builder.suggest("until");
+        builder.suggest("before");
+        return builder.buildFuture();
+    }
+
+    private static CompletableFuture<Suggestions> suggestChapterStatuses(CommandContext<CommandSourceStack> source, SuggestionsBuilder builder) {
+        builder.suggest("unlocked");
+        builder.suggest("completed");
+        builder.suggest("perfect");
+        return builder.buildFuture();
+    }
+
+    private static CompletableFuture<Suggestions> suggestBooleans(CommandContext<CommandSourceStack> source, SuggestionsBuilder builder) {
+        builder.suggest("true");
+        builder.suggest("false");
+        return builder.buildFuture();
+    }
+
+    /**
+     * 章节名参数：资源位置可能包含冒号，强制解锁还允许使用 *。
+     * Brigadier 的 word/string 参数都不接受未加引号的星号和冒号，因此单独解析。
+     */
+    private static final class ChapterArgumentType implements ArgumentType<String> {
+        private static final ChapterArgumentType INSTANCE = new ChapterArgumentType();
+
+        private ChapterArgumentType() {
+        }
+
+        static ChapterArgumentType chapter() {
+            return INSTANCE;
+        }
+
+        static String get(CommandContext<?> source, String name) {
+            return source.getArgument(name, String.class);
+        }
+
+        @Override
+        public String parse(StringReader reader) throws CommandSyntaxException {
+            if (!reader.canRead()) {
+                throw new SimpleCommandExceptionType(Component.literal("chapter")).create();
+            }
+            if (reader.peek() == '"' || reader.peek() == '\'') {
+                return reader.readString();
+            }
+            int start = reader.getCursor();
+            while (reader.canRead() && !Character.isWhitespace(reader.peek())) {
+                reader.skip();
+            }
+            return reader.getString().substring(start, reader.getCursor());
+        }
     }
 }

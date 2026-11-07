@@ -314,7 +314,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         if (experiment == null || experiment == BuiltinExperiments.CUSTOM_COMPONENT) {
             return;
         }
-        Set<ExperimentChapter> unlocked = BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player));
+        Set<ExperimentChapter> unlocked = BuiltinExperimentChapters.getUnlockedByName(
+                PlayerExperimentsAttachment.get(player), PlayerExperimentsAttachment.getForced(player));
         boolean allowed = false;
         for (ExperimentChapter chapter : unlocked) {
             if (chapter.containsExperiment(experiment)) {
@@ -613,13 +614,15 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     }
 
     private ExperimentTableScreenDataPayload screenDataFor(ServerPlayer player) {
+        Set<String> completed = PlayerExperimentsAttachment.get(player);
+        Set<String> forced = PlayerExperimentsAttachment.getForced(player);
         Set<String> unlocked = new HashSet<>();
-        for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(PlayerExperimentsAttachment.get(player))) {
+        for (ExperimentChapter chapter : BuiltinExperimentChapters.getUnlockedByName(completed, forced)) {
             unlocked.add(chapter.name);
         }
         long worldSeed = this.level instanceof ServerLevel serverLevel ? serverLevel.getSeed() : 0L;
         return new ExperimentTableScreenDataPayload(worldPosition, selectedChapter, selectedExperiment,
-                unlocked, PlayerExperimentsAttachment.get(player), worldSeed);
+                unlocked, forced, completed, worldSeed);
     }
 
     public void syncStatus() {
