@@ -68,6 +68,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     private int time = 0;
     private float progress = 0f;
     private final List<Integer> testResults = new ArrayList<>();
+    private final List<Integer> testTicks = new ArrayList<>();
     private final List<Component> tooltipLines = new ArrayList<>();
     private ExperimentFailureInfo failureInfo = null;
     private SequentialFailureInfo sequentialFailure = null;
@@ -340,9 +341,11 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             time = 0;
             progress = 0f;
             testResults.clear();
+            testTicks.clear();
             int count = experiment.getTestCaseCount();
             for (int i = 0; i < count; i++) {
                 testResults.add(-1);
+                testTicks.add(-1);
             }
             tooltipLines.clear();
             failureInfo = null;
@@ -357,6 +360,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             time = 0;
             progress = 0f;
             testResults.clear();
+            testTicks.clear();
             tooltipLines.clear();
             tooltipLines.add(Component.translatable("experiment.elements-plus.precheck.header"));
             tooltipLines.addAll(reasons);
@@ -404,6 +408,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         paused = false;
         progress = 1f;
         testResults.clear();
+        testTicks.clear();
         failureInfo = null;
         sequentialFailure = null;
         experimentState = null;
@@ -463,6 +468,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         time = 0;
         progress = 0f;
         testResults.clear();
+        testTicks.clear();
         tooltipLines.clear();
         failureInfo = null;
         sequentialFailure = null;
@@ -544,12 +550,25 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
 
     @Override
     public void reportTestResult(int index, boolean pass) {
+        reportTestResultState(index, pass ? 1 : 0);
+    }
+
+    @Override
+    public void reportTestResultState(int index, int result) {
         if (index >= 0 && index < testResults.size()) {
-            testResults.set(index, pass ? 1 : 0);
+            testResults.set(index, result);
         }
         recomputeProgress();
         this.setChanged();
         syncStatus();
+    }
+
+    @Override
+    public void setTestTicks(int index, int ticks) {
+        if (index >= 0 && index < testTicks.size()) {
+            testTicks.set(index, ticks);
+            this.setChanged();
+        }
     }
 
     private void recomputeProgress() {
@@ -559,7 +578,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         }
         int passed = 0;
         for (int result : testResults) {
-            if (result > 0) {
+            if (result == 1) {
                 passed++;
             }
         }
@@ -594,6 +613,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
                 activeExperiment != null ? activeExperiment.getName() : null,
                 progress,
                 new ArrayList<>(testResults),
+                new ArrayList<>(testTicks),
                 tooltipJson,
                 failureInfo,
                 status == ExperimentStatus.BUSY ? testIndex : -1,

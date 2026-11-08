@@ -63,6 +63,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     private final Set<String> unlockedChapters = new HashSet<>();
     private final Set<String> forcedChapters = new HashSet<>();
     private final Set<String> completedExperiments = new HashSet<>();
+    private final List<Integer> currentTestTicks = new ArrayList<>();
     private List<ChapterEntryButton> chapterButtons = new ArrayList<>();
 
     private ExperimentStatus status = ExperimentStatus.IDLE;
@@ -372,6 +373,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         // 当前测例结果属于另一个实验时视为失效
         if (!Objects.equals(resultsExperimentName, selectedExperiment == null ? null : selectedExperiment.getName())) {
             currentTestResults.clear();
+            currentTestTicks.clear();
             currentProgress = 0f;
             currentTestIndex = -1;
         }
@@ -391,8 +393,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     public void onStatusUpdate(BlockPos pos, ExperimentStatus status, boolean paused, String experimentName, float progress,
-                               List<Integer> testResults, List<String> tooltipJson, ExperimentFailureInfo failureInfo,
-                               int currentTestIndex, SequentialFailureInfo sequentialFailure) {
+                               List<Integer> testResults, List<Integer> testTicks, List<String> tooltipJson,
+                               ExperimentFailureInfo failureInfo, int currentTestIndex,
+                               SequentialFailureInfo sequentialFailure) {
         if (tablePos == null || !pos.equals(tablePos)) {
             return;
         }
@@ -402,6 +405,8 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.resultsExperimentName = experimentName;
         this.currentTestResults.clear();
         this.currentTestResults.addAll(testResults);
+        this.currentTestTicks.clear();
+        this.currentTestTicks.addAll(testTicks);
         this.failureInfo = failureInfo;
         this.currentTestIndex = currentTestIndex;
         if (this.sequentialFailure != sequentialFailure && this.sequentialDialog != null) {
@@ -540,18 +545,29 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     private void applyTestResultsToWidgets() {
         for (TestCaseWidget widget : testCaseWidgets) {
             int result = widget.testIndex >= 0 && widget.testIndex < currentTestResults.size() ? currentTestResults.get(widget.testIndex) : -1;
+            int ticks = widget.testIndex >= 0 && widget.testIndex < currentTestTicks.size()
+                    ? currentTestTicks.get(widget.testIndex) : -1;
             boolean sequential = widget.testCase instanceof CircuitExperiment.SequentialTestCase;
+            boolean interactive = widget.testCase instanceof CircuitExperiment.InteractiveTestCase;
             widget.bottomText = null;
-            if (status == ExperimentStatus.BUSY && sequential && result < 0 && widget.testIndex == currentTestIndex) {
+            if (status == ExperimentStatus.BUSY && (sequential || interactive)
+                    && result < 0 && widget.testIndex == currentTestIndex) {
                 widget.color = 0xFF3A6EC5;
                 widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_running");
-            } else if (result > 0) {
+            } else if (result == 1) {
                 widget.color = 0xFF00A000;
                 widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_correct");
-                if (sequential) {
+                if (interactive) {
+                    if (ticks >= 0) {
+                        widget.bottomText = Component.translatable("gui.elements-plus.experiment_table.test_ticks", ticks);
+                    }
+                } else if (sequential) {
                     widget.bottomText = Component.translatable("gui.elements-plus.experiment_table.test_ticks",
                             ((CircuitExperiment.SequentialTestCase) widget.testCase).getTickCount());
                 }
+            } else if (result == 2) {
+                widget.color = 0xFF8000FF;
+                widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_tle");
             } else if (result == 0) {
                 widget.color = 0xFFA00000;
                 widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_wrong");

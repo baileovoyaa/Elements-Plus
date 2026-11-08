@@ -73,6 +73,20 @@ public abstract class BaseExperiment {
             }
         }
 
+        /** 报告测例状态：1 通过、0 失败、2 TLE。 */
+        public void reportTestResultState(int index, int result) {
+            if (host != null) {
+                host.reportTestResultState(index, result);
+            }
+        }
+
+        /** 记录交互式测例成功时实际执行的 tick 数。 */
+        public void setTestTicks(int index, int ticks) {
+            if (host != null) {
+                host.setTestTicks(index, ticks);
+            }
+        }
+
         /**
          * 设置失败原因（statusButton 悬停提示）。
          */

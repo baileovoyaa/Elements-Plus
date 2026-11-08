@@ -205,6 +205,60 @@ public class CircuitExperiment extends BaseExperiment {
         }
     }
 
+    /**
+     * 交互式测例：测试系统通过 VI/RI/DI 和 VO/RO/DO 与电路交互，
+     * 依次送入 A、B 两个 8 位数据，再读取一次 8 位输出。
+     */
+    public interface InteractiveTestCase extends TestCase {
+        int getInputA();
+
+        int getInputB();
+
+        int getExpectedOutput();
+
+        default int getMaxTicks() {
+            return 20;
+        }
+    }
+
+    public static class ConstantInteractiveTestCase implements InteractiveTestCase {
+        private final int inputA;
+        private final int inputB;
+        private final int expectedOutput;
+        private final int maxTicks;
+
+        public ConstantInteractiveTestCase(int inputA, int inputB, int expectedOutput) {
+            this(inputA, inputB, expectedOutput, 20);
+        }
+
+        public ConstantInteractiveTestCase(int inputA, int inputB, int expectedOutput, int maxTicks) {
+            this.inputA = inputA;
+            this.inputB = inputB;
+            this.expectedOutput = expectedOutput;
+            this.maxTicks = maxTicks;
+        }
+
+        @Override
+        public int getInputA() {
+            return inputA;
+        }
+
+        @Override
+        public int getInputB() {
+            return inputB;
+        }
+
+        @Override
+        public int getExpectedOutput() {
+            return expectedOutput;
+        }
+
+        @Override
+        public int getMaxTicks() {
+            return maxTicks;
+        }
+    }
+
     private static final class SequentialState {
         final int testIndex;
         final int totalTicks;
@@ -220,6 +274,28 @@ public class CircuitExperiment extends BaseExperiment {
             this.simulator = simulator;
         }
     }
+
+    private static final class InteractiveState {
+        final int testIndex;
+        final CircuitDiagram diagram;
+        final CircuitSimulator simulator;
+        int inputIndex;
+        int nextInputTick;
+        int ticks;
+        boolean outputRequested;
+        final List<SequentialFailureInfo.Row> rows = new ArrayList<>();
+
+        InteractiveState(int testIndex, CircuitDiagram diagram, CircuitSimulator simulator) {
+            this.testIndex = testIndex;
+            this.diagram = diagram;
+            this.simulator = simulator;
+            this.nextInputTick = INTERACTIVE_FIRST_INPUT_DELAY;
+        }
+    }
+
+    /** 第一次输入前的等待 tick 数，以及两次输入之间的最小间隔。 */
+    private static final int INTERACTIVE_FIRST_INPUT_DELAY = 2;
+    private static final int INTERACTIVE_INPUT_GAP = 2;
 
     public List<TestCase> testCases;
     public Map<String, Integer> bitWidthsPrecheck;
@@ -272,9 +348,34 @@ public class CircuitExperiment extends BaseExperiment {
                         neededOutputWidths.put(pinName, bitWidth);
                     });
                 }
+            } else if (testCase instanceof InteractiveTestCase) {
+                addNeededInput("VI", 1);
+                addNeededInput("RO", 1);
+                addNeededInput("DI", 8);
+                addNeededOutput("VO", 1);
+                addNeededOutput("RI", 1);
+                addNeededOutput("DO", 8);
             }
         }
         this.circuitComponent = component;
+    }
+
+    private void addNeededInput(String label, int bitWidth) {
+        Integer previous = bitWidthsPrecheck.get(label);
+        if (previous != null && previous != bitWidth) {
+            throw new IllegalStateException("Bit width ambiguous for pin " + label);
+        }
+        bitWidthsPrecheck.put(label, bitWidth);
+        neededInputLabels.add(label);
+    }
+
+    private void addNeededOutput(String label, int bitWidth) {
+        Integer previous = neededOutputWidths.get(label);
+        if (previous != null && previous != bitWidth) {
+            throw new IllegalStateException("Bit width ambiguous for output pin " + label);
+        }
+        neededOutputWidths.put(label, bitWidth);
+        neededOutputLabels.add(label);
     }
 
     private static Map<String, PinValue> testExpectedOutputs(CombinationalTestCase testCase) {
@@ -310,6 +411,9 @@ public class CircuitExperiment extends BaseExperiment {
             return false;
         }
         TestCase testCase = testCases.get(index);
+        if (testCase instanceof InteractiveTestCase interactiveTestCase) {
+            return tickInteractive(context, index, interactiveTestCase);
+        }
         if (testCase instanceof SequentialTestCase sequentialTestCase) {
             return tickSequential(context, index, sequentialTestCase);
         }
@@ -421,6 +525,125 @@ public class CircuitExperiment extends BaseExperiment {
         }
         context.testIndex = index + 1;
         return true;
+    }
+
+    /**
+     * 交互式测例：按 VI/RI、VO/RO 同拍传输协议逐步驱动电路。
+     *
+     * <p>每个 tick 先设置外部输入，再读取当前组合输出；输入传输在当前时钟步进时生效。
+     * 外部会先等待 VO 有效，再拉高 RO，随后在 VO 与 RO 同时有效的 tick 读取 DO。
+     * 完整过程最多执行 {@link InteractiveTestCase#getMaxTicks()} 个 tick。</p>
+     */
+    private boolean tickInteractive(Context context, int index, InteractiveTestCase testCase) {
+        CircuitDiagram source = context.getItemStack() != null
+                ? context.getItemStack().get(ModDataComponents.CIRCUIT_DIAGRAM)
+                : null;
+        if (source == null) {
+            return false;
+        }
+
+        InteractiveState state = context.experimentState instanceof InteractiveState s && s.testIndex == index
+                ? s : null;
+        if (state == null) {
+            CircuitDiagram diagram = source.copy();
+            CircuitSimulator simulator = new CircuitSimulator();
+            simulator.setDiagram(diagram);
+            state = new InteractiveState(index, diagram, simulator);
+            context.experimentState = state;
+        }
+
+        boolean inputPhase = state.inputIndex < 2;
+        boolean inputAvailable = inputPhase && state.ticks >= state.nextInputTick;
+        int inputValue = inputAvailable ? switch (state.inputIndex) {
+            case 0 -> testCase.getInputA();
+            default -> testCase.getInputB();
+        } : 0;
+        Map<String, PinValue> inputs = new LinkedHashMap<>();
+        inputs.put("VI", new PinValue(inputAvailable ? 15 : 0));
+        inputs.put("RO", new PinValue(state.inputIndex >= 2 && state.outputRequested ? 15 : 0));
+        inputs.put("DI", new PinValue(busValue(inputValue)));
+        applyInputs(state.diagram, inputs);
+
+        state.simulator.evaluate();
+        Map<String, PinValue> outputs = collectOutputs(state.diagram, state.simulator);
+        state.rows.add(new SequentialFailureInfo.Row(
+                state.ticks,
+                ExperimentFailureInfo.pins(inputs),
+                List.of(),
+                ExperimentFailureInfo.pins(outputs)));
+        if (inputAvailable && outputHigh(outputs, "RI")) {
+            state.inputIndex++;
+            if (state.inputIndex < 2) {
+                state.nextInputTick = state.ticks + INTERACTIVE_INPUT_GAP;
+            }
+        }
+
+        boolean outputPhase = state.inputIndex >= 2;
+        // 外部只在已经观察到 VO 后才拉高 RO，避免 RO 直接驱动 VO 的电路伪造输出。
+        if (outputPhase && !state.outputRequested && outputHigh(outputs, "VO")) {
+            state.outputRequested = true;
+        } else if (outputPhase && state.outputRequested && outputHigh(outputs, "VO")) {
+            state.ticks++;
+            PinValue actual = outputs.get("DO");
+            PinValue expected = new PinValue(busValue(testCase.getExpectedOutput()));
+            if (!expected.equals(actual)) {
+                context.reportTestResultState(index, 0);
+                context.setFailureInfo(ExperimentFailureInfo.of(
+                        Map.of(
+                                "A", new PinValue(busValue(testCase.getInputA())),
+                                "B", new PinValue(busValue(testCase.getInputB()))),
+                        Map.of("DO", expected),
+                        Map.of("DO", actual == null ? new PinValue(busValue(0)) : actual)));
+                context.setSequentialFailureInfo(new SequentialFailureInfo(
+                        index, state.rows.size(), state.ticks - 1, List.copyOf(state.rows)));
+                context.experimentState = null;
+                context.complete(false);
+                return false;
+            }
+
+            context.setTestTicks(index, state.ticks);
+            context.reportTestResultState(index, 1);
+            context.experimentState = null;
+            if (index == testCases.size() - 1) {
+                context.complete(true);
+            } else {
+                context.testIndex = index + 1;
+            }
+            return true;
+        }
+
+        state.simulator.step();
+        state.ticks++;
+        if (state.ticks >= testCase.getMaxTicks()) {
+            context.reportTestResultState(index, 2);
+            context.setErrorLines(List.of(
+                    Component.translatable("experiment.elements-plus.testfail.header"),
+                    Component.translatable("experiment.elements-plus.testfail.tle", testCase.getMaxTicks()),
+                    Component.translatable("experiment.elements-plus.testfail.tle_inputs",
+                            testCase.getInputA(), testCase.getInputB()),
+                    Component.translatable("experiment.elements-plus.testfail.click_for_data")));
+            context.setSequentialFailureInfo(new SequentialFailureInfo(
+                    index, state.rows.size(), state.ticks - 1, List.copyOf(state.rows)));
+            context.experimentState = null;
+            context.complete(false);
+            return false;
+        }
+
+        context.experimentState = state;
+        return true;
+    }
+
+    private static boolean outputHigh(Map<String, PinValue> outputs, String label) {
+        PinValue value = outputs.get(label);
+        return value != null && value.values.length > 0 && value.values[0] != 0;
+    }
+
+    private static byte[] busValue(int value) {
+        byte[] lanes = new byte[8];
+        for (int b = 0; b < 8; b++) {
+            lanes[b] = (byte) (((value >> b) & 1) != 0 ? 15 : 0);
+        }
+        return lanes;
     }
 
     /**

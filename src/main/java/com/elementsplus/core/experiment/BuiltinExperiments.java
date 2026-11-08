@@ -1619,6 +1619,35 @@ public class BuiltinExperiments {
                 Map.of("Y", new PinValue(a != 0 ? d : A8_ZERO)));
     }).toList(), BuiltinCircuitComponents.TRI_STATE_BUFFER_ANALOG_8));
 
+    // ================= A+B 问题 =================
+
+    private static final int[][] A_PLUS_B_CASES = {
+            {0, 0},
+            {1, 2},
+            {12, 34},
+            {42, 58},
+            {50, 70},
+            {100, 55},
+            {123, 123},
+            {127, 1},
+            {200, 50},
+            {255, 0},
+    };
+
+    private static List<TestCase> buildAplusBTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int[] pair : A_PLUS_B_CASES) {
+            tests.add(new CircuitExperiment.ConstantInteractiveTestCase(
+                    pair[0], pair[1], (pair[0] + pair[1]) & 0xFF));
+        }
+        return tests;
+    }
+
+    /** A+B 问题不使用元件，完成后不编译电路图。 */
+    public static final CircuitExperiment A_PLUS_B = register("a_plus_b",
+            ElementsPlus.id("textures/experiments/a_plus_b.png"),
+            new CircuitExperiment(buildAplusBTests(), null));
+
     public static <T extends BaseExperiment> T register(String name, ResourceLocation icon, T experiment) {
         experiment.setName(name);
         experiment.setIcon(icon);

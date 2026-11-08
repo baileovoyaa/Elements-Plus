@@ -216,6 +216,10 @@ public class SequentialTestDataDialog {
         if (column.kind() != Kind.ACTUAL) {
             return COLOR_MUTED;
         }
+        if (row.expected().isEmpty()) {
+            // 交互式测例的逐 tick 记录没有逐 tick 预期输出，正常显示实际输出。
+            return 0xFFFFFFFF;
+        }
         ExperimentFailureInfo.Pin expected = findPin(row.expected(), column.label());
         ExperimentFailureInfo.Pin actual = findPin(row.actual(), column.label());
         return sameValue(expected, actual) ? COLOR_ACTUAL_OK : COLOR_ACTUAL_BAD;

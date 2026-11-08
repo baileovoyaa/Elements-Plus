@@ -40,6 +40,17 @@ public interface ExperimentHost {
     void reportTestResult(int index, boolean pass);
 
     /**
+     * 报告测例状态：1 通过、0 失败、2 TLE（仍属于失败）。
+     */
+    default void reportTestResultState(int index, int result) {
+        reportTestResult(index, result == 1);
+    }
+
+    /** 记录交互式测例成功时实际执行的 tick 数。 */
+    default void setTestTicks(int index, int ticks) {
+    }
+
+    /**
      * 转化当前正在实验的物品。
      */
     void transformActiveItem(Function<ItemStack, ItemStack> function);

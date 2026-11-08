@@ -1,0 +1,92 @@
+{
+  "dependencies": [
+    "elements-plus:multi_byte_memory"
+  ],
+  "sections": [
+    {
+      "type": "text",
+      "section": 0,
+      "lines": 4,
+      "args": [
+        {
+          "line": 3,
+          "params": [
+            {
+              "style": ["blue"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 1,
+      "lines": 3,
+      "args": [
+        {
+          "line": 0,
+          "params": [
+            {
+              "style": ["blue"]
+            }
+          ]
+        },
+        {
+          "line": 1,
+          "params": [
+            {
+              "style": ["blue"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "section": 2,
+      "lines": 8
+    },
+    {
+      "type": "text",
+      "section": 3,
+      "lines": 12,
+      "args": [
+        {
+          "line": 2,
+          "params": [
+            {
+              "style": ["blue"]
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "params": [
+            {
+              "style": ["bold"]
+            }
+          ]
+        },
+        {
+          "line": 10,
+          "params": [
+            {
+              "style": ["light_purple"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:a_plus_b"
+      ]
+    },
+    {
+      "type": "text",
+      "section": 5,
+      "lines": 1
+    }
+  ]
+}

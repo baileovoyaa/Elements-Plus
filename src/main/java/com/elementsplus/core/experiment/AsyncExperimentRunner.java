@@ -210,7 +210,17 @@ public final class AsyncExperimentRunner implements AutoCloseable {
 
         @Override
         public void reportTestResult(int index, boolean pass) {
-            events.add(host -> host.reportTestResult(index, pass));
+            reportTestResultState(index, pass ? 1 : 0);
+        }
+
+        @Override
+        public void reportTestResultState(int index, int result) {
+            events.add(host -> host.reportTestResultState(index, result));
+        }
+
+        @Override
+        public void setTestTicks(int index, int ticks) {
+            events.add(host -> host.setTestTicks(index, ticks));
         }
 
         @Override

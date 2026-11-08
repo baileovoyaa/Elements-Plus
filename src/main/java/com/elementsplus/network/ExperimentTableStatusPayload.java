@@ -21,7 +21,8 @@ import java.util.List;
  */
 public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status, boolean paused,
                                            @Nullable String experimentName, float progress,
-                                           List<Integer> testResults, List<String> tooltipLines,
+                                           List<Integer> testResults, List<Integer> testTicks,
+                                           List<String> tooltipLines,
                                            @Nullable ExperimentFailureInfo failureInfo,
                                            int currentTestIndex,
                                            @Nullable SequentialFailureInfo sequentialFailure) implements CustomPacketPayload {
@@ -35,6 +36,7 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                 buf.writeNullable(payload.experimentName(), FriendlyByteBuf::writeUtf);
                 buf.writeFloat(payload.progress());
                 buf.writeCollection(payload.testResults(), FriendlyByteBuf::writeVarInt);
+                buf.writeCollection(payload.testTicks(), FriendlyByteBuf::writeVarInt);
                 buf.writeCollection(payload.tooltipLines(), FriendlyByteBuf::writeUtf);
                 writeFailureInfo(buf, payload.failureInfo());
                 buf.writeInt(payload.currentTestIndex());
@@ -47,6 +49,7 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                     buf.readNullable(FriendlyByteBuf::readUtf),
                     buf.readFloat(),
                     buf.readCollection(ArrayList::new, FriendlyByteBuf::readVarInt),
+                    buf.readCollection(ArrayList::new, FriendlyByteBuf::readVarInt),
                     buf.readCollection(ArrayList::new, FriendlyByteBuf::readUtf),
                     readFailureInfo(buf),
                     buf.readInt(),
@@ -57,7 +60,7 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
     public ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status, boolean paused,
                                         @Nullable String experimentName, float progress,
                                         List<Integer> testResults, List<String> tooltipLines) {
-        this(pos, status, paused, experimentName, progress, testResults, tooltipLines, null, -1, null);
+        this(pos, status, paused, experimentName, progress, testResults, List.of(), tooltipLines, null, -1, null);
     }
 
     private static void writeSequentialFailure(FriendlyByteBuf buf, @Nullable SequentialFailureInfo info) {
