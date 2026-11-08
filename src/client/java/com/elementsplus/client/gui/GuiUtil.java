@@ -1,8 +1,11 @@
 package com.elementsplus.client.gui;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.util.FormattedCharSequence;
 
 import java.util.List;
 
@@ -268,5 +271,44 @@ public class GuiUtil {
 
     public static int maxWidth(List<Component> text) {
         return text.stream().mapToInt(component -> Minecraft.getInstance().font.width(component)).max().orElse(0);
+    }
+
+    /**
+     * 在给定宽度内绘制文本；超宽时在末尾绘制省略号，并保留文本自身样式。
+     */
+    public static void drawTruncatedText(GuiGraphics graphics, Font font, Component text,
+                                         int x, int y, int maxWidth, int color, boolean shadow) {
+        if (text == null || text.getString().isEmpty() || maxWidth <= 0) {
+            return;
+        }
+        if (font.width(text) <= maxWidth) {
+            graphics.drawString(font, text, x, y, color, shadow);
+            return;
+        }
+
+        String ellipsis = "...";
+        int ellipsisWidth = font.width(ellipsis);
+        if (maxWidth <= ellipsisWidth) {
+            drawFormattedText(graphics, font, font.substrByWidth(text, maxWidth), x, y, maxWidth, color, shadow);
+            return;
+        }
+
+        FormattedText clipped = font.substrByWidth(text, maxWidth - ellipsisWidth);
+        int clippedWidth = font.width(clipped);
+        drawFormattedText(graphics, font, clipped, x, y, clippedWidth, color, shadow);
+        graphics.drawString(font, ellipsis, x + clippedWidth, y, color, shadow);
+    }
+
+    public static void drawTruncatedText(GuiGraphics graphics, Font font, Component text,
+                                         int x, int y, int maxWidth, int color) {
+        drawTruncatedText(graphics, font, text, x, y, maxWidth, color, false);
+    }
+
+    private static void drawFormattedText(GuiGraphics graphics, Font font, FormattedText text,
+                                          int x, int y, int width, int color, boolean shadow) {
+        List<FormattedCharSequence> lines = font.split(text, Math.max(1, width));
+        if (!lines.isEmpty()) {
+            graphics.drawString(font, lines.get(0), x, y, color, shadow);
+        }
     }
 }

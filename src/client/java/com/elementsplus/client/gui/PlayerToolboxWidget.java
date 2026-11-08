@@ -603,7 +603,12 @@ public class PlayerToolboxWidget extends AbstractWidget {
         } else {
             g.blit(ElementsPlus.id("textures/gui/widget.png"), x + w - 10, hy + HEADER_HEIGHT / 2 - 2, 5, 0, 5, 5);
         }
-        g.drawString(font, toolbox.groups.get(i).displayName(), x + 4, hy + (HEADER_HEIGHT - 9) / 2, 0xFFFFFFFF, false);
+        Component groupName = toolbox.groups.get(i).displayName();
+        if (headerHovered) {
+            tooltip.set(Tooltip.create(groupName));
+        }
+        GuiUtil.drawTruncatedText(g, font, groupName, x + 4, hy + (HEADER_HEIGHT - 9) / 2,
+                Math.max(1, w - 18), 0xFFFFFFFF);
 
         if (!expanded) return;
         PlayerToolbox.Group group = toolbox.groups.get(i);
@@ -617,7 +622,8 @@ public class PlayerToolboxWidget extends AbstractWidget {
                 tooltip.set(Tooltip.create(componentTooltip(component)));
             }
             drawToolboxIcon(g, component, x + 6, ey + 1);
-            g.drawString(font, component.getName(), x + 24, ey + (ENTRY_HEIGHT - 9) / 2, 0xFFFFFFFF, false);
+            GuiUtil.drawTruncatedText(g, font, component.getName(), x + 24, ey + (ENTRY_HEIGHT - 9) / 2,
+                    Math.max(1, w - 26), 0xFFFFFFFF);
         }
     }
 

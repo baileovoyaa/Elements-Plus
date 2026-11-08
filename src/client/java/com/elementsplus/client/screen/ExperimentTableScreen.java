@@ -657,7 +657,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         for (ChapterEntryButton button : chapterButtons) {
             boolean locked = !unlockedChapters.contains(button.chapter.name);
             button.locked = locked;
-            button.setTooltip(locked ? Tooltip.create(buildLockedChapterTooltip(button.chapter)) : null);
+            button.setTooltip(Tooltip.create(buildChapterTooltip(button.chapter, locked)));
         }
         ChapterEntryButton target = null;
         if (selectedName != null) {
@@ -695,6 +695,17 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             }
         }
         return true;
+    }
+
+    /**
+     * 章节条目的悬停提示：第一行显示完整名称；未解锁时再追加原有前置章节提示。
+     */
+    private Component buildChapterTooltip(ExperimentChapter chapter, boolean locked) {
+        MutableComponent tooltip = chapter.getDisplayName().copy();
+        if (locked) {
+            tooltip.append(Component.literal("\n")).append(buildLockedChapterTooltip(chapter));
+        }
+        return tooltip;
     }
 
     /**
@@ -791,6 +802,11 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         ChapterEntryButton(int x, int y, int width, int height, ExperimentChapter chapter) {
             super(x, y, width, height, chapter.getDisplayName());
             this.chapter = chapter;
+            this.setTooltip(Tooltip.create(chapter.getDisplayName()));
+        }
+
+        private boolean hasCompletionMark() {
+            return !locked && unlockedChapters.contains(chapter.name) && isChapterComplete(chapter);
         }
 
         @Override
@@ -807,18 +823,20 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
         @Override
         public void renderString(GuiGraphics guiGraphics, Font font, int i) {
+            boolean completionMark = hasCompletionMark();
             int left = this.getX() + 3;
-            int right = this.getX() + this.getWidth() - 3;
-            int color = locked ? 0xFF808080 : (forcedChapters.contains(chapter.name) ? 0xFFFF55FF : i);
+            int right = this.getX() + this.getWidth() - (completionMark ? 20 : 3);
+            int color = locked ? 0xFF909090 : (forcedChapters.contains(chapter.name) ? 0xFFFF55FF : i);
             guiGraphics.enableScissor(left, this.getY(), right, this.getY() + this.getHeight());
-            guiGraphics.drawString(font, this.getMessage(), left, this.getY() + (this.getHeight() - 9) / 2, color);
+            GuiUtil.drawTruncatedText(guiGraphics, font, this.getMessage(), left,
+                    this.getY() + (this.getHeight() - 9) / 2, Math.max(1, right - left), color, true);
             guiGraphics.disableScissor();
         }
 
         @Override
         protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
             super.renderWidget(guiGraphics, i, j, f);
-            if (unlockedChapters.contains(chapter.name) && isChapterComplete(chapter)) {
+            if (hasCompletionMark()) {
                 guiGraphics.blit(ElementsPlus.id("textures/gui/experiment_table/success.png"), this.getX() + this.getWidth() - 18, this.getY() + this.getHeight() / 2 - 8, 0, 0, 16, 16, 16, 16);
             }
         }
