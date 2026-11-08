@@ -1,6 +1,7 @@
 import {defineConfig} from 'vitepress'
 import type {DefaultTheme} from 'vitepress'
 import {experimentsPlugin} from './experiments.mjs'
+import {spoilerPlugin} from './spoiler.mjs'
 
 /** 站点部署路径，实验块的链接和图标地址都要带上它 */
 const base = '/Elements-Plus/'
@@ -188,6 +189,8 @@ export default defineConfig({
         config(md) {
             // ```epp-experiments 渲染成带图标/可选标志的实验条目
             md.use(experimentsPlugin, {base})
+            // ![alt](src){.spoiler} 渲染成可点击的剧透图
+            md.use(spoilerPlugin)
         }
     },
     ignoreDeadLinks: true

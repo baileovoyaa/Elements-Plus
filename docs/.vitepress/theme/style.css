@@ -48,3 +48,68 @@
   font-weight: 500;
   line-height: 1.4;
 }
+
+/* 图片剧透：`![alt](src){.spoiler}`，交互见 theme/spoiler.ts */
+
+.vp-doc .epp-spoiler {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  line-height: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.vp-doc .epp-spoiler:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+
+.vp-doc .epp-spoiler img {
+  display: block;
+  max-width: 100%;
+  filter: blur(14px);
+  transform: scale(1.03);
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.vp-doc .epp-spoiler--revealed img {
+  filter: none;
+  transform: none;
+}
+
+.vp-doc .epp-spoiler-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.15s ease;
+}
+
+.vp-doc .epp-spoiler:hover .epp-spoiler-hint,
+.vp-doc .epp-spoiler:focus-visible .epp-spoiler-hint {
+  opacity: 1;
+}
+
+.vp-doc .epp-spoiler--revealed .epp-spoiler-hint {
+  display: none;
+}
+
+/* 触屏设备没有 hover，直接常显提示 */
+@media (hover: none) {
+  .vp-doc .epp-spoiler:not(.epp-spoiler--revealed) .epp-spoiler-hint {
+    opacity: 1;
+  }
+}
