@@ -29,6 +29,10 @@ author: me
 - 电路
     - [8位加法器测例生成.py](../dev/reference/%E5%AE%9E%E9%AA%8C/%E7%94%B5%E8%B7%AF/8%E4%BD%8D%E5%8A%A0%E6%B3%95%E5%99%A8%E6%B5%8B%E4%BE%8B%E7%94%9F%E6%88%90.py)
 
+### 计算机架构
+
+- [8 位指令集](../dev/reference/8位指令集.md)
+
 ## 路线图
 
 [路线图](../dev/roadmap.md)

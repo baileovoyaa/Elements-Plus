@@ -38,9 +38,10 @@ category: "用户文档"
 - [计数器](counter.md)
 - [多字节存储器](multi-byte-memory.md)
 - [A+B问题](a-plus-b.md)
-- 计算机架构-输入输出寄存器
-- 计算机架构-运算
-- 计算机架构-立即数
-- 计算机架构-跳转
-- 计算机架构-连接内存
+- [计算机架构-输入输出寄存器](architecture-iom.md)
+- [计算机架构-立即数](architecture-immediate.md)
+- [计算机架构-连接内存](architecture-memory.md)
+- [计算机架构-运算](architecture-compute.md)
+- [计算机架构-跳转](architecture-jump.md)
+- 计算机架构-调用返回和栈
 - 汇编

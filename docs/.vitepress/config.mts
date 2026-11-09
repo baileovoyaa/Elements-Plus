@@ -55,7 +55,13 @@ const userSidebar: DefaultTheme.SidebarItem[] = [
                     {text: '寄存器', link: '/user/experiment-chapters/register'},
                     {text: '模数转换器', link: '/user/experiment-chapters/analog-digital-converter'},
                     {text: '计数器', link: '/user/experiment-chapters/counter'},
-                    {text: '多字节存储器', link: '/user/experiment-chapters/multi-byte-memory'}
+                    {text: '多字节存储器', link: '/user/experiment-chapters/multi-byte-memory'},
+                    {text: 'A+B问题', link: '/user/experiment-chapters/a-plus-b'},
+                    {text: '计算机架构-输入输出指令集', link: '/user/experiment-chapters/architecture-iom'},
+                    {text: '计算机架构-立即数', link: '/user/experiment-chapters/architecture-immediate'},
+                    {text: '计算机架构-连接内存', link: '/user/experiment-chapters/architecture-memory'},
+                    {text: '计算机架构-运算', link: '/user/experiment-chapters/architecture-compute'},
+                    {text: '计算机架构-跳转', link: '/user/experiment-chapters/architecture-jump'}
                 ]
             },
             {text: '自定义实验章节', link: '/user/custom-experiment-chapters'}
@@ -140,7 +146,8 @@ const devSidebar: DefaultTheme.SidebarItem[] = [
     {
         text: '参考',
         items: [
-            {text: '参考算法描述', link: '/dev/reference/电路/参考算法描述'}
+            {text: '参考算法描述', link: '/dev/reference/电路/参考算法描述'},
+            {text: '8位指令集', link: '/dev/reference/8位指令集'}
         ]
     },
     {text: '路线图', link: '/dev/roadmap'}
