@@ -190,18 +190,37 @@ public class CircuitExperiment extends BaseExperiment {
         default int getTickCount() {
             return getTicks().size();
         }
+
+        /**
+         * 是否只检查 expectedOutputs 中列出的输出标签。
+         * 默认严格比较全部输出；极限 A+B 等协议测例可以忽略未声明的辅助输出。
+         */
+        default boolean compareOnlyExpectedOutputs() {
+            return false;
+        }
     }
 
     public static class ConstantSequentialTestCase implements SequentialTestCase {
         public final List<SequentialTick> ticks;
+        private final boolean compareOnlyExpectedOutputs;
 
         public ConstantSequentialTestCase(List<SequentialTick> ticks) {
+            this(ticks, false);
+        }
+
+        public ConstantSequentialTestCase(List<SequentialTick> ticks, boolean compareOnlyExpectedOutputs) {
             this.ticks = ticks;
+            this.compareOnlyExpectedOutputs = compareOnlyExpectedOutputs;
         }
 
         @Override
         public List<SequentialTick> getTicks() {
             return ticks;
+        }
+
+        @Override
+        public boolean compareOnlyExpectedOutputs() {
+            return compareOnlyExpectedOutputs;
         }
     }
 
@@ -219,6 +238,16 @@ public class CircuitExperiment extends BaseExperiment {
         default int getMaxTicks() {
             return 20;
         }
+
+        /** 第一次输入前等待的 tick 数；测试系统可以按测例设置不同值。 */
+        default int getFirstInputDelay() {
+            return 2;
+        }
+
+        /** 两次输入之间的最小间隔 tick 数。 */
+        default int getInputGap() {
+            return 1;
+        }
     }
 
     public static class ConstantInteractiveTestCase implements InteractiveTestCase {
@@ -226,16 +255,25 @@ public class CircuitExperiment extends BaseExperiment {
         private final int inputB;
         private final int expectedOutput;
         private final int maxTicks;
+        private final int firstInputDelay;
+        private final int inputGap;
 
         public ConstantInteractiveTestCase(int inputA, int inputB, int expectedOutput) {
-            this(inputA, inputB, expectedOutput, 20);
+            this(inputA, inputB, expectedOutput, 20, 2, 1);
         }
 
         public ConstantInteractiveTestCase(int inputA, int inputB, int expectedOutput, int maxTicks) {
+            this(inputA, inputB, expectedOutput, maxTicks, 2, 1);
+        }
+
+        public ConstantInteractiveTestCase(int inputA, int inputB, int expectedOutput,
+                                           int maxTicks, int firstInputDelay, int inputGap) {
             this.inputA = inputA;
             this.inputB = inputB;
             this.expectedOutput = expectedOutput;
             this.maxTicks = maxTicks;
+            this.firstInputDelay = Math.max(0, firstInputDelay);
+            this.inputGap = Math.max(0, inputGap);
         }
 
         @Override
@@ -256,6 +294,16 @@ public class CircuitExperiment extends BaseExperiment {
         @Override
         public int getMaxTicks() {
             return maxTicks;
+        }
+
+        @Override
+        public int getFirstInputDelay() {
+            return firstInputDelay;
+        }
+
+        @Override
+        public int getInputGap() {
+            return inputGap;
         }
     }
 
@@ -285,17 +333,13 @@ public class CircuitExperiment extends BaseExperiment {
         boolean outputRequested;
         final List<SequentialFailureInfo.Row> rows = new ArrayList<>();
 
-        InteractiveState(int testIndex, CircuitDiagram diagram, CircuitSimulator simulator) {
+        InteractiveState(int testIndex, CircuitDiagram diagram, CircuitSimulator simulator, int firstInputDelay) {
             this.testIndex = testIndex;
             this.diagram = diagram;
             this.simulator = simulator;
-            this.nextInputTick = INTERACTIVE_FIRST_INPUT_DELAY;
+            this.nextInputTick = Math.max(0, firstInputDelay);
         }
     }
-
-    /** 第一次输入前的等待 tick 数，以及两次输入之间的最小间隔。 */
-    private static final int INTERACTIVE_FIRST_INPUT_DELAY = 2;
-    private static final int INTERACTIVE_INPUT_GAP = 2;
 
     public List<TestCase> testCases;
     public Map<String, Integer> bitWidthsPrecheck;
@@ -501,7 +545,7 @@ public class CircuitExperiment extends BaseExperiment {
                 ExperimentFailureInfo.pins(tick.expectedOutputs),
                 ExperimentFailureInfo.pins(outputs)));
 
-        if (!tick.expectedOutputs.equals(outputs)) {
+        if (!sequentialOutputsMatch(testCase, tick.expectedOutputs, outputs)) {
             context.reportTestResult(index, false);
             writeBackFailedInputs(context, tick.inputs);
             context.setErrorLines(buildFailureLinesForTick(tick.inputs, tick.expectedOutputs, outputs));
@@ -548,7 +592,7 @@ public class CircuitExperiment extends BaseExperiment {
             CircuitDiagram diagram = source.copy();
             CircuitSimulator simulator = new CircuitSimulator();
             simulator.setDiagram(diagram);
-            state = new InteractiveState(index, diagram, simulator);
+            state = new InteractiveState(index, diagram, simulator, testCase.getFirstInputDelay());
             context.experimentState = state;
         }
 
@@ -574,7 +618,7 @@ public class CircuitExperiment extends BaseExperiment {
         if (inputAvailable && outputHigh(outputs, "RI")) {
             state.inputIndex++;
             if (state.inputIndex < 2) {
-                state.nextInputTick = state.ticks + INTERACTIVE_INPUT_GAP;
+                state.nextInputTick = state.ticks + testCase.getInputGap();
             }
         }
 
@@ -644,6 +688,21 @@ public class CircuitExperiment extends BaseExperiment {
             lanes[b] = (byte) (((value >> b) & 1) != 0 ? 15 : 0);
         }
         return lanes;
+    }
+
+    private static boolean sequentialOutputsMatch(SequentialTestCase testCase,
+                                                  Map<String, PinValue> expected,
+                                                  Map<String, PinValue> actual) {
+        if (!testCase.compareOnlyExpectedOutputs()) {
+            return expected.equals(actual);
+        }
+        for (Map.Entry<String, PinValue> entry : expected.entrySet()) {
+            PinValue value = actual.get(entry.getKey());
+            if (value == null || !entry.getValue().equals(value)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

@@ -87,6 +87,20 @@
       "type": "text",
       "section": 5,
       "lines": 1
+    },
+    {
+      "type": "text",
+      "section": 6,
+      "lines": 2
+    },
+    {
+      "type": "experiments",
+      "experiments": [
+        "elements-plus:a_plus_b_extreme"
+      ],
+      "optional": [
+        "elements-plus:a_plus_b_extreme"
+      ]
     }
   ]
 }

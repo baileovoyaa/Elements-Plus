@@ -1578,7 +1578,8 @@ public class CircuitSimulator {
             boolean advanced = cc == BuiltinCircuitComponents.ALU_ADVANCED;
             int a = tupleToInt(inPort(node, 0));
             int b = tupleToInt(inPort(node, 1));
-            int op = tupleToInt(inPort(node, 2)) & 0x7;
+            int rawOp = tupleToInt(inPort(node, 2));
+            int op = advanced ? rawOp & 0xF : rawOp & 0x7;
             int ci = inPort(node, 3) != 0 ? 1 : 0;
             int y;
             int y1 = 0;
@@ -1599,23 +1600,20 @@ public class CircuitSimulator {
                 case 4 -> y = ~a & 0xFF;
                 case 5 -> y = a ^ b;
                 case 6 -> {
-                    // 逻辑移位，B 按 8 位补码解释：非负左移、负数右移，空位补 0。
-                    int shift = (byte) (b & 0xFF);
-                    if (shift >= 0) {
-                        y = shift >= 8 ? 0 : (a << shift) & 0xFF;
-                    } else {
-                        int s = -shift;
-                        y = s >= 8 ? 0 : (a & 0xFF) >>> s;
-                    }
+                    // 逻辑左移：B 的低 3 位为移位量，低位补 0。
+                    int shift = b & 0x7;
+                    y = (a << shift) & 0xFF;
                 }
                 case 7 -> {
-                    if (advanced) {
-                        int product = a * b;
-                        y = product & 0xFF;
-                        y1 = (product >> 8) & 0xFF;
-                    } else {
-                        y = 0;
-                    }
+                    // 逻辑右移：B 的低 3 位为移位量，高位补 0。
+                    int shift = b & 0x7;
+                    y = (a & 0xFF) >>> shift;
+                }
+                case 8 -> {
+                    // 高级版专用乘法：Y0 为低 8 位，Y1 为高 8 位。
+                    int product = a * b;
+                    y = product & 0xFF;
+                    y1 = (product >> 8) & 0xFF;
                 }
                 default -> y = 0;
             }

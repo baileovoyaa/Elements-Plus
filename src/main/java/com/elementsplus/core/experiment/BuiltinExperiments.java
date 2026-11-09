@@ -1264,19 +1264,16 @@ public class BuiltinExperiments {
             {0x80, 0x02}, {0x96, 0xFE}, {0x0F, 0x04}, {0xF0, 0xF9},
     };
 
-    /**
-     * ALU 的逻辑移位：B 按 8 位补码解释，非负左移、负数右移，空位补 0。
-     */
-    private static int aluShift(int value, int shiftAmount) {
-        int shift = (byte) (shiftAmount & 0xFF);
-        if (shift >= 0) {
-            return shift >= 8 ? 0 : (value << shift) & 0xFF;
-        }
-        int s = -shift;
-        return s >= 8 ? 0 : (value & 0xFF) >>> s;
+    private static int aluShiftLeft(int value, int shiftAmount) {
+        return (value << (shiftAmount & 0x7)) & 0xFF;
     }
 
-    private static int aluResult(int op, int a, int b, int ci, boolean advanced) {
+    private static int aluShiftRight(int value, int shiftAmount) {
+        return (value & 0xFF) >>> (shiftAmount & 0x7);
+    }
+
+    private static int aluResult(int rawOp, int a, int b, int ci, boolean advanced) {
+        int op = advanced ? rawOp & 0xF : rawOp & 0x7;
         return switch (op) {
             case 0 -> (a + b + ci) & 0xFF;
             case 1 -> (a - b - ci) & 0xFF;
@@ -1284,8 +1281,9 @@ public class BuiltinExperiments {
             case 3 -> a | b;
             case 4 -> ~a & 0xFF;
             case 5 -> a ^ b;
-            case 6 -> aluShift(a, b);
-            case 7 -> advanced ? (a * b) & 0xFF : 0;
+            case 6 -> aluShiftLeft(a, b);
+            case 7 -> aluShiftRight(a, b);
+            case 8 -> (a * b) & 0xFF;
             default -> 0;
         };
     }
@@ -1307,11 +1305,12 @@ public class BuiltinExperiments {
                 "B", new PinValue(pin8(b)),
                 "OP", new PinValue(pin8(op)),
                 "CI", new PinValue(ci != 0 ? 15 : 0));
+        int effectiveOp = advanced ? op & 0xF : op & 0x7;
         int y = aluResult(op, a, b, ci, advanced);
-        int co = aluCarry(op, a, b, ci);
+        int co = aluCarry(effectiveOp, a, b, ci);
         Map<String, PinValue> outputs;
         if (advanced) {
-            int y1 = op == 7 ? ((a * b) >> 8) & 0xFF : 0;
+            int y1 = effectiveOp == 8 ? ((a * b) >> 8) & 0xFF : 0;
             outputs = Map.of(
                     "Y0", new PinValue(pin8(y)),
                     "Y1", new PinValue(pin8(y1)),
@@ -1325,11 +1324,12 @@ public class BuiltinExperiments {
     }
 
     /**
-     * ALU 测例：操作码 0~7 × 16 组操作数 × CI(0/1)。B 的取值同时覆盖移位量与乘法操作数。
+     * ALU 测例：基础版 0~7，高级版 0~15（0000~0111 同基础，1000 乘法，1001~1111 保留）。
      */
     private static List<TestCase> buildAluTests(boolean advanced) {
         List<TestCase> tests = new ArrayList<>();
-        for (int op = 0; op < 8; op++) {
+        int operationCount = advanced ? 16 : 8;
+        for (int op = 0; op < operationCount; op++) {
             for (int[] pair : ALU_OPERAND_PAIRS) {
                 for (int ci = 0; ci <= 1; ci++) {
                     tests.add(aluCase(advanced, op, pair[0], pair[1], ci));
@@ -1621,24 +1621,24 @@ public class BuiltinExperiments {
 
     // ================= A+B 问题 =================
 
+    /** {A, B, 第一次输入前等待 tick 数, 两次输入之间的间隔 tick 数} */
     private static final int[][] A_PLUS_B_CASES = {
-            {0, 0},
-            {1, 2},
-            {12, 34},
-            {42, 58},
-            {50, 70},
-            {100, 55},
-            {123, 123},
-            {127, 1},
-            {200, 50},
-            {255, 0},
+            {0, 0, 1, 1},
+            {1, 2, 2, 1},
+            {12, 34, 3, 1},
+            {42, 58, 4, 1},
+            {50, 70, 5, 1},
+            {100, 55, 6, 1},
+            {123, 123, 7, 1},
+            {127, 1, 8, 0},
     };
 
     private static List<TestCase> buildAplusBTests() {
         List<TestCase> tests = new ArrayList<>();
         for (int[] pair : A_PLUS_B_CASES) {
             tests.add(new CircuitExperiment.ConstantInteractiveTestCase(
-                    pair[0], pair[1], (pair[0] + pair[1]) & 0xFF));
+                    pair[0], pair[1], (pair[0] + pair[1]) & 0xFF,
+                    20, pair[2], pair[3]));
         }
         return tests;
     }
@@ -1647,6 +1647,40 @@ public class BuiltinExperiments {
     public static final CircuitExperiment A_PLUS_B = register("a_plus_b",
             ElementsPlus.id("textures/experiments/a_plus_b.png"),
             new CircuitExperiment(buildAplusBTests(), null));
+
+    private static List<TestCase> buildAplusBExtremeTests() {
+        List<TestCase> tests = new ArrayList<>();
+        for (int[] pair : A_PLUS_B_CASES) {
+            int a = pair[0];
+            int b = pair[1];
+            int sum = (a + b) & 0xFF;
+            List<SequentialTick> ticks = List.of(
+                    new SequentialTick(
+                            Map.of(
+                                    "VI", new PinValue(15),
+                                    "DI", new PinValue(pin8(a)),
+                                    "RO", new PinValue(0)),
+                            Map.of(
+                                    "RI", new PinValue(15),
+                                    "VO", new PinValue(0))),
+                    new SequentialTick(
+                            Map.of(
+                                    "VI", new PinValue(15),
+                                    "DI", new PinValue(pin8(b)),
+                                    "RO", new PinValue(15)),
+                            Map.of(
+                                    "RI", new PinValue(15),
+                                    "VO", new PinValue(15),
+                                    "DO", new PinValue(pin8(sum)))));
+            tests.add(new ConstantSequentialTestCase(ticks, true));
+        }
+        return tests;
+    }
+
+    /** 极限 A+B：两 tick 完成输入与输出，使用普通时序测例。 */
+    public static final CircuitExperiment A_PLUS_B_EXTREME = register("a_plus_b_extreme",
+            ElementsPlus.id("textures/experiments/a_plus_b.png"),
+            new CircuitExperiment(buildAplusBExtremeTests(), null));
 
     public static <T extends BaseExperiment> T register(String name, ResourceLocation icon, T experiment) {
         experiment.setName(name);
