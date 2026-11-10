@@ -25,6 +25,7 @@
     "elements-plus:analog_digital_converter",
     "elements-plus:counter",
     "elements-plus:multi_byte_memory",
-    "elements-plus:a_plus_b"
+    "elements-plus:a_plus_b",
+    "elements-plus:architecture_iom"
   ]
 }

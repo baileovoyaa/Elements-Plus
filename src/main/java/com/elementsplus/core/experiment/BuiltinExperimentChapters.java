@@ -139,6 +139,13 @@ public class BuiltinExperimentChapters {
         // 内置章节沿用短名称以保持现有语言键；自定义命名空间使用完整 id，避免同名冲突。
         String name = id.getNamespace().equals(ElementsPlus.MOD_ID) ? id.getPath() : id.toString();
         List<ExperimentChapter.Section> sections = new ArrayList<>();
+        if (definition.markdown().isPresent()) {
+            List<BaseExperiment> experiments = resolveExperiments(definition.experiments());
+            Set<BaseExperiment> optional = resolveOptionalExperiments(
+                    definition.optional(), experiments);
+            sections.add(new ExperimentChapter.MarkdownSection(
+                    definition.markdown().get(), experiments, optional, definition.specialText()));
+        }
         for (ExperimentChapterDefinition.SectionDefinition section : definition.sections()) {
             if (section instanceof ExperimentChapterDefinition.TextSectionDefinition text) {
                 sections.add(buildTextSection(name, text));
@@ -172,6 +179,39 @@ public class BuiltinExperimentChapters {
             specs.add(new ArgSpec(line.line(), params, formats.toArray(ChatFormatting[]::new)));
         }
         return buildTextSection(prefix, definition.lines(), specs.toArray(ArgSpec[]::new));
+    }
+
+    private static List<BaseExperiment> resolveExperiments(List<String> rawIds) {
+        List<BaseExperiment> experiments = new ArrayList<>();
+        for (String raw : rawIds) {
+            BaseExperiment experiment = resolveExperiment(raw);
+            if (experiment != null && !experiments.contains(experiment)) {
+                experiments.add(experiment);
+            }
+        }
+        return experiments;
+    }
+
+    /** 可选实验会自动补进总实验列表，避免 optional 单独出现时漏掉。 */
+    private static Set<BaseExperiment> resolveOptionalExperiments(
+            List<String> rawOptional, List<BaseExperiment> allExperiments) {
+        Set<BaseExperiment> optional = new LinkedHashSet<>();
+        for (String raw : rawOptional) {
+            BaseExperiment experiment = resolveExperiment(raw);
+            if (experiment == null) {
+                continue;
+            }
+            optional.add(experiment);
+            if (!allExperiments.contains(experiment)) {
+                allExperiments.add(experiment);
+            }
+        }
+        return optional;
+    }
+
+    /** 供 Markdown 章节的 epp-text 块使用。 */
+    public static List<Component> dynamicText(ResourceLocation provider, long seed) {
+        return buildDynamicText(provider, seed);
     }
 
     private static ExperimentChapter.ExperimentSection buildExperimentSection(

@@ -14,13 +14,24 @@ import java.util.Optional;
 public record ExperimentChapterDefinition(
         Optional<ResourceLocation> icon,
         List<ResourceLocation> dependencies,
+        Optional<ResourceLocation> markdown,
+        List<ResourceLocation> specialText,
+        List<String> experiments,
+        List<String> optional,
         List<SectionDefinition> sections
 ) {
     public static final Codec<ExperimentChapterDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.optionalFieldOf("icon").forGetter(ExperimentChapterDefinition::icon),
             ResourceLocation.CODEC.listOf().optionalFieldOf("dependencies", List.of())
                     .forGetter(ExperimentChapterDefinition::dependencies),
-            SectionDefinition.CODEC.listOf().fieldOf("sections")
+            ResourceLocation.CODEC.optionalFieldOf("markdown").forGetter(ExperimentChapterDefinition::markdown),
+            ResourceLocation.CODEC.listOf().optionalFieldOf("special_text", List.of())
+                    .forGetter(ExperimentChapterDefinition::specialText),
+            Codec.STRING.listOf().optionalFieldOf("experiments", List.of())
+                    .forGetter(ExperimentChapterDefinition::experiments),
+            Codec.STRING.listOf().optionalFieldOf("optional", List.of())
+                    .forGetter(ExperimentChapterDefinition::optional),
+            SectionDefinition.CODEC.listOf().optionalFieldOf("sections", List.of())
                     .forGetter(ExperimentChapterDefinition::sections)
     ).apply(instance, ExperimentChapterDefinition::new));
 

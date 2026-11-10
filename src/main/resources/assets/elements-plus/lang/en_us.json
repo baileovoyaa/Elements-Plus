@@ -1111,6 +1111,7 @@
   "experiment.elements-plus.group.a_plus_b.section6.text0": "20 ticks is actually quite generous; in theory input and output can be completed in 2 ticks — read the first number on the first tick, then read the second number and output the result on the second tick. However, this cannot verify the circuit's blocking input/output behavior.",
   "experiment.elements-plus.group.a_plus_b.section6.text1": "This experiment makes both input and output ready immediately, so you do not need to wait for any data. Therefore VI is 1 for both ticks, and VO should also be 1 on the second tick. RO is guaranteed to be 1 on the second tick (the same tick when VO is 1).",
 
+  "experiment.elements-plus.group.architecture_iom": "Computer Architecture - I/O Registers",
   "experiment.elements-plus.group.analog_digital_converter": "Analog-to-Digital Converter",
   "experiment.elements-plus.group.analog_digital_converter.section0.text0": "This is an optional chapter. If you have trouble, you can skip it and come back later.",
   "experiment.elements-plus.group.analog_digital_converter.section0.text1": "In the previous chapters, we usually cared only about whether a signal is present, not about its exact strength. Such circuits are called %s.",

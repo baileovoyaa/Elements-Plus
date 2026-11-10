@@ -44,6 +44,27 @@ public class ExperimentChapter {
         }
     }
 
+    /**
+     * 由资源包 Markdown 驱动的章节内容。
+     *
+     * <p>实验列表仍然在此保存，以参与章节解锁和完成判定；Markdown 只决定正文排版
+     * 以及实验在正文中的位置。</p>
+     */
+    public static class MarkdownSection extends ExperimentSection {
+        public ResourceLocation markdown;
+        public List<ResourceLocation> specialText;
+
+        public MarkdownSection(ResourceLocation markdown, List<BaseExperiment> experiments,
+                               Set<BaseExperiment> optional, List<ResourceLocation> specialText) {
+            super(experiments);
+            if (!optional.isEmpty()) {
+                optional(optional.toArray(BaseExperiment[]::new));
+            }
+            this.markdown = markdown;
+            this.specialText = List.copyOf(specialText);
+        }
+    }
+
     public static class ImageSection extends Section {
         public ResourceLocation image;
         public int width;

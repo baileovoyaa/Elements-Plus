@@ -63,22 +63,78 @@ my_datapack/
       └─ tags/elements-plus/experiment_chapter/index.json
 ```
 
-章节文字仍然需要语言文件，而语言文件属于**资源包**，不属于数据包：
+旧式段落章节的文字仍然需要语言文件，而语言文件属于**资源包**，不属于数据包：
 
 ```text
 my_resourcepack/
 ├─ pack.mcmeta
 └─ assets/
-   └─ my_chapters/lang/
-      ├─ zh_cn.json
-      └─ en_us.json
+   ├─ my_chapters/lang/
+   │  ├─ zh_cn.json
+   │  └─ en_us.json
+   └─ my_chapters/texts/experiment_chapter/
+      └─ hello_logic.md
 ```
 
-语言键本身是全局解析的，不要求语言文件所在命名空间与章节命名空间相同。如果你的自定义章节直接复用现成语言键，则不需要额外资源包。
+语言键本身是全局解析的，不要求语言文件所在命名空间与章节命名空间相同。如果你的自定义章节直接复用现成语言键，则不需要额外语言文件；Markdown 驱动的章节则把正文放在资源包的 `texts` 路径下。
 
 ## 章节 JSON
 
-一个章节的基本结构：
+### Markdown 驱动章节
+
+章节可以把正文交给资源包中的 Markdown 文件。数据包 JSON 只负责资源路径、允许的特殊文本提供器和实验列表：
+
+```json
+{
+  "dependencies": ["elements-plus:a_plus_b"],
+  "markdown": "my_chapters:texts/experiment_chapter/hello_logic.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:and_gate"
+  ],
+  "optional": [
+    "elements-plus:not_gate"
+  ]
+}
+```
+
+`markdown` 使用资源位置（命名空间 + 路径），实际文件位于：
+
+```text
+assets/<命名空间>/<路径>
+```
+
+例如 `my_chapters:texts/experiment_chapter/hello_logic.md` 对应：
+
+```text
+assets/my_chapters/texts/experiment_chapter/hello_logic.md
+assets/my_chapters/texts/experiment_chapter/hello_logic.zh.md
+```
+
+默认文件是不带语言后缀的 `.md`；当前语言为 `zh_cn` 时会优先查找 `.zh.md`，再查找完整语言代码 `.zh_cn.md`，最后回退到默认文件。资源包可以分别覆盖不同语言的 Markdown。
+
+Markdown 的空行表示段落分隔，连续空行只会分隔一次；同一段落内的普通换行按空格合并，行尾两个空格表示强制换行。Markdown 支持标题、表格、行内代码和代码块。实验块使用 `epp-experiments` 代码块，每行写一个实验 ID：
+
+````text
+```epp-experiments
+elements-plus:and_gate
+elements-plus:not_gate
+```
+````
+
+Markdown 中的实验 ID 必须同时出现在数据包 JSON 的 `experiments` 或 `optional` 中，否则不会显示。可选状态由数据包 JSON 决定，Markdown 不写可选标记。数据包中定义但 Markdown 没有提到的实验，会按 JSON 中的顺序追加到章节末尾。
+
+特殊文本使用 `epp-text` 代码块，块内写提供器 ID；只有同时列在 JSON 的 `special_text` 中才会显示：
+
+````text
+```epp-text
+elements-plus:rom_values
+```
+````
+
+### 旧式段落结构
+
+旧章节仍然可以使用 `sections`：
 
 ```json
 {
@@ -119,7 +175,11 @@ my_resourcepack/
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
 | `dependencies` | 否 | 前置章节 ID 列表。所有前置章节完成后，此章节才会解锁。 |
-| `sections` | 是 | 章节段落列表，按数组顺序显示。 |
+| `markdown` | 否 | Markdown 资源位置。存在时使用 Markdown 驱动章节。 |
+| `special_text` | 否 | Markdown 中允许使用的特殊文本提供器 ID 列表。 |
+| `experiments` | 否 | 本章实验 ID 列表；Markdown 中的实验 ID 必须在这里出现。 |
+| `optional` | 否 | `experiments` 中的可选实验 ID 列表。 |
+| `sections` | 否 | 旧式段落列表。没有 `markdown` 时使用。 |
 
 依赖使用完整章节 ID。例如自定义章节依赖内置介绍章节：
 
@@ -274,6 +334,77 @@ experiment.elements-plus.group.<章节名称>.section<段落编号>.text<行号>
 ```
 
 `component` 使用 Minecraft 的文本组件 JSON 格式。它不会生成 `.argN` 语言键，但仍会占据参数位置。
+
+#### 富文本行
+
+章节文本行还支持一组轻量的 Markdown 风格格式。它们仍然按普通文本行填写，因此代码块和表格可以跨连续的多个语言键。
+
+标题行以 1~6 个 `#` 加空格开头，显示为粗体：
+
+```text
+## 标题
+```
+
+行内代码使用一对反引号，会跟随普通文字换行，并带深色背景：
+
+```text
+这一段里有 `行内代码`。
+```
+
+如果行内代码以 `component::` 开头，后面的内容会作为 JSON 文本组件解析并嵌入正文：
+
+```text
+`component::{"translate": "item.elements-plus.copper_wire"}`
+```
+
+行内粗体使用 `**粗体**`，斜体使用 `*斜体*`。行内颜色可以使用 Minecraft 颜色名或十六进制颜色：
+
+```text
+这是 **粗体**，这是 *斜体*，这是 <color=red>红色</color>。
+
+也可以写成 <font color=#FFAA00>自定义橙色</font>。
+```
+
+可用的颜色名与 Minecraft 格式颜色一致，例如 `red`、`blue`、`gold`、`green`、`aqua`、`light_purple`、`white`；十六进制颜色写作 `#RRGGBB`。
+
+表格使用连续的 `|` 行，第一行是表头，第二行是分隔行：
+
+```text
+| 名称 | 位宽 | 说明 |
+| --- | --- | --- |
+| `PC` | 8 | 程序地址 |
+| `INS` | 8 | 指令字节 |
+```
+
+代码块以三个反引号开始和结束：
+
+```text
+MOV R0, R3
+MOV R3, R0
+```
+
+表格和代码块超过可用宽度时会各自出现横向滚动条。鼠标滚轮在它们上面时仍然纵向滚动整个章节；按住 `Shift` 滚动滚轮或拖动底部滚动条可以横向查看。
+
+代码块中间的行不会自动换行，也不会额外增加行间距。行内代码只使用一对反引号。
+
+单独一行 `---` 会显示为分隔线。
+
+块级图片使用 `![图片描述](图片路径)`。路径可以相对于当前 Markdown 文件所在目录、使用 `../` 回退，或使用完整的命名空间路径：
+
+```text
+![章节总览](../../textures/gui/experiment_table/chapters/intro/intro.png)
+![命名空间图片](elements-plus:textures/gui/experiment_table/chapters/intro/intro.png)
+```
+
+相对路径不能越过 `assets/<命名空间>/` 根目录。图片不存在时，章节会显示 16×16 的缺失图标和图片描述，并把解析后的资源路径写入日志。
+
+行内 JSON 文本组件使用带 `component::` 前缀的行内代码：
+
+```text
+`component::{"translate": "item.elements-plus.copper_wire"}`
+```
+
+内置的“计算机架构——输入输出寄存器”章节包含这几种格式的示例。
 
 ### experiments：实验块
 

@@ -5,6 +5,7 @@ import com.elementsplus.ModItems;
 import com.elementsplus.blocks.entity.ExperimentStatus;
 import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.config.NumberFormat;
+import com.elementsplus.client.experiment.ExperimentMarkdownParser;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
@@ -25,6 +26,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -594,12 +596,14 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         experimentChapterWidget.scrollToTop();
         int y = 10;
         for (ExperimentChapter.Section section : chapter.sections) {
-            if (section instanceof ExperimentChapter.TextSection textSection) {
-                TextSectionWidget textSectionWidget = new TextSectionWidget(5, y, experimentChapterWidget.getWidth() - 10, textSection.text);
+            if (section instanceof ExperimentChapter.MarkdownSection markdownSection) {
+                y = addMarkdownChapter(markdownSection, y);
+            } else if (section instanceof ExperimentChapter.TextSection textSection) {
+                RichTextSectionWidget textSectionWidget = new RichTextSectionWidget(5, y, experimentChapterWidget.getWidth() - 10, textSection.text);
                 experimentChapterWidget.addChild(textSectionWidget);
                 y += textSectionWidget.getHeight();
             } else if (section instanceof ExperimentChapter.DynamicTextSection dynamicTextSection) {
-                TextSectionWidget textSectionWidget = new TextSectionWidget(5, y,
+                RichTextSectionWidget textSectionWidget = new RichTextSectionWidget(5, y,
                         experimentChapterWidget.getWidth() - 10, dynamicTextSection.text.apply(worldSeed));
                 experimentChapterWidget.addChild(textSectionWidget);
                 y += textSectionWidget.getHeight();
@@ -608,50 +612,158 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                 experimentChapterWidget.addChild(imageSectionWidget);
                 y += imageSectionWidget.getHeight();
             } else if (section instanceof ExperimentChapter.ExperimentSection experimentSection) {
-                ScrollPanelWidget experimentSectionWidget = new ScrollPanelWidget(5, y, experimentChapterWidget.getWidth() - 10, experimentSection.experiments.size() * 25 + 2, GuiUtil.SubPanelType.NONE, 0x00000000) {{
-                    int y = 0;
-                    for (BaseExperiment experiment : experimentSection.experiments) {
-                        AbstractWidget experimentWidget = new AbstractWidget(0, y, experimentChapterWidget.getWidth() - 11, 20, Component.empty()) {
-                            @Override
-                            protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-                                guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), isHovered ? 0xFFFFFFFF : 0xFF000000);
-                                boolean selected = experiment == selectedExperiment;
-                                GuiUtil.drawSubPanel(guiGraphics, this.getX() + 1, this.getY() + 1, this.getX() + this.getWidth() - 1, this.getY() + this.getHeight() - 1, selected ? 0xFF808080 : 0xFFA0A0A0, selected ? GuiUtil.SubPanelType.CONCAVE : GuiUtil.SubPanelType.CONVEX);
-                                if (experiment.getIcon() != null) {
-                                    guiGraphics.blit(experiment.getIcon(), 5 + this.getX(), this.getY() + 2, 0, 0, 16, 16, 16, 16);
-                                }
-                                Component displayName = experiment.getDisplayName();
-                                if (experimentSection.optional != null && experimentSection.optional.contains(experiment)) {
-                                    displayName = Component.translatable("gui.elements-plus.experiment_table.optional", displayName.copy().withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.DARK_GRAY);
-                                }
-                                guiGraphics.drawString(font, displayName, 5 + this.getX() + 16 + 2, this.getY() + this.getHeight() / 2 - font.lineHeight / 2, 0xFFFFFFFF, false);
-                                if (hasCompletedExperiment(experiment)) {
-                                    guiGraphics.blit(ElementsPlus.id("textures/gui/experiment_table/success.png"), 5 + this.getX() + this.getWidth() - 24, this.getY() + this.getHeight() / 2 - 8, 0, 0, 16, 16, 16, 16);
-                                }
-                            }
-
-                            @Override
-                            protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
-
-                            }
-
-                            @Override
-                            public void onClick(double d, double e) {
-                                if (unlockedChapters.contains(selectedChapter.name)) {
-                                    setCurrentExperiment(experiment);
-                                }
-                            }
-                        };
-                        addChild(experimentWidget);
-                        y += 25;
-                    }
-                }};
-                experimentChapterWidget.addChild(experimentSectionWidget);
-                y += experimentSectionWidget.getHeight();
+                y = addExperimentList(y, experimentSection.experiments, experimentSection.optional);
             }
             y += 10;
         }
         experimentChapterWidget.addChild(new EmptyWidget(0, y));
+    }
+
+    /**
+     * 按 Markdown 中出现的顺序添加正文和实验块；data 中定义但 Markdown
+     * 没有提到的实验会在最后统一追加。
+     */
+    private int addMarkdownChapter(ExperimentChapter.MarkdownSection section, int y) {
+        Map<String, BaseExperiment> allowed = new HashMap<>();
+        for (BaseExperiment experiment : section.experiments) {
+            if (experiment.getName() != null) {
+                allowed.put(experiment.getName(), experiment);
+                allowed.put("elements-plus:" + experiment.getName(), experiment);
+            }
+        }
+
+        Set<BaseExperiment> seen = new HashSet<>();
+        for (ExperimentMarkdownParser.Part part : ExperimentMarkdownParser.load(section.markdown)) {
+            if (part instanceof ExperimentMarkdownParser.TextPart textPart) {
+                RichTextSectionWidget textWidget = new RichTextSectionWidget(
+                        5, y, experimentChapterWidget.getWidth() - 10, textPart.lines(), true);
+                experimentChapterWidget.addChild(textWidget);
+                y += textWidget.getHeight();
+            } else if (part instanceof ExperimentMarkdownParser.ImagePart imagePart) {
+                MarkdownImageWidget imageWidget = new MarkdownImageWidget(
+                        5, y, experimentChapterWidget.getWidth() - 10,
+                        imagePart.image(), imagePart.description(), imagePart.rawPath());
+                experimentChapterWidget.addChild(imageWidget);
+                y += imageWidget.getHeight();
+            } else if (part instanceof ExperimentMarkdownParser.HorizontalRulePart) {
+                AbstractWidget ruleWidget = new AbstractWidget(
+                        5, y, experimentChapterWidget.getWidth() - 10, 1, Component.empty()) {
+                    @Override
+                    protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                        guiGraphics.fill(this.getX(), this.getY(),
+                                this.getX() + this.getWidth(), this.getY() + 1, 0xFF808080);
+                    }
+
+                    @Override
+                    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+                    }
+                };
+                experimentChapterWidget.addChild(ruleWidget);
+                y += ruleWidget.getHeight();
+            } else if (part instanceof ExperimentMarkdownParser.ExperimentPart experimentPart) {
+                List<BaseExperiment> experiments = new ArrayList<>();
+                for (String id : experimentPart.experimentIds()) {
+                    BaseExperiment experiment = allowed.get(normalizeExperimentId(id));
+                    if (experiment != null && seen.add(experiment)) {
+                        experiments.add(experiment);
+                    }
+                }
+                if (!experiments.isEmpty()) {
+                    y = addExperimentList(y, experiments, section.optional);
+                }
+            } else if (part instanceof ExperimentMarkdownParser.SpecialTextPart specialPart) {
+                for (ResourceLocation provider : specialPart.providers()) {
+                    if (!section.specialText.contains(provider)) {
+                        ElementsPlus.LOGGER.warn("Markdown chapter {} references undeclared text provider {}",
+                                section.markdown, provider);
+                        continue;
+                    }
+                    RichTextSectionWidget textWidget = new RichTextSectionWidget(
+                            5, y, experimentChapterWidget.getWidth() - 10,
+                            BuiltinExperimentChapters.dynamicText(provider, worldSeed));
+                    experimentChapterWidget.addChild(textWidget);
+                    y += textWidget.getHeight();
+                }
+            }
+            y += 10;
+        }
+
+        List<BaseExperiment> remaining = new ArrayList<>();
+        for (BaseExperiment experiment : section.experiments) {
+            if (seen.add(experiment)) {
+                remaining.add(experiment);
+            }
+        }
+        if (!remaining.isEmpty()) {
+            y = addExperimentList(y, remaining, section.optional);
+            y += 10;
+        }
+        return y;
+    }
+
+    private static String normalizeExperimentId(String id) {
+        ResourceLocation location = ResourceLocation.tryParse(id);
+        if (location != null && location.getNamespace().equals(ElementsPlus.MOD_ID)) {
+            return location.getPath();
+        }
+        return id;
+    }
+
+    private int addExperimentList(int y, List<BaseExperiment> experiments, Set<BaseExperiment> optional) {
+        if (experiments.isEmpty()) {
+            return y;
+        }
+        ScrollPanelWidget experimentSectionWidget = new ScrollPanelWidget(5, y,
+                experimentChapterWidget.getWidth() - 10, experiments.size() * 25 + 2,
+                GuiUtil.SubPanelType.NONE, 0x00000000) {{
+            int childY = 0;
+            for (BaseExperiment experiment : experiments) {
+                AbstractWidget experimentWidget = new AbstractWidget(0, childY,
+                        experimentChapterWidget.getWidth() - 11, 20, Component.empty()) {
+                    @Override
+                    protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                        guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), isHovered ? 0xFFFFFFFF : 0xFF000000);
+                        boolean selected = experiment == selectedExperiment;
+                        GuiUtil.drawSubPanel(guiGraphics, this.getX() + 1, this.getY() + 1,
+                                this.getX() + this.getWidth() - 1, this.getY() + this.getHeight() - 1,
+                                selected ? 0xFF808080 : 0xFFA0A0A0,
+                                selected ? GuiUtil.SubPanelType.CONCAVE : GuiUtil.SubPanelType.CONVEX);
+                        if (experiment.getIcon() != null) {
+                            guiGraphics.blit(experiment.getIcon(), 5 + this.getX(), this.getY() + 2, 0, 0, 16, 16, 16, 16);
+                        }
+                        Component displayName = experiment.getDisplayName();
+                        if (optional != null && optional.contains(experiment)) {
+                            displayName = Component.translatable("gui.elements-plus.experiment_table.optional",
+                                    displayName.copy().withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.DARK_GRAY);
+                        }
+                        guiGraphics.drawString(font, displayName, 5 + this.getX() + 16 + 2,
+                                this.getY() + this.getHeight() / 2 - font.lineHeight / 2,
+                                0xFFFFFFFF, false);
+                        if (hasCompletedExperiment(experiment)) {
+                            guiGraphics.blit(ElementsPlus.id("textures/gui/experiment_table/success.png"),
+                                    5 + this.getX() + this.getWidth() - 24,
+                                    this.getY() + this.getHeight() / 2 - 8,
+                                    0, 0, 16, 16, 16, 16);
+                        }
+                    }
+
+                    @Override
+                    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+                    }
+
+                    @Override
+                    public void onClick(double d, double e) {
+                        if (unlockedChapters.contains(selectedChapter.name)) {
+                            setCurrentExperiment(experiment);
+                        }
+                    }
+                };
+                addChild(experimentWidget);
+                childY += 25;
+            }
+        }};
+        experimentChapterWidget.addChild(experimentSectionWidget);
+        return y + experimentSectionWidget.getHeight();
     }
 
     public void onServerData(BlockPos pos, String selectedName, String selectedExperimentName,

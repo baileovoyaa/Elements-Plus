@@ -1,0 +1,14 @@
+{
+  "dependencies": [
+    "elements-plus:a_plus_b"
+  ],
+  "markdown": "elements-plus:texts/experiment_chapter/architecture_iom.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:tff",
+    "elements-plus:tff_prime"
+  ],
+  "optional": [
+    "elements-plus:tff_prime"
+  ]
+}

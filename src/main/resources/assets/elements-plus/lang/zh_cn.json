@@ -1110,6 +1110,7 @@
   "experiment.elements-plus.group.a_plus_b.section6.text0": "20 tick 其实已经相当宽松，理论上最快可以在 2 tick 内完成输入输出——第一个 tick 读取第一个数，第二个 tick 读取第二个数并输出结果。不过这样将无法验证电路的阻塞式输入/输出。",
   "experiment.elements-plus.group.a_plus_b.section6.text1": "该实验会立即准备好输入和输出，你不需要等待任何数据。因此 VI 在两个 tick 内都为 1，第 2 个 tick VO 也应该为 1。保证第 2 tick（即 VO 为 1 的同一 tick）RO 为 1。",
 
+  "experiment.elements-plus.group.architecture_iom": "计算机架构——输入输出寄存器",
   "experiment.elements-plus.group.analog_digital_converter": "模数转换器",
   "experiment.elements-plus.group.analog_digital_converter.section0.text0": "这是一个可选章节。如果遇到了困难，可以先跳过这一节去做后面的。",
   "experiment.elements-plus.group.analog_digital_converter.section0.text1": "在前面的几个章节里，我们通常只关心信号的有和无，而不关心具体信号强度，这类电路我们称之为%s。",

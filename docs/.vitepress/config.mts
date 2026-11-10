@@ -57,7 +57,7 @@ const userSidebar: DefaultTheme.SidebarItem[] = [
                     {text: '计数器', link: '/user/experiment-chapters/counter'},
                     {text: '多字节存储器', link: '/user/experiment-chapters/multi-byte-memory'},
                     {text: 'A+B问题', link: '/user/experiment-chapters/a-plus-b'},
-                    {text: '计算机架构-输入输出指令集', link: '/user/experiment-chapters/architecture-iom'},
+                    {text: '计算机架构-输入输出寄存器', link: '/user/experiment-chapters/architecture-iom'},
                     {text: '计算机架构-立即数', link: '/user/experiment-chapters/architecture-immediate'},
                     {text: '计算机架构-连接内存', link: '/user/experiment-chapters/architecture-memory'},
                     {text: '计算机架构-运算', link: '/user/experiment-chapters/architecture-compute'},
