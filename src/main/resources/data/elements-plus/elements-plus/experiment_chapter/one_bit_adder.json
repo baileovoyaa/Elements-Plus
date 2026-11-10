@@ -2,99 +2,11 @@
   "dependencies": [
     "elements-plus:advanced_gate"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 4,
-      "args": [
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 7,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:half_adder"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 2,
-      "lines": 11,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:full_adder"
-      ]
-    }
-  ]
+  "markdown": "elements-plus:texts/experiment_chapter/one_bit_adder.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:half_adder",
+    "elements-plus:full_adder"
+  ],
+  "optional": []
 }

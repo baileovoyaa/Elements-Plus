@@ -2,131 +2,15 @@
   "dependencies": [
     "elements-plus:multi_bit_adder"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 3,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:comparator"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 2,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:comparator_8"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 2,
-      "lines": 2,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:comparator_signed_8"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 3,
-      "lines": 2,
-      "args": [
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:comparator_analog"
-      ],
-      "optional": [
-        "elements-plus:comparator_analog"
-      ]
-    }
+  "markdown": "elements-plus:texts/experiment_chapter/comparator.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:comparator",
+    "elements-plus:comparator_8",
+    "elements-plus:comparator_signed_8",
+    "elements-plus:comparator_analog"
+  ],
+  "optional": [
+    "elements-plus:comparator_analog"
   ]
 }

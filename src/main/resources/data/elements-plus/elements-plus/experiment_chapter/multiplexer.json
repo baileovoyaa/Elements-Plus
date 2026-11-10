@@ -2,224 +2,25 @@
   "dependencies": [
     "elements-plus:advanced_gate"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 4,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "style": [
-            "red"
-          ],
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:mux_2"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 7,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:mux_4"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 2,
-      "lines": 3,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            },
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "style": [
-            "dark_purple"
-          ],
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            },
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:mux_2_8",
-        "elements-plus:mux_4_8"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 3,
-      "lines": 2,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:tri_state_buffer_8"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 4,
-      "lines": 1,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            },
-            {
-              "style": [
-                "blue"
-              ]
-            },
-            {
-              "style": [
-                "gold"
-              ]
-            },
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:mux_analog_2",
-        "elements-plus:mux_analog_4",
-        "elements-plus:mux_analog_2_8",
-        "elements-plus:mux_analog_4_8",
-        "elements-plus:tri_state_buffer_analog_8"
-      ],
-      "optional": [
-        "elements-plus:mux_analog_2",
-        "elements-plus:mux_analog_4",
-        "elements-plus:mux_analog_2_8",
-        "elements-plus:mux_analog_4_8",
-        "elements-plus:tri_state_buffer_analog_8"
-      ]
-    }
+  "markdown": "elements-plus:texts/experiment_chapter/multiplexer.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:mux_2",
+    "elements-plus:mux_4",
+    "elements-plus:mux_2_8",
+    "elements-plus:mux_4_8",
+    "elements-plus:tri_state_buffer_8",
+    "elements-plus:mux_analog_2",
+    "elements-plus:mux_analog_4",
+    "elements-plus:mux_analog_2_8",
+    "elements-plus:mux_analog_4_8",
+    "elements-plus:tri_state_buffer_analog_8"
+  ],
+  "optional": [
+    "elements-plus:mux_analog_2",
+    "elements-plus:mux_analog_4",
+    "elements-plus:mux_analog_2_8",
+    "elements-plus:mux_analog_4_8",
+    "elements-plus:tri_state_buffer_analog_8"
   ]
 }

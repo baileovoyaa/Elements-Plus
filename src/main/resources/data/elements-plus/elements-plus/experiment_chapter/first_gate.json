@@ -2,130 +2,13 @@
   "dependencies": [
     "elements-plus:amplifier"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 12,
-      "args": [
-        {
-          "line": 5,
-          "params": [
-            {
-              "style": [
-                "bold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 9,
-          "params": [
-            {
-              "component": {
-                "translate": "item.elements-plus.copper_wire"
-              }
-            },
-            {
-              "component": {
-                "translate": "item.elements-plus.gold_wire"
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 5,
-      "args": [
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "italic",
-                "red"
-              ]
-            },
-            {
-              "style": [
-                "italic",
-                "red"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:not_gate"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 2,
-      "lines": 4,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "italic",
-                "red"
-              ]
-            },
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:analog_not"
-      ],
-      "optional": [
-        "elements-plus:analog_not"
-      ]
-    }
+  "markdown": "elements-plus:texts/experiment_chapter/first_gate.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:not_gate",
+    "elements-plus:analog_not"
+  ],
+  "optional": [
+    "elements-plus:analog_not"
   ]
 }

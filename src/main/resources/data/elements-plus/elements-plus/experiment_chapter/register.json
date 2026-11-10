@@ -2,98 +2,14 @@
   "dependencies": [
     "elements-plus:flip_flop"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 4,
-      "args": [
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:register"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 2,
-      "args": [
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:register_8"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 2,
-      "lines": 2,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:register_analog"
-      ],
-      "optional": [
-        "elements-plus:register_analog"
-      ]
-    }
+  "markdown": "elements-plus:texts/experiment_chapter/register.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:register",
+    "elements-plus:register_8",
+    "elements-plus:register_analog"
+  ],
+  "optional": [
+    "elements-plus:register_analog"
   ]
 }

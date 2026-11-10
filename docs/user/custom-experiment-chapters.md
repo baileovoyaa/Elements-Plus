@@ -113,28 +113,14 @@ assets/my_chapters/texts/experiment_chapter/hello_logic.zh.md
 
 默认文件是不带语言后缀的 `.md`；当前语言为 `zh_cn` 时会优先查找 `.zh.md`，再查找完整语言代码 `.zh_cn.md`，最后回退到默认文件。资源包可以分别覆盖不同语言的 Markdown。
 
-Markdown 的空行表示段落分隔，连续空行只会分隔一次；同一段落内的普通换行按空格合并，行尾两个空格表示强制换行。Markdown 支持标题、表格、行内代码和代码块。实验块使用 `epp-experiments` 代码块，每行写一个实验 ID：
+Markdown 的空行表示段落分隔，连续空行只会分隔一次；同一段落内的普通换行按空格合并，行尾两个空格表示强制换行。Markdown 支持标题、表格、颜色、粗体、斜体、块级图片、行内代码（含内嵌文本组件）和代码块（含实验块、特殊文本块）。
 
-````text
-```epp-experiments
-elements-plus:and_gate
-elements-plus:not_gate
-```
-````
-
-Markdown 中的实验 ID 必须同时出现在数据包 JSON 的 `experiments` 或 `optional` 中，否则不会显示。可选状态由数据包 JSON 决定，Markdown 不写可选标记。数据包中定义但 Markdown 没有提到的实验，会按 JSON 中的顺序追加到章节末尾。
-
-特殊文本使用 `epp-text` 代码块，块内写提供器 ID；只有同时列在 JSON 的 `special_text` 中才会显示：
-
-````text
-```epp-text
-elements-plus:rom_values
-```
-````
+详细格式见 [Markdown 语法](#markdown-语法) 部分。
 
 ### 旧式段落结构
 
-旧章节仍然可以使用 `sections`：
+> [!NOTE]
+> 旧章节仍然可以使用 `sections`，但与 Markdown 驱动章节相比，这需要管理大量 JSON 和语言键，因此不推荐作为首选。
 
 ```json
 {
@@ -196,6 +182,9 @@ elements-plus:rom_values
 依赖关系应保持无环。
 
 ## 段落类型
+
+> [!NOTE]
+> 以下内容适用于 `sections` 字段，如果章节是 Markdown 驱动的，可以使用 [Markdown 语法](#markdown-语法)。
 
 ### text：文本段落
 
@@ -337,74 +326,7 @@ experiment.elements-plus.group.<章节名称>.section<段落编号>.text<行号>
 
 #### 富文本行
 
-章节文本行还支持一组轻量的 Markdown 风格格式。它们仍然按普通文本行填写，因此代码块和表格可以跨连续的多个语言键。
-
-标题行以 1~6 个 `#` 加空格开头，显示为粗体：
-
-```text
-## 标题
-```
-
-行内代码使用一对反引号，会跟随普通文字换行，并带深色背景：
-
-```text
-这一段里有 `行内代码`。
-```
-
-如果行内代码以 `component::` 开头，后面的内容会作为 JSON 文本组件解析并嵌入正文：
-
-```text
-`component::{"translate": "item.elements-plus.copper_wire"}`
-```
-
-行内粗体使用 `**粗体**`，斜体使用 `*斜体*`。行内颜色可以使用 Minecraft 颜色名或十六进制颜色：
-
-```text
-这是 **粗体**，这是 *斜体*，这是 <color=red>红色</color>。
-
-也可以写成 <font color=#FFAA00>自定义橙色</font>。
-```
-
-可用的颜色名与 Minecraft 格式颜色一致，例如 `red`、`blue`、`gold`、`green`、`aqua`、`light_purple`、`white`；十六进制颜色写作 `#RRGGBB`。
-
-表格使用连续的 `|` 行，第一行是表头，第二行是分隔行：
-
-```text
-| 名称 | 位宽 | 说明 |
-| --- | --- | --- |
-| `PC` | 8 | 程序地址 |
-| `INS` | 8 | 指令字节 |
-```
-
-代码块以三个反引号开始和结束：
-
-```text
-MOV R0, R3
-MOV R3, R0
-```
-
-表格和代码块超过可用宽度时会各自出现横向滚动条。鼠标滚轮在它们上面时仍然纵向滚动整个章节；按住 `Shift` 滚动滚轮或拖动底部滚动条可以横向查看。
-
-代码块中间的行不会自动换行，也不会额外增加行间距。行内代码只使用一对反引号。
-
-单独一行 `---` 会显示为分隔线。
-
-块级图片使用 `![图片描述](图片路径)`。路径可以相对于当前 Markdown 文件所在目录、使用 `../` 回退，或使用完整的命名空间路径：
-
-```text
-![章节总览](../../textures/gui/experiment_table/chapters/intro/intro.png)
-![命名空间图片](elements-plus:textures/gui/experiment_table/chapters/intro/intro.png)
-```
-
-相对路径不能越过 `assets/<命名空间>/` 根目录。图片不存在时，章节会显示 16×16 的缺失图标和图片描述，并把解析后的资源路径写入日志。
-
-行内 JSON 文本组件使用带 `component::` 前缀的行内代码：
-
-```text
-`component::{"translate": "item.elements-plus.copper_wire"}`
-```
-
-内置的“计算机架构——输入输出寄存器”章节包含这几种格式的示例。
+章节文本行还支持一组轻量的 [Markdown 风格格式](#markdown-语法)。它们仍然按普通文本行填写，因此代码块和表格可以跨连续的多个语言键。
 
 ### experiments：实验块
 
@@ -459,6 +381,96 @@ MOV R3, R0
 | `elements-plus:rom_values` | 根据当前存档世界种子生成 ROM 地址 0~15 的随机字节表。 |
 
 动态文本块会跟随世界种子变化，不需要在语言文件中逐项维护。
+
+## Markdown 语法
+
+[Markdown 驱动章节](#markdown-驱动章节)和[章节文本行](#富文本行)支持一组轻量的 Markdown 风格语法。
+
+标题行以 1~6 个 `#` 加空格开头，显示为粗体：
+
+```text
+## 标题
+```
+
+行内代码使用一对反引号，会跟随普通文字换行，并带深色背景：
+
+```text
+这一段里有 `行内代码`。
+```
+
+如果行内代码以 `component::` 开头，后面的内容会作为 JSON 文本组件解析并嵌入正文：
+
+```text
+`component::{"translate": "item.elements-plus.copper_wire"}`
+```
+
+行内粗体使用 `**粗体**`，斜体使用 `*斜体*`。行内颜色可以使用 Minecraft 颜色名或十六进制颜色：
+
+```text
+这是 **粗体**，这是 *斜体*，这是 <color=red>红色</color>。
+
+也可以写成 <font color=#FFAA00>自定义橙色</font>。
+```
+
+可用的颜色名与 Minecraft 格式颜色一致，例如 `red`、`blue`、`gold`、`green`、`aqua`、`light_purple`、`white`；十六进制颜色写作 `#RRGGBB`。
+
+表格使用连续的 `|` 行，第一行是表头，第二行是分隔行：
+
+```text
+| 名称 | 位宽 | 说明 |
+| --- | --- | --- |
+| `PC` | 8 | 程序地址 |
+| `INS` | 8 | 指令字节 |
+```
+
+代码块以三个反引号开始和结束：
+
+````text
+```
+MOV R0, R3
+MOV R3, R0
+```
+````
+
+表格和代码块超过可用宽度时会各自出现横向滚动条。鼠标滚轮在它们上面时仍然纵向滚动整个章节；按住 `Shift` 滚动滚轮或拖动底部滚动条可以横向查看。
+
+代码块中间的行不会自动换行，也不会额外增加行间距。行内代码只使用一对反引号。
+
+单独一行 `---` 会显示为分隔线。
+
+块级图片使用 `![图片描述](图片路径)`。路径可以相对于当前 Markdown 文件所在目录、使用 `../` 回退，或使用完整的命名空间路径：
+
+```text
+![章节总览](../../textures/gui/experiment_table/chapters/intro/intro.png)
+![命名空间图片](elements-plus:textures/gui/experiment_table/chapters/intro/intro.png)
+```
+
+相对路径不能越过 `assets/<命名空间>/` 根目录。图片不存在时，章节会显示 16×16 的缺失图标和图片描述，并把解析后的资源路径写入日志。
+
+行内 JSON 文本组件使用带 `component::` 前缀的行内代码：
+
+```text
+`component::{"translate": "item.elements-plus.copper_wire"}`
+```
+
+实验块使用 `epp-experiments` 代码块，每行写一个实验 ID：
+
+````text
+```epp-experiments
+elements-plus:and_gate
+elements-plus:not_gate
+```
+````
+
+Markdown 中的实验 ID 必须同时出现在数据包 JSON 的 `experiments` 或 `optional` 中，否则不会显示。可选状态由数据包 JSON 决定，Markdown 不写可选标记。数据包中定义但 Markdown 没有提到的实验，会按 JSON 中的顺序追加到章节末尾。
+
+特殊文本使用 `epp-text` 代码块，块内写提供器 ID；只有同时列在 JSON 的 `special_text` 中才会显示：
+
+````text
+```epp-text
+elements-plus:rom_values
+```
+````
 
 ## 章节顺序
 
@@ -516,9 +528,89 @@ data/elements-plus/tags/elements-plus/experiment_chapter/index.json
 
 ## 完整示例
 
-下面添加一个自定义章节 `my_chapters:hello_logic`，依赖介绍章节，包含一段文字和一个实验块。
+下面添加一个自定义章节 `my_chapters:hello_logic`，依赖介绍章节，使用 Markdown 正文并包含一个实验块。
 
 ### 1. 章节定义
+
+`data/my_chapters/elements-plus/experiment_chapter/hello_logic.json`：
+
+```json
+{
+  "dependencies": [
+    "elements-plus:intro"
+  ],
+  "markdown": "my_chapters:texts/experiment_chapter/hello_logic.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:and_gate"
+  ],
+  "optional": []
+}
+```
+
+Markdown 中的实验 ID 必须出现在 `experiments` 或 `optional` 中；可选状态只由这里的数据定义。
+
+### 2. 资源包
+
+章节标题放在语言文件中。`assets/my_chapters/lang/zh_cn.json`：
+
+```json
+{
+  "experiment.elements-plus.group.my_chapters:hello_logic": "我的逻辑章节"
+}
+```
+
+英文语言文件同理，放在 `assets/my_chapters/lang/en_us.json`：
+
+```json
+{
+  "experiment.elements-plus.group.my_chapters:hello_logic": "My Logic Chapter"
+}
+```
+
+中文 Markdown 是 `assets/my_chapters/texts/experiment_chapter/hello_logic.zh.md`：
+
+````markdown
+## 欢迎
+
+这是 **Markdown 驱动** 的自定义章节，支持 `行内代码`、*斜体* 和
+<color=gold>行内颜色</color>。
+
+| 项目 | 说明 |
+| --- | --- |
+| 正文 | Markdown 文件 |
+| 实验 | 由 `epp-experiments` 块决定 |
+
+```epp-experiments
+elements-plus:and_gate
+```
+````
+
+默认语言 Markdown 是 `assets/my_chapters/texts/experiment_chapter/hello_logic.md`，内容是同一章节的英文版本：
+
+````markdown
+## Welcome
+
+This is a **Markdown-driven** custom chapter with `inline code`, *italics*,
+and <color=gold>inline color</color>.
+
+| Item | Description |
+| --- | --- |
+| Text | Markdown file |
+| Experiment | Defined by the `epp-experiments` block |
+
+```epp-experiments
+elements-plus:and_gate
+```
+````
+
+### 旧式章节
+
+作为对比，以下是旧式章节定义和资源包格式：
+
+<details>
+
+**1. 章节定义**
 
 `data/my_chapters/elements-plus/experiment_chapter/hello_logic.json`：
 
@@ -564,7 +656,7 @@ data/elements-plus/tags/elements-plus/experiment_chapter/index.json
 }
 ```
 
-### 2. 语言文件（资源包）
+**2. 语言文件（资源包）**
 
 `assets/my_chapters/lang/zh_cn.json`：
 
@@ -579,6 +671,8 @@ data/elements-plus/tags/elements-plus/experiment_chapter/index.json
 ```
 
 英文语言文件同理，放在 `assets/my_chapters/lang/en_us.json`。
+
+</details>
 
 ### 3. 章节顺序
 

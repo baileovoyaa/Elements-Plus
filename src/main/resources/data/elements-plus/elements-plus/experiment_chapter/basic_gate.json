@@ -2,105 +2,18 @@
   "dependencies": [
     "elements-plus:first_gate"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 6,
-      "args": [
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 4,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 5,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:or_gate",
-        "elements-plus:nor_gate",
-        "elements-plus:nand_gate",
-        "elements-plus:and_gate"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 2
-    },
-    {
-      "type": "text",
-      "section": 2,
-      "lines": 3,
-      "args": [
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:and_gate_sc",
-        "elements-plus:or_gate_sc"
-      ],
-      "optional": [
-        "elements-plus:and_gate_sc",
-        "elements-plus:or_gate_sc"
-      ]
-    }
+  "markdown": "elements-plus:texts/experiment_chapter/basic_gate.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:or_gate",
+    "elements-plus:nor_gate",
+    "elements-plus:nand_gate",
+    "elements-plus:and_gate",
+    "elements-plus:and_gate_sc",
+    "elements-plus:or_gate_sc"
+  ],
+  "optional": [
+    "elements-plus:and_gate_sc",
+    "elements-plus:or_gate_sc"
   ]
 }

@@ -42,7 +42,7 @@ public class RichTextSectionWidget extends AbstractWidget {
     private static final String BULLET = "•";
     private static final int PARAGRAPH_SPACING = 5;
     private static final int BLOCK_SPACING = 6;
-    private static final int HEADING_TOP_MARGIN = 6;
+    private static final int HEADING_TOP_MARGIN = 9;
     private static final int INLINE_CODE_PADDING = 3;
     private static final int TABLE_CELL_PADDING = 5;
     private static final int TABLE_ROW_PADDING = 3;

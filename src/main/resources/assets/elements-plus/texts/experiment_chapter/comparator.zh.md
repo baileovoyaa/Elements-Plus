@@ -1,0 +1,33 @@
+比较器可以对两个二进制数进行比较。首先是<color=gold>1位比较器</color>。
+
+注意：1位比较器只认0/非0，因此任意非0值，如1和15，被认为是相等的，非0值大于0。
+
+- <color=gold>1位比较器</color>：输入A、B、I0和I1，输出Y0和Y1。当A<B时，输出Y0=15，Y1=0；当A>B时，输出Y0=0，Y1=15；当A=B时，输出Y0和Y1分别为I0和I1的放大值（非0即15）。
+
+```epp-experiments
+elements-plus:comparator
+```
+
+将上面的一位比较器级联，可以得到<color=gold>8位比较器</color>。
+
+- <color=gold>8位比较器</color>：输入A（8位）、B（8位）、I0（1位）和I1（1位），输出Y0（1位）和Y1（1位）。当A和B代表的无符号二进制数A<B时，输出Y0=15，Y1=0；A>B时，输出Y0=0，Y1=15；A=B时，输出Y0和Y1分别为I0和I1的放大值（非0即15）。
+
+```epp-experiments
+elements-plus:comparator_8
+```
+
+通过反转符号位，可以引入一个固定的偏移，它是严格保序的，因此可以用来比较有符号数的大小。本质上，符号位反转后的编码就是补码真值对应的一种“<color=blue>移码</color>”。
+
+- <color=gold>8位有符号比较器</color>：输入A（8位）、B（8位）、I0（1位）和I1（1位），输出Y0（1位）和Y1（1位）。当A和B代表的有符号二进制数A<B时，输出Y0=15，Y1=0；A>B时，输出Y0=0，Y1=15；A=B时，输出Y0和Y1分别为I0和I1的放大值（非0即15）。
+
+```epp-experiments
+elements-plus:comparator_signed_8
+```
+
+另外还有一种“比较器”比较的是模拟信号强度。与数字1位比较器不同，它会将1~15的信号强度视为不同的数值，例如9被认为大于8。它的实现比较复杂，这里作为可选实验。
+
+- <color=gold>模拟比较器</color>：输入A、B、I0和I1，输出Y0和Y1。当A的信号强度<B时，输出Y0=15，Y1=0；A>B时，输出Y0=0，Y1=15；A=B时，输出Y0和Y1分别为I0和I1的放大值（非0即15）。
+
+```epp-experiments
+elements-plus:comparator_analog
+```

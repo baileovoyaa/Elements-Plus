@@ -2,192 +2,24 @@
   "dependencies": [
     "elements-plus:advanced_gate"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 8,
-      "args": [
-        {
-          "line": 0,
-          "style": [
-            "dark_purple"
-          ],
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            },
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": [
-                "italic",
-                "red"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 4,
-          "params": [
-            {
-              "style": [
-                "blue"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 5,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 6,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 7,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:decoder_2_4",
-        "elements-plus:decoder_3_8",
-        "elements-plus:decoder_4_16"
-      ],
-      "optional": [
-        "elements-plus:decoder_4_16"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 6,
-      "args": [
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "italic",
-                "red"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 4,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 5,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:encoder_4_2",
-        "elements-plus:encoder_8_3",
-        "elements-plus:encoder_16_4"
-      ],
-      "optional": [
-        "elements-plus:encoder_16_4"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 2,
-      "lines": 1,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:priority_encoder_4_2",
-        "elements-plus:priority_encoder_8_3",
-        "elements-plus:priority_encoder_16_4"
-      ],
-      "optional": [
-        "elements-plus:priority_encoder_4_2",
-        "elements-plus:priority_encoder_8_3",
-        "elements-plus:priority_encoder_16_4"
-      ]
-    }
+  "markdown": "elements-plus:texts/experiment_chapter/encoder_decoder.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:decoder_2_4",
+    "elements-plus:decoder_3_8",
+    "elements-plus:decoder_4_16",
+    "elements-plus:encoder_4_2",
+    "elements-plus:encoder_8_3",
+    "elements-plus:encoder_16_4",
+    "elements-plus:priority_encoder_4_2",
+    "elements-plus:priority_encoder_8_3",
+    "elements-plus:priority_encoder_16_4"
+  ],
+  "optional": [
+    "elements-plus:decoder_4_16",
+    "elements-plus:encoder_16_4",
+    "elements-plus:priority_encoder_4_2",
+    "elements-plus:priority_encoder_8_3",
+    "elements-plus:priority_encoder_16_4"
   ]
 }

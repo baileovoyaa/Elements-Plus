@@ -2,250 +2,35 @@
   "dependencies": [
     "elements-plus:multi_bit_subtract"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 3,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": ["blue"]
-            },
-            {
-              "style": ["blue"]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 11,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": ["blue"]
-            },
-            {
-              "style": ["blue"]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": ["gold"]
-            },
-            {
-              "style": ["gold"]
-            },
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 5,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 6,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 7,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 9,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 10,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:bitwise_left_shift",
-        "elements-plus:bitwise_right_shift",
-        "elements-plus:bitwise_right_shift_arithmetic",
-        "elements-plus:bitwise_shift",
-        "elements-plus:bitwise_shift_arithmetic"
-      ],
-      "optional": [
-        "elements-plus:bitwise_shift",
-        "elements-plus:bitwise_shift_arithmetic"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 2,
-      "lines": 4,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": ["gold"]
-            },
-            {
-              "style": ["bold"]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": ["gold"]
-            },
-            {
-              "style": ["bold"]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:bitwise_left_rotate",
-        "elements-plus:bitwise_right_rotate",
-        "elements-plus:bitwise_rotate"
-      ],
-      "optional": [
-        "elements-plus:bitwise_left_rotate",
-        "elements-plus:bitwise_right_rotate",
-        "elements-plus:bitwise_rotate"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 3,
-      "lines": 8,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 4,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 5,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 6,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        },
-        {
-          "line": 7,
-          "params": [
-            {
-              "style": ["gold"]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:bitwise_left_shift_analog",
-        "elements-plus:bitwise_right_shift_analog",
-        "elements-plus:bitwise_shift_analog",
-        "elements-plus:bitwise_left_rotate_analog",
-        "elements-plus:bitwise_right_rotate_analog",
-        "elements-plus:bitwise_rotate_analog"
-      ],
-      "optional": [
-        "elements-plus:bitwise_left_shift_analog",
-        "elements-plus:bitwise_right_shift_analog",
-        "elements-plus:bitwise_shift_analog",
-        "elements-plus:bitwise_left_rotate_analog",
-        "elements-plus:bitwise_right_rotate_analog",
-        "elements-plus:bitwise_rotate_analog"
-      ]
-    }
+  "markdown": "elements-plus:texts/experiment_chapter/bitwise_shifter.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:bitwise_left_shift",
+    "elements-plus:bitwise_right_shift",
+    "elements-plus:bitwise_right_shift_arithmetic",
+    "elements-plus:bitwise_shift",
+    "elements-plus:bitwise_shift_arithmetic",
+    "elements-plus:bitwise_left_rotate",
+    "elements-plus:bitwise_right_rotate",
+    "elements-plus:bitwise_rotate",
+    "elements-plus:bitwise_left_shift_analog",
+    "elements-plus:bitwise_right_shift_analog",
+    "elements-plus:bitwise_shift_analog",
+    "elements-plus:bitwise_left_rotate_analog",
+    "elements-plus:bitwise_right_rotate_analog",
+    "elements-plus:bitwise_rotate_analog"
+  ],
+  "optional": [
+    "elements-plus:bitwise_shift",
+    "elements-plus:bitwise_shift_arithmetic",
+    "elements-plus:bitwise_left_rotate",
+    "elements-plus:bitwise_right_rotate",
+    "elements-plus:bitwise_rotate",
+    "elements-plus:bitwise_left_shift_analog",
+    "elements-plus:bitwise_right_shift_analog",
+    "elements-plus:bitwise_shift_analog",
+    "elements-plus:bitwise_left_rotate_analog",
+    "elements-plus:bitwise_right_rotate_analog",
+    "elements-plus:bitwise_rotate_analog"
   ]
 }

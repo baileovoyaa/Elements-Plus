@@ -1,0 +1,66 @@
+上一章节我们认识了<color=blue>补码</color>的概念。后续“<color=blue>有符号数</color>”如果没有特殊说明，均是指补码。
+
+位移器是一种可以将二进制数向左或向右移动若干位的元件。对于不循环的移位，左移 n 位等效于乘 2 的 n 次幂，右移 n 位等效于除以 2 的 n 次幂并向下取整；有符号数的右移需要使用能保留符号位的算术右移。
+
+例如 0000 1001 左移 3 位的结果是 0100 1000。
+
+---
+
+移位操作有<color=blue>逻辑移位</color>和<color=blue>算术移位</color>两种。逻辑移位不区分符号位，空缺位一律补 0；算术右移会保留符号位，空缺的高位补符号位。左移时两者的结果相同（低位都补 0），因此只需要单独的算术右移器。
+
+逻辑右移和算术右移的区别可以用 1001 0110 看出：逻辑右移 3 位得到 0001 0010，算术右移 3 位得到 1111 0010（最高位为 1，空缺的高位补 1）。
+
+为了避免功能重叠，把位移器按移位方向和补位规则拆成三个单向版本：<color=gold>8位左移器</color>、<color=gold>8位右移器</color>和<color=gold>8位算术右移器</color>。双向版本作为可选实验。
+
+如果 A 是有符号数，右移时应使用算术右移器；逻辑右移会把符号位当作普通数据位，结果可能变成一个很大的正数。
+
+单向移位器（包括后面的循环和模拟版本）都只使用 B 的低 3 位作为移位量，即移位量为 0~7，B 的高 5 位会被忽略。非循环移位移动 8 位及以上会移出全部原始位，循环移位则以 8 为周期，所以 3 位二进制数足够表示所有有效移位量。例如 B=8 的低 3 位是 0，效果等同于不移位。
+
+- <color=gold>8位左移器</color>：输入 A（8位）和 B（8位，仅低 3 位有效），输出 Y（8位）。Y 为 A 左移 B 位的结果（0 对应 0，1 对应 15）；低位补 0，移出的高位舍弃。
+- <color=gold>8位右移器</color>：输入同上，输出 Y 为 A 逻辑右移 B 位的结果；高位补 0，移出的低位舍弃。
+- <color=gold>8位算术右移器</color>：输入同上，输出 Y 为 A 算术右移 B 位的结果；高位补符号位（正数补 0，负数补 1），移出的低位舍弃。
+
+双向版本不使用低 3 位规则，而是用同一个 B 同时表示方向和位数：B 的 8 位整体视为有符号数（补码），为正时左移，为负时右移。
+
+- <color=gold>8位位移器</color>：输入 A（8位）和 B（8位），输出 Y（8位）。B 为正时，Y 为 A 左移 B 位的结果；B 为负时，Y 为 A 右移 |B| 位的结果。超出的位舍弃，缺失的位补 0（0 对应 0，1 对应 15）。
+- <color=gold>8位算术位移器</color>：输入输出同上，区别是左移时缺失的位补 0，右移时缺失的位补符号位。
+
+```epp-experiments
+elements-plus:bitwise_left_shift
+elements-plus:bitwise_right_shift
+elements-plus:bitwise_right_shift_arithmetic
+elements-plus:bitwise_shift
+elements-plus:bitwise_shift_arithmetic
+```
+
+还有一种<color=gold>循环位移器</color>，它不会舍弃超出的位，而是循环移到另一侧，例如 1001 0110 循环左移 6 位后是 1010 0101。和普通位移器一样，循环位移器也拆成了循环左移和循环右移两个单向版本，以及一个双向版本。作为可选实验。
+
+- <color=gold>8位循环左移器</color>：输入 A（8位）和 B（8位，仅低 3 位有效），输出 Y 为 A **循环**左移 B 位的结果（0 对应 0，1 对应 15）；移出的高位补到低位。
+- <color=gold>8位循环右移器</color>：输入同上，输出 Y 为 A **循环**右移 B 位的结果；移出的低位补到高位。
+- <color=gold>8位循环位移器</color>：输入 A（8位）和 B（8位），输出 Y（8位）。双向版本。B 的 8 位整体视为有符号数，为正时循环左移，为负时循环右移。
+
+```epp-experiments
+elements-plus:bitwise_left_rotate
+elements-plus:bitwise_right_rotate
+elements-plus:bitwise_rotate
+```
+
+还有一种<color=gold>模拟位移器</color>，它会保留非 0 位的信号强度，而不是全变为 15。例如 1 2 3 4 5 6 7 8 左移 4 位变为 5 6 7 8 0 0 0 0，循环左移 4 位变为 5 6 7 8 1 2 3 4。模拟位移器也拆成了左移、右移、循环左移和循环右移四个单向版本，以及两个双向版本。作为可选实验。
+
+数字位移器的输出每一位只会是 0 或 15；模拟位移器则保留原来的 0~15 信号强度。
+
+- <color=gold>8位模拟左移器</color>：输入 A（8位）和 B（8位，仅低 3 位有效），输出 Y 为 A 左移 B 位的结果，并保留各通道的信号强度；低位补 0，移出的高位舍弃。
+- <color=gold>8位模拟右移器</color>：输入同上，输出 Y 为 A 逻辑右移 B 位的结果，并保留各通道的信号强度；高位补 0，移出的低位舍弃。
+- <color=gold>8位模拟位移器</color>：输入 A（8位）和 B（8位），输出 Y（8位）。双向版本。B 的 8 位整体视为有符号数，为正时左移，为负时右移（高位补 0）；保留各通道的信号强度。
+- <color=gold>8位模拟循环左移器</color>：输入 A（8位）和 B（8位，仅低 3 位有效），输出 Y 为 A 循环左移 B 位的结果，并保留各通道的信号强度；移出的高位补到低位。
+- <color=gold>8位模拟循环右移器</color>：输入同上，输出 Y 为 A 循环右移 B 位的结果，并保留各通道的信号强度；移出的低位补到高位。
+- <color=gold>8位模拟循环位移器</color>：输入 A（8位）和 B（8位），输出 Y（8位）。双向循环版本。B 的 8 位整体视为有符号数，为正时循环左移，为负时循环右移；保留各通道的信号强度。
+
+```epp-experiments
+elements-plus:bitwise_left_shift_analog
+elements-plus:bitwise_right_shift_analog
+elements-plus:bitwise_shift_analog
+elements-plus:bitwise_left_rotate_analog
+elements-plus:bitwise_right_rotate_analog
+elements-plus:bitwise_rotate_analog
+```

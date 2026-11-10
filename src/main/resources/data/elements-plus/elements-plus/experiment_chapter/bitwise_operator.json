@@ -2,112 +2,25 @@
   "dependencies": [
     "elements-plus:multi_bit_adder"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 3,
-      "args": [
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:bitwise_and",
-        "elements-plus:bitwise_or",
-        "elements-plus:bitwise_not",
-        "elements-plus:bitwise_nand",
-        "elements-plus:bitwise_nor",
-        "elements-plus:bitwise_xor",
-        "elements-plus:bitwise_xnor"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 2
-    },
-    {
-      "type": "text",
-      "section": 2,
-      "lines": 4,
-      "args": [
-        {
-          "line": 0,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 1,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 2,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        },
-        {
-          "line": 3,
-          "params": [
-            {
-              "style": [
-                "gold"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:or_gate_8",
-        "elements-plus:and_gate_8",
-        "elements-plus:xor_gate_8",
-        "elements-plus:xnor_gate_8"
-      ],
-      "optional": [
-        "elements-plus:or_gate_8",
-        "elements-plus:and_gate_8",
-        "elements-plus:xor_gate_8",
-        "elements-plus:xnor_gate_8"
-      ]
-    }
+  "markdown": "elements-plus:texts/experiment_chapter/bitwise_operator.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:bitwise_and",
+    "elements-plus:bitwise_or",
+    "elements-plus:bitwise_not",
+    "elements-plus:bitwise_nand",
+    "elements-plus:bitwise_nor",
+    "elements-plus:bitwise_xor",
+    "elements-plus:bitwise_xnor",
+    "elements-plus:or_gate_8",
+    "elements-plus:and_gate_8",
+    "elements-plus:xor_gate_8",
+    "elements-plus:xnor_gate_8"
+  ],
+  "optional": [
+    "elements-plus:or_gate_8",
+    "elements-plus:and_gate_8",
+    "elements-plus:xor_gate_8",
+    "elements-plus:xnor_gate_8"
   ]
 }

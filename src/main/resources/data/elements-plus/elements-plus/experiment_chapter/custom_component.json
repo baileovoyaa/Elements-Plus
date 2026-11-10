@@ -2,22 +2,10 @@
   "dependencies": [
     "elements-plus:alu_basic"
   ],
-  "sections": [
-    {
-      "type": "text",
-      "section": 0,
-      "lines": 4
-    },
-    {
-      "type": "experiments",
-      "experiments": [
-        "elements-plus:custom_component"
-      ]
-    },
-    {
-      "type": "text",
-      "section": 1,
-      "lines": 1
-    }
-  ]
+  "markdown": "elements-plus:texts/experiment_chapter/custom_component.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:custom_component"
+  ],
+  "optional": []
 }
