@@ -68,6 +68,12 @@ const userSidebar: DefaultTheme.SidebarItem[] = [
         ]
     },
     {
+        text: '界面',
+        items: [
+            {text: '光刻机', link: '/user/ui/lithography-machine'}
+        ]
+    },
+    {
         text: '物品与方块',
         items: [
             {text: '总览', link: '/user/items-and-blocks/'},
@@ -169,6 +175,16 @@ const themeConfig = {
         {text: '用户文档', link: '/user/'},
         {text: '开发文档', link: '/dev/'}
     ],
+
+    /**
+     * 右侧 “On this page” 的标题层级，写成 [最高层级, 最低层级]。
+     * VitePress 2 默认只取 h2，这里放开到 h2~h4（'deep' 等价于 [2, 6]）。
+     * 单页可以再用 frontmatter 的 `outline` 覆盖。
+     */
+    outline: {
+        level: [2, 4],
+        label: 'On this page'
+    },
 
     /**
      * 兜底：没有（或没匹配上）`category` 的页面按路径前缀取侧边栏。
