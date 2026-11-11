@@ -4,6 +4,8 @@
   ],
   "markdown": "elements-plus:texts/experiment_chapter/architecture_iom.md",
   "special_text": [],
-  "experiments": [],
+  "experiments": [
+    "elements-plus:architecture_iom"
+  ],
   "optional": []
 }

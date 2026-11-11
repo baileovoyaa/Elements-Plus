@@ -225,6 +225,74 @@ public class CircuitExperiment extends BaseExperiment {
     }
 
     /**
+     * 架构测例的一帧。expectedPc 是该 tick 开始时应当执行的程序地址，
+     * inputs 包含外部提供的 VI/DI/RO，expectedOutputs 包含 RI/VO/DO。
+     */
+    public static class ArchitectureTick {
+        public final int expectedPc;
+        public final Map<String, PinValue> inputs;
+        public final Map<String, PinValue> expectedOutputs;
+
+        public ArchitectureTick(int expectedPc, Map<String, PinValue> inputs,
+                                Map<String, PinValue> expectedOutputs) {
+            this.expectedPc = expectedPc;
+            this.inputs = inputs;
+            this.expectedOutputs = expectedOutputs;
+        }
+    }
+
+    /**
+     * 计算机架构测例：测试系统提供外部虚拟程序 ROM，每个 tick 执行一条指令。
+     * 与普通时序测例不同，INS 由实际 PC 从 program 中取出后作为输入施加。
+     */
+    public interface ArchitectureTestCase extends TestCase {
+        byte[] getProgram();
+
+        List<ArchitectureTick> getTicks();
+
+        default int getTickCount() {
+            return getTicks().size();
+        }
+
+        /** 跳转测例的 PC 不单调，失败时复制整个程序而不是已执行的字节前缀。 */
+        default boolean copyWholeProgram() {
+            return false;
+        }
+    }
+
+    public static class ConstantArchitectureTestCase implements ArchitectureTestCase {
+        public final byte[] program;
+        public final List<ArchitectureTick> ticks;
+        private final boolean copyWholeProgram;
+
+        public ConstantArchitectureTestCase(byte[] program, List<ArchitectureTick> ticks) {
+            this(program, ticks, false);
+        }
+
+        public ConstantArchitectureTestCase(byte[] program, List<ArchitectureTick> ticks,
+                                            boolean copyWholeProgram) {
+            this.program = program.clone();
+            this.ticks = List.copyOf(ticks);
+            this.copyWholeProgram = copyWholeProgram;
+        }
+
+        @Override
+        public byte[] getProgram() {
+            return program.clone();
+        }
+
+        @Override
+        public List<ArchitectureTick> getTicks() {
+            return ticks;
+        }
+
+        @Override
+        public boolean copyWholeProgram() {
+            return copyWholeProgram;
+        }
+    }
+
+    /**
      * 交互式测例：测试系统通过 VI/RI/DI 和 VO/RO/DO 与电路交互，
      * 依次送入 A、B 两个 8 位数据，再读取一次 8 位输出。
      */
@@ -341,6 +409,25 @@ public class CircuitExperiment extends BaseExperiment {
         }
     }
 
+    private static final class ArchitectureState {
+        final int testIndex;
+        final int totalTicks;
+        final byte[] program;
+        final CircuitDiagram diagram;
+        final CircuitSimulator simulator;
+        final List<ArchitectureFailureInfo.Row> rows = new ArrayList<>();
+        int tickIndex;
+
+        ArchitectureState(int testIndex, int totalTicks, byte[] program,
+                          CircuitDiagram diagram, CircuitSimulator simulator) {
+            this.testIndex = testIndex;
+            this.totalTicks = totalTicks;
+            this.program = program;
+            this.diagram = diagram;
+            this.simulator = simulator;
+        }
+    }
+
     public List<TestCase> testCases;
     public Map<String, Integer> bitWidthsPrecheck;
     public CircuitComponent circuitComponent;
@@ -348,6 +435,7 @@ public class CircuitExperiment extends BaseExperiment {
     private final Set<String> neededInputLabels = new LinkedHashSet<>();
     private final Set<String> neededOutputLabels = new LinkedHashSet<>();
     private final Map<String, Integer> neededOutputWidths = new LinkedHashMap<>();
+    private boolean hasArchitectureTests;
 
     public CircuitExperiment(List<TestCase> testCases, CircuitComponent component) {
         this.testCases = testCases;
@@ -399,6 +487,19 @@ public class CircuitExperiment extends BaseExperiment {
                 addNeededOutput("VO", 1);
                 addNeededOutput("RI", 1);
                 addNeededOutput("DO", 8);
+            } else if (testCase instanceof ArchitectureTestCase architectureTestCase) {
+                hasArchitectureTests = true;
+                addNeededInput("INS", 8);
+                addNeededInput("VI", 1);
+                addNeededInput("DI", 8);
+                addNeededInput("RO", 1);
+                addNeededOutput("PC", 8);
+                addNeededOutput("RI", 1);
+                addNeededOutput("VO", 1);
+                addNeededOutput("DO", 8);
+                if (architectureTestCase.getProgram().length > 256) {
+                    throw new IllegalStateException("Architecture test program is longer than 256 bytes");
+                }
             }
         }
         this.circuitComponent = component;
@@ -455,6 +556,9 @@ public class CircuitExperiment extends BaseExperiment {
             return false;
         }
         TestCase testCase = testCases.get(index);
+        if (testCase instanceof ArchitectureTestCase architectureTestCase) {
+            return tickArchitecture(context, index, architectureTestCase);
+        }
         if (testCase instanceof InteractiveTestCase interactiveTestCase) {
             return tickInteractive(context, index, interactiveTestCase);
         }
@@ -497,6 +601,112 @@ public class CircuitExperiment extends BaseExperiment {
             return true;
         }
 
+        context.testIndex = index + 1;
+        return true;
+    }
+
+    /**
+     * 架构测例：测试系统根据实际 PC 从虚拟 ROM 取出 INS，再驱动电路一个时钟。
+     *
+     * <p>PC、INS 和执行阶段的 RI 在时钟步进前采样；VO/DO 是输出寄存器在步进后的状态。
+     * 任一值不匹配时立即结束测例，并记录从开始到当前 tick 的完整数据。</p>
+     */
+    private boolean tickArchitecture(Context context, int index, ArchitectureTestCase testCase) {
+        List<ArchitectureTick> ticks = testCase.getTicks();
+        if (ticks.isEmpty()) {
+            context.reportTestResult(index, true);
+            context.experimentState = null;
+            if (index == testCases.size() - 1) {
+                context.complete(true);
+            } else {
+                context.testIndex = index + 1;
+            }
+            return true;
+        }
+
+        CircuitDiagram source = context.getItemStack() != null
+                ? context.getItemStack().get(ModDataComponents.CIRCUIT_DIAGRAM)
+                : null;
+        if (source == null) {
+            return false;
+        }
+
+        ArchitectureState state = context.experimentState instanceof ArchitectureState s && s.testIndex == index
+                ? s : null;
+        if (state == null) {
+            CircuitDiagram diagram = source.copy();
+            CircuitSimulator simulator = new CircuitSimulator();
+            simulator.setDiagram(diagram);
+            state = new ArchitectureState(index, ticks.size(), testCase.getProgram(), diagram, simulator);
+            context.experimentState = state;
+        }
+
+        ArchitectureTick tick = ticks.get(state.tickIndex);
+        state.simulator.evaluate();
+        Map<String, PinValue> before = collectOutputs(state.diagram, state.simulator);
+        int actualPc = pinDigital(before.get("PC"));
+        int actualIns = programByte(state.program, actualPc);
+
+        Map<String, PinValue> inputs = new LinkedHashMap<>();
+        inputs.put("INS", new PinValue(busValue(actualIns)));
+        inputs.putAll(tick.inputs);
+        applyInputs(state.diagram, inputs);
+        state.simulator.evaluate();
+
+        Map<String, PinValue> during = collectOutputs(state.diagram, state.simulator);
+        int actualRi = pinHigh(during.get("RI")) ? 1 : 0;
+
+        state.simulator.step();
+        Map<String, PinValue> after = collectOutputs(state.diagram, state.simulator);
+        int actualVo = pinHigh(after.get("VO")) ? 1 : 0;
+        int actualDo = pinDigital(after.get("DO"));
+
+        int vi = pinHigh(tick.inputs.get("VI")) ? 1 : 0;
+        int di = pinDigital(tick.inputs.get("DI"));
+        int ro = pinHigh(tick.inputs.get("RO")) ? 1 : 0;
+        int expectedPc = tick.expectedPc & 0xFF;
+        int expectedIns = programByte(state.program, expectedPc);
+        int expectedRi = pinHigh(tick.expectedOutputs.get("RI")) ? 1 : 0;
+        int expectedVo = pinHigh(tick.expectedOutputs.get("VO")) ? 1 : 0;
+        int expectedDo = pinDigital(tick.expectedOutputs.get("DO"));
+
+        state.rows.add(new ArchitectureFailureInfo.Row(
+                state.tickIndex, actualPc, actualIns, expectedPc, expectedIns,
+                vi, actualRi, di, actualVo, ro, actualDo,
+                expectedRi, expectedVo, expectedDo));
+
+        boolean pass = actualPc == expectedPc
+                && actualIns == expectedIns
+                && actualRi == expectedRi
+                && actualVo == expectedVo
+                && actualDo == expectedDo;
+
+        if (!pass) {
+            context.reportTestResult(index, false);
+            writeBackFailedInputs(context, inputs);
+            context.setErrorLines(List.of(
+                    Component.translatable("experiment.elements-plus.testfail.header"),
+                    Component.translatable("experiment.elements-plus.testfail.click_for_data")));
+            context.setSequentialFailureInfo(new SequentialFailureInfo(
+                    index, state.totalTicks, state.tickIndex, List.of(),
+                    new ArchitectureFailureInfo(state.program, List.copyOf(state.rows),
+                            testCase.copyWholeProgram())));
+            context.experimentState = null;
+            context.complete(false);
+            return false;
+        }
+
+        state.tickIndex++;
+        if (state.tickIndex < state.totalTicks) {
+            return true;
+        }
+
+        context.reportTestResult(index, true);
+        context.experimentState = null;
+        if (index == testCases.size() - 1) {
+            context.complete(true);
+            return true;
+        }
         context.testIndex = index + 1;
         return true;
     }
@@ -688,6 +898,38 @@ public class CircuitExperiment extends BaseExperiment {
             lanes[b] = (byte) (((value >> b) & 1) != 0 ? 15 : 0);
         }
         return lanes;
+    }
+
+    /** 8 位总线引脚值转成整数：每个通道非 0 即该位为 1，忽略具体信号强度。 */
+    private static int pinDigital(PinValue value) {
+        if (value == null) {
+            return 0;
+        }
+        int result = 0;
+        for (int b = 0; b < Math.min(8, value.values.length); b++) {
+            if (value.values[b] != 0) {
+                result |= 1 << b;
+            }
+        }
+        return result;
+    }
+
+    /** 1 位引脚的逻辑值：任意非 0 信号强度都视为 1。 */
+    private static boolean pinHigh(PinValue value) {
+        if (value == null) {
+            return false;
+        }
+        for (byte lane : value.values) {
+            if (lane != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int programByte(byte[] program, int address) {
+        int index = address & 0xFF;
+        return index < program.length ? program[index] & 0xFF : 0;
     }
 
     private static boolean sequentialOutputsMatch(SequentialTestCase testCase,
@@ -915,9 +1157,54 @@ public class CircuitExperiment extends BaseExperiment {
         simulator.setDiagram(diagram.copy());
         if (simulator.hasCycle()) {
             reasons.add(Component.translatable("experiment.elements-plus.precheck.cycle"));
+        } else if (hasArchitectureTests) {
+            // 架构测试会把外部 ROM 的 PC -> INS 连接补进电路。
+            // 如果电路内部已经存在 INS -> PC 的组合路径，就会形成组合环。
+            CircuitDiagram.Component ins = findInput(diagram, "INS");
+            CircuitDiagram.Component pc = findOutput(diagram, "PC");
+            if (ins != null && pc != null
+                    && simulator.hasCombinationalPath(ins.x, ins.y, pc.x, pc.y)) {
+                reasons.add(Component.translatable("experiment.elements-plus.precheck.external_rom_cycle"));
+            }
         }
 
         return reasons;
+    }
+
+    private static CircuitDiagram.Component findInput(CircuitDiagram diagram, String label) {
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (CircuitDiagram.Component comp : chunk.components) {
+                if (comp.component == BuiltinCircuitComponents.INPUT
+                        && comp.instance instanceof InputComponentInstance in
+                        && label.equals(in.getLabel())) {
+                    return comp;
+                }
+                if (comp.component == BuiltinCircuitComponents.INPUT_8
+                        && comp.instance instanceof Input8ComponentInstance in8
+                        && label.equals(in8.getLabel())) {
+                    return comp;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static CircuitDiagram.Component findOutput(CircuitDiagram diagram, String label) {
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (CircuitDiagram.Component comp : chunk.components) {
+                if (comp.component == BuiltinCircuitComponents.OUTPUT
+                        && comp.instance instanceof OutputComponentInstance out
+                        && label.equals(out.getLabel())) {
+                    return comp;
+                }
+                if (comp.component == BuiltinCircuitComponents.OUTPUT_8
+                        && comp.instance instanceof Output8ComponentInstance out8
+                        && label.equals(out8.getLabel())) {
+                    return comp;
+                }
+            }
+        }
+        return null;
     }
 
     private List<Component> buildFailureLines(CombinationalTestCase testCase, Map<String, PinValue> inputs,

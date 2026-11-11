@@ -1,0 +1,11 @@
+{
+  "dependencies": [
+    "elements-plus:architecture_memory"
+  ],
+  "markdown": "elements-plus:texts/experiment_chapter/architecture_compute.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:architecture_compute"
+  ],
+  "optional": []
+}

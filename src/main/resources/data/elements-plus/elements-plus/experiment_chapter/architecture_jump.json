@@ -1,0 +1,11 @@
+{
+  "dependencies": [
+    "elements-plus:architecture_compute"
+  ],
+  "markdown": "elements-plus:texts/experiment_chapter/architecture_jump.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:architecture_jump"
+  ],
+  "optional": []
+}

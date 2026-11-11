@@ -1682,6 +1682,33 @@ public class BuiltinExperiments {
             ElementsPlus.id("textures/experiments/a_plus_b.png"),
             new CircuitExperiment(buildAplusBExtremeTests(), null));
 
+    // ================= 计算机架构 =================
+
+    /** 第一章：输入输出寄存器。外部虚拟 ROM 每个 tick 提供一条指令。 */
+    public static final CircuitExperiment ARCHITECTURE_IOM = register("architecture_iom",
+            ElementsPlus.id("textures/experiments/architecture_iom.png"),
+            new CircuitExperiment(ArchitectureIomTests.build(), null));
+
+    /** 第二章：立即数 LDL/LDH。 */
+    public static final CircuitExperiment ARCHITECTURE_IMMEDIATE = register("architecture_immediate",
+            ElementsPlus.id("textures/experiments/architecture_immediate.png"),
+            new CircuitExperiment(ArchitectureImmediateTests.build(), null));
+
+    /** 第三章：连接内存 R2 = mem[R1]。 */
+    public static final CircuitExperiment ARCHITECTURE_MEMORY = register("architecture_memory",
+            ElementsPlus.id("textures/experiments/architecture_memory.png"),
+            new CircuitExperiment(ArchitectureMemoryTests.build(), null));
+
+    /** 第四章：基础 ALU 运算。 */
+    public static final CircuitExperiment ARCHITECTURE_COMPUTE = register("architecture_compute",
+            ElementsPlus.id("textures/experiments/architecture_compute.png"),
+            new CircuitExperiment(ArchitectureComputeTests.build(), null));
+
+    /** 第五章：跳转、TR 和 IO 等待。 */
+    public static final CircuitExperiment ARCHITECTURE_JUMP = register("architecture_jump",
+            ElementsPlus.id("textures/experiments/architecture_jump.png"),
+            new CircuitExperiment(ArchitectureJumpTests.build(), null));
+
     public static <T extends BaseExperiment> T register(String name, ResourceLocation icon, T experiment) {
         experiment.setName(name);
         experiment.setIcon(icon);

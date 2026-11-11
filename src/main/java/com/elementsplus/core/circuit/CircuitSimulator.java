@@ -20,6 +20,7 @@ import com.elementsplus.core.circuit.diagram.CircuitDiagram.Wire.WireMaterial;
 import com.elementsplus.core.circuit.storage.StoredCircuit;
 import net.minecraft.core.Direction;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -102,6 +103,7 @@ public class CircuitSimulator {
     private long evalHighBits;
     private int[] netWidth = new int[0];
     private int[] topo = new int[0];
+    private List<Integer>[] succs = new List[0];
     private int topoLen;
     private boolean hasCycle;
     private boolean hasDeferredInputs;
@@ -185,6 +187,38 @@ public class CircuitSimulator {
 
     public boolean hasCycle() {
         return hasCycle;
+    }
+
+    /**
+     * 判断两个元件之间是否存在组合依赖路径。
+     *
+     * <p>架构实验会用外部 ROM 把 PC 输出接回 INS 输入；如果电路内部已经存在
+     * INS -&gt; ... -&gt; PC 的组合路径，外部 ROM 就会形成组合环。该方法不修改电路，
+     * 只在当前依赖图上做一次可达性搜索。</p>
+     */
+    public boolean hasCombinationalPath(int fromX, int fromY, int toX, int toY) {
+        Integer from = compNodes.get(key(fromX, fromY));
+        Integer to = compNodes.get(key(toX, toY));
+        if (from == null || to == null || from >= totalNodes || to >= totalNodes) {
+            return false;
+        }
+        boolean[] visited = new boolean[totalNodes];
+        ArrayDeque<Integer> queue = new ArrayDeque<>();
+        visited[from] = true;
+        queue.add(from);
+        while (!queue.isEmpty()) {
+            int node = queue.removeFirst();
+            if (node == to) {
+                return true;
+            }
+            for (int next : succs[node]) {
+                if (!visited[next]) {
+                    visited[next] = true;
+                    queue.addLast(next);
+                }
+            }
+        }
+        return false;
     }
 
     public boolean hasMismatchWarning() {
@@ -356,6 +390,7 @@ public class CircuitSimulator {
             nodeValsHigh = new long[0];
             netWidth = new int[0];
             topo = new int[0];
+            succs = new List[0];
             topoLen = 0;
             badNet = new boolean[0];
             inputPorts = new InputPort[0][];
@@ -589,7 +624,8 @@ public class CircuitSimulator {
 
         /* ---------- 3. 拓扑排序 ---------- */
         @SuppressWarnings("unchecked")
-        List<Integer>[] succs = new List[totalNodes];
+        List<Integer>[] builtSuccs = new List[totalNodes];
+        succs = builtSuccs;
         for (int i = 0; i < totalNodes; i++) succs[i] = new ArrayList<>();
         int[] indeg = new int[totalNodes];
         for (int i = 0; i < totalNodes; i++) {

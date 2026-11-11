@@ -2,6 +2,7 @@ package com.elementsplus.network;
 
 import com.elementsplus.ElementsPlus;
 import com.elementsplus.blocks.entity.ExperimentStatus;
+import com.elementsplus.core.experiment.ArchitectureFailureInfo;
 import com.elementsplus.core.experiment.ExperimentFailureInfo;
 import com.elementsplus.core.experiment.SequentialFailureInfo;
 import net.minecraft.core.BlockPos;
@@ -77,6 +78,30 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
             writePins(b, row.expected());
             writePins(b, row.actual());
         });
+        ArchitectureFailureInfo architecture = info.architecture();
+        buf.writeBoolean(architecture != null);
+        if (architecture != null) {
+            byte[] program = architecture.program();
+            buf.writeVarInt(program.length);
+            buf.writeBytes(program);
+            buf.writeBoolean(architecture.copyWholeProgram());
+            buf.writeCollection(architecture.rows(), (b, row) -> {
+                b.writeVarInt(row.tick());
+                b.writeVarInt(row.pc());
+                b.writeVarInt(row.ins());
+                b.writeVarInt(row.expectedPc());
+                b.writeVarInt(row.expectedIns());
+                b.writeVarInt(row.vi());
+                b.writeVarInt(row.ri());
+                b.writeVarInt(row.di());
+                b.writeVarInt(row.vo());
+                b.writeVarInt(row.ro());
+                b.writeVarInt(row.doValue());
+                b.writeVarInt(row.expectedRi());
+                b.writeVarInt(row.expectedVo());
+                b.writeVarInt(row.expectedDo());
+            });
+        }
     }
 
     private static SequentialFailureInfo readSequentialFailure(FriendlyByteBuf buf) {
@@ -92,7 +117,30 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                         readPins(b),
                         readPins(b),
                         readPins(b)));
-        return new SequentialFailureInfo(testIndex, totalTicks, failedTick, rows);
+        ArchitectureFailureInfo architecture = null;
+        if (buf.readBoolean()) {
+            byte[] program = new byte[buf.readVarInt()];
+            buf.readBytes(program);
+            boolean copyWholeProgram = buf.readBoolean();
+            List<ArchitectureFailureInfo.Row> architectureRows = buf.readCollection(ArrayList::new, b ->
+                    new ArchitectureFailureInfo.Row(
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt(),
+                            b.readVarInt()));
+            architecture = new ArchitectureFailureInfo(program, architectureRows, copyWholeProgram);
+        }
+        return new SequentialFailureInfo(testIndex, totalTicks, failedTick, rows, architecture);
     }
 
     private static void writeFailureInfo(FriendlyByteBuf buf, @Nullable ExperimentFailureInfo info) {
