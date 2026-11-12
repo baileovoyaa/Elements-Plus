@@ -18,6 +18,8 @@ import com.elementsplus.core.circuit.component.Const8ComponentInstance;
 import com.elementsplus.core.circuit.component.ConstAnalog8ComponentInstance;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
+import com.elementsplus.core.circuit.component.Output8ComponentInstance;
+import com.elementsplus.core.circuit.component.OutputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.config.ElementsPlusServerConfig;
 import com.elementsplus.menu.LithographyMachineMenu;
@@ -1700,20 +1702,29 @@ public class CircuitDiagramPanel extends AbstractWidget {
         drawIcon(guiGraphics, component.component, (left + right) / 2.0, (top + bottom) / 2.0, right - left, bottom - top, 1.0F);
         var font = Minecraft.getInstance().font;
         if (dx == 0 && dy == 0) {
+            String text = "";
+            int textColor = 0xFFFFFFFF;
             if (component.component == BuiltinCircuitComponents.INPUT || component.component == BuiltinCircuitComponents.OUTPUT) {
-                int value = simulator != null ? simulator.getComponentValue(component.x, component.y) : 0;
-                String text = ClientConfig.get().analogNumberFormat.formatAnalog(value);
-                guiGraphics.drawString(font, Component.nullToEmpty(text),
-                        (int) Math.round((left + right) / 2.0 - font.width(text) / 2.0),
-                        (int) Math.round((top + bottom) / 2.0 - 4),
-                        0xFFFFFFFF);
+                if (Screen.hasShiftDown()) {
+                    text = componentLabel(component);
+                } else {
+                    int value = simulator != null ? simulator.getComponentValue(component.x, component.y) : 0;
+                    text = ClientConfig.get().analogNumberFormat.formatAnalog(value);
+                }
             } else if (component.component == BuiltinCircuitComponents.INPUT_8 || component.component == BuiltinCircuitComponents.OUTPUT_8) {
-                int value = simulator != null ? simulator.getComponentBusValue(component.x, component.y) : 0;
-                String text = ClientConfig.get().digitalNumberFormat.formatDigital(value);
+                textColor = COLOR_BUS_8;
+                if (Screen.hasShiftDown()) {
+                    text = componentLabel(component);
+                } else {
+                    int value = simulator != null ? simulator.getComponentBusValue(component.x, component.y) : 0;
+                    text = ClientConfig.get().digitalNumberFormat.formatDigital(value);
+                }
+            }
+            if (!text.isEmpty()) {
                 guiGraphics.drawString(font, Component.nullToEmpty(text),
                         (int) Math.round((left + right) / 2.0 - font.width(text) / 2.0),
                         (int) Math.round((top + bottom) / 2.0 - 4),
-                        COLOR_BUS_8);
+                        textColor);
             }
         }
         if (isSelected(component.x, component.y)) {
@@ -1722,6 +1733,22 @@ public class CircuitDiagramPanel extends AbstractWidget {
             guiGraphics.fill(lx, ty, lx + 1, by, COLOR_SELECTION);
             guiGraphics.fill(rx - 1, ty, rx, by, COLOR_SELECTION);
         }
+    }
+
+    private static String componentLabel(CircuitDiagram.Component component) {
+        if (component.instance instanceof InputComponentInstance input) {
+            return input.getLabel();
+        }
+        if (component.instance instanceof Input8ComponentInstance input8) {
+            return input8.getLabel();
+        }
+        if (component.instance instanceof OutputComponentInstance output) {
+            return output.getLabel();
+        }
+        if (component.instance instanceof Output8ComponentInstance output8) {
+            return output8.getLabel();
+        }
+        return "";
     }
 
     private void drawGroupAt(GuiGraphics guiGraphics, int dx, int dy) {
@@ -2812,9 +2839,43 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     /**
-     * 元件的原位旋转：旋转方向，锚定左上角（与放置预览一致）。先试 90°，冲突时回退 180°。
+     * 旋转当前放置预览，或鼠标悬停/选中的元件。
+     * quarterTurns 为 1 表示顺时针 90°，-1 表示逆时针 90°，2 表示 180°。
      */
-    private void tryRotateAt(int gx, int gy, boolean clockwise) {
+    public void applyRotation(int quarterTurns) {
+        if (isReadOnly()) {
+            return;
+        }
+        if (activeComponent() != null) {
+            rotation = rotateDirection(rotation, quarterTurns);
+            playRotationSound(quarterTurns);
+            return;
+        }
+        if (lastMouseX == null || lastMouseY == null || !contains(lastMouseX, lastMouseY)) {
+            return;
+        }
+        tryRotateAt(cellX(lastMouseX), cellY(lastMouseY), quarterTurns);
+    }
+
+    private static Direction rotateDirection(Direction direction, int quarterTurns) {
+        int turns = Math.floorMod(quarterTurns, 4);
+        for (int i = 0; i < turns; i++) {
+            direction = direction.getClockWise();
+        }
+        return direction;
+    }
+
+    private void playRotationSound(int quarterTurns) {
+        playSound(quarterTurns == -1 || quarterTurns == 3
+                ? ROTATE_ANTICLOCKWISE_SOUND
+                : ROTATE_CLOCKWISE_SOUND);
+    }
+
+    /**
+     * 元件的原位旋转：旋转方向，锚定左上角（与放置预览一致）。
+     * 90° 旋转冲突时会回退尝试 180°；180° 旋转只尝试一次。
+     */
+    private void tryRotateAt(int gx, int gy, int quarterTurns) {
         CircuitDiagram diagram = getDiagram();
         if (diagram == null || isReadOnly()) {
             return;
@@ -2826,13 +2887,13 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (!selectedCells.contains(cellKey(under.x, under.y))) {
             setSelectionSingle(under.x, under.y);
         }
-        if (tryRotateGroup(clockwise)) {
-            playSound(clockwise ? ROTATE_CLOCKWISE_SOUND : ROTATE_ANTICLOCKWISE_SOUND);
+        if (tryRotateGroup(quarterTurns)) {
+            playRotationSound(quarterTurns);
             ElementsPlusClient.awardAdvancement("all_rounder", "rotate");
         }
     }
 
-    private boolean tryRotateGroup(boolean clockwise) {
+    private boolean tryRotateGroup(int quarterTurns) {
         if (selectedCells.isEmpty()) {
             return false;
         }
@@ -2853,19 +2914,22 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (comps.isEmpty()) {
             return false;
         }
-        if (tryRotateApply(editor, comps, clockwise, false)) {
-            commitDiagram(stack, editor);
-            updateSelBox();
-            bumpSelection();
-            return true;
+        int turns = Math.floorMod(quarterTurns, 4);
+        boolean success;
+        if (turns == 2) {
+            success = tryRotateApply(editor, comps, false, true);
+        } else {
+            boolean clockwise = turns == 1;
+            success = tryRotateApply(editor, comps, clockwise, false)
+                    || tryRotateApply(editor, comps, clockwise, true);
         }
-        if (tryRotateApply(editor, comps, clockwise, true)) {
-            commitDiagram(stack, editor);
-            updateSelBox();
-            bumpSelection();
-            return true;
+        if (!success) {
+            return false;
         }
-        return false;
+        commitDiagram(stack, editor);
+        updateSelBox();
+        bumpSelection();
+        return true;
     }
 
     private boolean tryRotateApply(CircuitDiagram editor, List<CircuitDiagram.Component> comps, boolean clockwise, boolean opposite) {
@@ -3210,7 +3274,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
             int gx = cellX(mouseX);
             int gy = cellY(mouseY);
             if (blockComponent(gx, gy) != null) {
-                tryRotateAt(gx, gy, scrollY > 0);
+                tryRotateAt(gx, gy, scrollY > 0 ? 1 : -1);
                 return true;
             }
         }

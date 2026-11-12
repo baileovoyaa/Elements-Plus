@@ -1,0 +1,7 @@
+{
+  "type": "elements-plus:chip_component",
+  "ingredient": {
+    "item": "elements-plus:amethyst_capacitor"
+  },
+  "component": "elements-plus:capacitor_8"
+}

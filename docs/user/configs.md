@@ -22,7 +22,8 @@ Elements Plus 的配置分为两类：
   "muted": false,
   "inspect": false,
   "digitalNumberFormat": "UNSIGNED",
-  "analogNumberFormat": "UNSIGNED"
+  "analogNumberFormat": "UNSIGNED",
+  "lithographyHelpDismissed": false
 }
 ```
 
@@ -35,6 +36,8 @@ Elements Plus 的配置分为两类：
 | `inspect` | 布尔 | `false` | 「检查」模式：在光刻机设计页悬停元件或导线时，显示详细信息。元件会显示名称、旋转/镜像状态、输入与输出引脚及其实时信号值，自定义元件还会显示 UUID 与作者；导线会显示铜/金材质及其通道信号值。 | 光刻机设计页工具栏的「检查」按钮。 |
 | `digitalNumberFormat` | 枚举 | `UNSIGNED` | 8 位总线的数字显示格式，影响检查提示、存储器编辑器和数值输入框等处的显示。 | 光刻机设计页工具栏的总线格式按钮；实验桌中也有入口。点击切换到下一项，按住 Shift 点击切换到上一项。 |
 | `analogNumberFormat` | 枚举 | `UNSIGNED` | 1 位信号强度（0~15）的数字显示格式。 | 光刻机设计页工具栏的信号强度格式按钮；实验桌中也有入口。操作同上。 |
+| `lithographyHelpDismissed` | 布尔 | `false` | 是否已关闭过光刻机设计页的帮助页面。若为 `true` 则不会在打开时显示帮助页面。 | 按 Esc 或点击按钮关闭光刻机帮助页面。 |
+
 
 `digitalNumberFormat` / `analogNumberFormat` 的取值：
 

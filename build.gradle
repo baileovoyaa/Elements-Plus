@@ -42,12 +42,20 @@ loom {
             // 从 local.properties 读取开发者玩家名/UUID，缺失则不加参数。
             def devArgs = []
             def devUsername = localProperties.getProperty('dev.username')
-            def devUuid = localProperties.getProperty('dev.uuid')
             if (devUsername) {
                 devArgs.addAll(['--username', devUsername])
             }
+            def devUuid = localProperties.getProperty('dev.uuid')
             if (devUuid) {
                 devArgs.addAll(['--uuid', devUuid])
+            }
+            def devWidth = localProperties.getProperty('dev.width')
+            if (devWidth) {
+                devArgs.addAll(['--width', devWidth])
+            }
+            def devHeight = localProperties.getProperty('dev.height')
+            if (devHeight) {
+                devArgs.addAll(['--height', devHeight])
             }
             if (!devArgs.isEmpty()) {
                 programArguments = devArgs

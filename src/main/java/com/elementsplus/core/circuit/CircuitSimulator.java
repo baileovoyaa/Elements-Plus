@@ -126,7 +126,8 @@ public class CircuitSimulator {
     private final Map<WirePoint, Boolean> wireBad = new HashMap<>();
     private final Map<Long, Integer> compValues = new HashMap<>();
 
-    private final Map<Long, Integer> capQ = new HashMap<>();
+    /** 电容状态；1 位电容只使用低 4 位，8 位电容使用 8 个 4 位通道。 */
+    private final Map<Long, Long> capQ = new HashMap<>();
     private final Map<Long, Integer> resPhase = new HashMap<>();
     private final Map<Long, Integer> tffQ = new HashMap<>();
     private final Map<Long, Integer> tffPrevClock = new HashMap<>();
@@ -461,7 +462,7 @@ public class CircuitSimulator {
         for (int i = 0; i < numNets; i++) nodeKind[i] = NodeKind.NET;
         for (int i = 0; i < numComps; i++) {
             CircuitComponent cc = comps.get(i).component;
-            if (cc == BuiltinCircuitComponents.CAPACITOR) {
+            if (cc == BuiltinCircuitComponents.CAPACITOR || cc == BuiltinCircuitComponents.CAPACITOR_8) {
                 nodeKind[numNets + i] = NodeKind.CAP;
                 capNodes.add(numNets + i);
             } else if (cc == BuiltinCircuitComponents.RESONATOR) {
@@ -822,7 +823,7 @@ public class CircuitSimulator {
                 case CAP -> {
                     int idx = node - numNets;
                     Component component = comps.get(idx);
-                    nodeVals[node] = capQ.getOrDefault(key(component.x, component.y), 0);
+                    nodeVals[node] = capQ.getOrDefault(key(component.x, component.y), 0L);
                 }
                 default -> {
                     int idx = node - numNets;
@@ -897,6 +898,38 @@ public class CircuitSimulator {
             if (((tuple >> (4 * b)) & 0xF) != 0) t |= 15L << (4 * b);
         }
         return t;
+    }
+
+    /** 8 位总线的每个通道独立减去相同的衰减量。 */
+    private static long decayTuple(long tuple, int decay) {
+        long result = 0L;
+        for (int b = 0; b < 8; b++) {
+            int value = (int) ((tuple >> (4 * b)) & 0xF);
+            result |= (long) Math.max(value - decay, 0) << (4 * b);
+        }
+        return result;
+    }
+
+    /** 1 位电容/单个通道的充放电状态更新。 */
+    private static long stepCapacitorLane(long q, long d, int charge, int discharge) {
+        if (d > q) {
+            return Math.min(q + charge, d);
+        }
+        if (d < q) {
+            return Math.max(q - discharge, d);
+        }
+        return q;
+    }
+
+    /** 8 位电容：每条通道独立按相同的充电/放电速度更新。 */
+    private static long stepCapacitorTuple(long q, long d, int charge, int discharge) {
+        long result = 0L;
+        for (int b = 0; b < 8; b++) {
+            long qLane = (q >> (4 * b)) & 0xF;
+            long dLane = (d >> (4 * b)) & 0xF;
+            result |= stepCapacitorLane(qLane, dLane, charge, discharge) << (4 * b);
+        }
+        return result;
     }
 
     /**
@@ -1215,9 +1248,14 @@ public class CircuitSimulator {
             return Math.min((int) Math.floor(2.0 * west * (1.0 - south / 15.0)), 15);
         } else if (cc == BuiltinCircuitComponents.DIODE) {
             return inPort(node, 0);
+        } else if (cc == BuiltinCircuitComponents.DIODE_8) {
+            return inPort(node, 0);
         } else if (cc == BuiltinCircuitComponents.RESISTOR) {
             int decay = ((ResistorComponentInstance) component.instance).getDecay();
             return Math.max(inPort(node, 0) - decay, 0);
+        } else if (cc == BuiltinCircuitComponents.RESISTOR_8) {
+            int decay = ((ResistorComponentInstance) component.instance).getDecay();
+            return decayTuple(inPort(node, 0), decay);
         } else if (cc == BuiltinCircuitComponents.BATTERY) {
             return 15;
         } else if (cc == BuiltinCircuitComponents.INPUT) {
@@ -1257,6 +1295,8 @@ public class CircuitSimulator {
             return tupleToInt(inPort(node, 0)) & 0xF;
         } else if (cc == BuiltinCircuitComponents.AMPLIFIER) {
             return inPort(node, 0) > 0 ? 15 : 0;
+        } else if (cc == BuiltinCircuitComponents.AMPLIFIER_8) {
+            return amplifyTuple(inPort(node, 0));
         } else if (cc == BuiltinCircuitComponents.AND_GATE) {
             int a = (int) inPort(node, 0);
             int b = (int) inPort(node, 1);
@@ -1745,26 +1785,21 @@ public class CircuitSimulator {
         }
         evaluate();
 
-        Map<Integer, Integer> dSample = new HashMap<>();
+        Map<Integer, Long> dSample = new HashMap<>();
         for (int node : capNodes) {
             int src = dSampleSource[node];
-            dSample.put(node, src >= 0 ? (int) nodeVals[src] : 0);
+            dSample.put(node, src >= 0 ? nodeVals[src] : 0L);
         }
         for (int node : capNodes) {
             int idx = node - numNets;
             Component component = comps.get(idx);
-            int q = capQ.getOrDefault(key(component.x, component.y), 0);
-            int d = dSample.getOrDefault(node, 0);
+            long q = capQ.getOrDefault(key(component.x, component.y), 0L);
+            long d = dSample.getOrDefault(node, 0L);
             int charge = ((CapacitorComponentInstance) component.instance).getChargeSpeed();
             int discharge = ((CapacitorComponentInstance) component.instance).getDischargeSpeed();
-            int q1;
-            if (d > q) {
-                q1 = Math.min(q + charge, d);
-            } else if (d < q) {
-                q1 = Math.max(q - discharge, d);
-            } else {
-                q1 = q;
-            }
+            long q1 = component.component == BuiltinCircuitComponents.CAPACITOR_8
+                    ? stepCapacitorTuple(q, d, charge, discharge)
+                    : stepCapacitorLane(q, d, charge, discharge);
             capQ.put(key(component.x, component.y), q1);
         }
         for (int node : resNodes) {

@@ -1,0 +1,7 @@
+{
+  "type": "elements-plus:chip_component",
+  "ingredient": {
+    "item": "elements-plus:amethyst_resistor"
+  },
+  "component": "elements-plus:resistor_8"
+}

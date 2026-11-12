@@ -9,11 +9,13 @@
     "elements-plus:mask_8",
     "elements-plus:bit_extract_8",
     "elements-plus:bit_index_8",
+    "elements-plus:amplifier_8",
     "elements-plus:const_analog_8",
     "elements-plus:bit_index_analog_8"
   ],
   "optional": [
     "elements-plus:bit_index_8",
+    "elements-plus:amplifier_8",
     "elements-plus:const_analog_8",
     "elements-plus:bit_index_analog_8"
   ]

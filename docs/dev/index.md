@@ -9,7 +9,7 @@ author: me
 ## 构建、执行与部署
 
 - [本地配置 Gradle 发行版镜像](../dev/deploy/gradle-mirror.md)
-- 自定义玩家名和 uuid
+- 本地配置启动参数（窗口宽高、玩家名和 uuid）
 
 ## 阶段性文档
 

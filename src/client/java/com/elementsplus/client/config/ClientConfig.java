@@ -22,6 +22,8 @@ public class ClientConfig {
     public NumberFormat digitalNumberFormat = NumberFormat.UNSIGNED;
     /** 1 位信号强度的数字显示格式。 */
     public NumberFormat analogNumberFormat = NumberFormat.UNSIGNED;
+    /** 是否已经通过帮助页的“关闭”按钮关闭过首次帮助。 */
+    public boolean lithographyHelpDismissed = false;
 
     private ClientConfig() {
     }
@@ -38,6 +40,7 @@ public class ClientConfig {
                     INSTANCE.darkMode = loaded.darkMode;
                     INSTANCE.muted = loaded.muted;
                     INSTANCE.inspect = loaded.inspect;
+                    INSTANCE.lithographyHelpDismissed = loaded.lithographyHelpDismissed;
                     if (loaded.digitalNumberFormat != null) {
                         INSTANCE.digitalNumberFormat = loaded.digitalNumberFormat;
                     }

@@ -41,6 +41,7 @@ import com.elementsplus.network.ToolboxUpdatePayload;
 import com.elementsplus.network.UpdateCircuitDiagramPayload;
 import com.elementsplus.player.PlayerExperimentsAttachment;
 import com.elementsplus.player.PlayerToolboxAttachment;
+import com.elementsplus.recipe.ChipComponentRecipe;
 import com.elementsplus.recipe.CrystallizerRecipe;
 import com.elementsplus.recipe.MetalCatalystRecipe;
 import com.elementsplus.recipe.ScaleUpgradeRecipe;
@@ -148,6 +149,7 @@ public class ElementsPlus implements ModInitializer {
         MetalCatalystRecipe.TYPE.toString();
         CrystallizerRecipe.TYPE.toString();
         ScaleUpgradeRecipe.TYPE_ID.toString();
+        ChipComponentRecipe.SERIALIZER.toString();
 
         ServerLifecycleEvents.SERVER_STARTED.register(CircuitStorage.get()::load);
         ServerLifecycleEvents.SERVER_STARTED.register(server ->

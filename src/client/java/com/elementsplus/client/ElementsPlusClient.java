@@ -63,6 +63,12 @@ public class ElementsPlusClient implements ClientModInitializer {
     public static KeyMapping keyMirrorHorizontal;
     /** 垂直镜像元件（默认为 N）。 */
     public static KeyMapping keyMirrorVertical;
+    /** 逆时针旋转元件（默认未绑定）。 */
+    public static KeyMapping keyRotateCounterClockwise;
+    /** 顺时针旋转元件（默认未绑定）。 */
+    public static KeyMapping keyRotateClockwise;
+    /** 旋转元件 180 度（默认未绑定）。 */
+    public static KeyMapping keyRotate180;
 
     @Override
     public void onInitializeClient() {
@@ -75,6 +81,15 @@ public class ElementsPlusClient implements ClientModInitializer {
                 "key.elements-plus.mirror_horizontal", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_M, KEY_CATEGORY));
         keyMirrorVertical = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.elements-plus.mirror_vertical", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, KEY_CATEGORY));
+        keyRotateCounterClockwise = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.elements-plus.rotate_counterclockwise", InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_UNKNOWN, KEY_CATEGORY));
+        keyRotateClockwise = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.elements-plus.rotate_clockwise", InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_UNKNOWN, KEY_CATEGORY));
+        keyRotate180 = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.elements-plus.rotate_180", InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_UNKNOWN, KEY_CATEGORY));
 
         // This entrypoint is suitable for setting up client-specific logic, such as rendering.
         ModMenuScreens.initialize();

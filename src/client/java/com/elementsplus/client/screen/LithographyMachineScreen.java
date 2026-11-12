@@ -77,6 +77,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private ContextMenu contextMenu;
     private ToolboxDialog toolboxDialog;
     private MemoryEditorDialog memoryDialog;
+    private LithographyHelpDialog helpDialog;
 
     public Map<Integer, Point> slotPosition;
 
@@ -139,8 +140,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     protected void init() {
+        boolean helpWasOpen = this.helpDialog != null;
         this.contextMenu = null;
         this.toolboxDialog = null;
+        this.helpDialog = null;
         updateScreenSize();
         super.init();
 
@@ -359,6 +362,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             ElementsPlusClient.awardAdvancement("all_rounder", "inspect");
         }));
 
+        // 帮助
+        toolbarWidget.addChild(new IconButton(toolbarX += 16, 1, 16, 16,
+                ElementsPlus.id("textures/gui/help.png"), button -> openHelpDialog()));
+
         this.addRenderableWidget(manufactureWidget = new ScrollPanelWidget(leftPos + 89, topPos + 48, imageWidth - 94, imageHeight - 53, GuiUtil.SubPanelType.BORDERED, 0xFF2B2B2B));
         manufactureWidget.overflowBehaviorX = ScrollPanelWidget.OverflowBehavior.CLIP;
 
@@ -377,6 +384,21 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
 
         tabChanged();
+
+        if (helpWasOpen || !ClientConfig.get().lithographyHelpDismissed) {
+            openHelpDialog();
+        }
+    }
+
+    private void openHelpDialog() {
+        if (helpDialog != null) {
+            return;
+        }
+        helpDialog = new LithographyHelpDialog(font, width, height, () -> {
+            ClientConfig.get().lithographyHelpDismissed = true;
+            ClientConfig.get().save();
+            helpDialog = null;
+        });
     }
 
     private void initComponentList() {
@@ -730,6 +752,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (helpDialog != null) {
+            helpDialog.mouseClicked(mouseX, mouseY, button);
+            return true;
+        }
         if (memoryDialog != null) {
             memoryDialog.mouseClicked(mouseX, mouseY, button);
             return true;
@@ -756,6 +782,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (helpDialog != null) {
+            helpDialog.mouseReleased(mouseX, mouseY, button);
+            return true;
+        }
         if (memoryDialog != null) {
             memoryDialog.mouseReleased(mouseX, mouseY, button);
             return true;
@@ -771,6 +801,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (helpDialog != null) {
+            helpDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+            return true;
+        }
         if (memoryDialog != null) {
             memoryDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
             return true;
@@ -783,8 +817,11 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (helpDialog != null) {
+            return helpDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        }
         if (memoryDialog != null) {
-            return true;
+            return memoryDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
         if (contextMenu != null) {
             contextMenu = null;
@@ -798,6 +835,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (helpDialog != null) {
+            return helpDialog.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (memoryDialog != null) {
             return memoryDialog.keyPressed(keyCode, scanCode, modifiers);
         }
@@ -853,6 +893,21 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 ElementsPlusClient.awardAdvancement("keyboard_fury", "mirror_key");
                 return true;
             }
+            if (ElementsPlusClient.keyRotateCounterClockwise != null
+                    && ElementsPlusClient.keyRotateCounterClockwise.matches(keyCode, scanCode)) {
+                circuitPanel.applyRotation(-1);
+                return true;
+            }
+            if (ElementsPlusClient.keyRotateClockwise != null
+                    && ElementsPlusClient.keyRotateClockwise.matches(keyCode, scanCode)) {
+                circuitPanel.applyRotation(1);
+                return true;
+            }
+            if (ElementsPlusClient.keyRotate180 != null
+                    && ElementsPlusClient.keyRotate180.matches(keyCode, scanCode)) {
+                circuitPanel.applyRotation(2);
+                return true;
+            }
         }
         if (keyCode == GLFW.GLFW_KEY_E) {
             return false;  // 阻止默认关闭行为
@@ -862,6 +917,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
 
     @Override
     public boolean charTyped(char c, int modifiers) {
+        if (helpDialog != null) {
+            return helpDialog.charTyped(c, modifiers);
+        }
         if (memoryDialog != null) {
             return memoryDialog.charTyped(c, modifiers);
         }
@@ -1392,7 +1450,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             circuitPanel.setPreviewStack(carried);
             this.menu.setCarried(ItemStack.EMPTY);
         }
-        boolean modal = toolboxDialog != null || memoryDialog != null;
+        boolean modal = toolboxDialog != null || memoryDialog != null || helpDialog != null;
         super.render(guiGraphics, modal ? -1 : mouseX, modal ? -1 : mouseY, delta);
         if (hideCarried) {
             this.menu.setCarried(carried);
@@ -1418,7 +1476,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (memoryDialog != null) {
             memoryDialog.render(guiGraphics, mouseX, mouseY, delta);
         }
-        if (memoryDialog == null && toolboxDialog == null) {
+        if (helpDialog != null) {
+            helpDialog.render(guiGraphics, mouseX, mouseY, delta);
+        }
+        if (memoryDialog == null && toolboxDialog == null && helpDialog == null) {
             this.renderTooltip(guiGraphics, mouseX, mouseY);
         }
     }
@@ -1426,7 +1487,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     @Override
     protected void renderTooltip(GuiGraphics guiGraphics, int i, int j) {
         super.renderTooltip(guiGraphics, i, j);
-        if (inspect && toolboxDialog == null && contextMenu == null
+        if (inspect && toolboxDialog == null && helpDialog == null && contextMenu == null
                 && buttonGroup != null && buttonGroup.getSelected() == tabButtonDesign
                 && circuitPanel != null && circuitPanel.contains(i, j)) {
             List<Component> inspectLines = circuitPanel.buildInspectTooltip(i, j);

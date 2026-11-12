@@ -316,6 +316,25 @@ public class BuiltinCircuitComponents {
         setPin(Direction.EAST, 7, PinType.OUTPUT, "Y7");
         clearIngredientSupplier();
     }});
+    // 8 个一组的模拟/总线元件
+    public static final CircuitComponent AMPLIFIER_8 = register(new CircuitComponent(ElementsPlus.id("amplifier_8"), Component.translatable("circuit.elements-plus.component.amplifier_8"), Component.translatable("circuit.elements-plus.component.amplifier_8.description"), ElementsPlus.id("textures/circuit/amplifier_8.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent DIODE_8 = register(new CircuitComponent(ElementsPlus.id("diode_8"), Component.translatable("circuit.elements-plus.component.diode_8"), Component.translatable("circuit.elements-plus.component.diode_8.description"), ElementsPlus.id("textures/circuit/diode_8.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+    }});
+    public static final CircuitComponent CAPACITOR_8 = register(new CircuitComponent(ElementsPlus.id("capacitor_8"), Component.translatable("circuit.elements-plus.component.capacitor_8"), Component.translatable("circuit.elements-plus.component.capacitor_8.description"), ElementsPlus.id("textures/circuit/capacitor_8.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "D", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Q", 8);
+        setInstanceFactory(CapacitorComponentInstance::new);
+    }});
+    public static final CircuitComponent RESISTOR_8 = register(new CircuitComponent(ElementsPlus.id("resistor_8"), Component.translatable("circuit.elements-plus.component.resistor_8"), Component.translatable("circuit.elements-plus.component.resistor_8.description"), ElementsPlus.id("textures/circuit/resistor_8.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+        setInstanceFactory(ResistorComponentInstance::new);
+    }});
     // 总线常量/掩码
     public static final CircuitComponent CONST_8 = register(new CircuitComponent(ElementsPlus.id("const_8"), Component.translatable("circuit.elements-plus.component.const_8"), null, ElementsPlus.id("textures/circuit/const_8.png"), 1, 1) {{
         setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);

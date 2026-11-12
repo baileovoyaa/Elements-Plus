@@ -29,6 +29,10 @@ public class BuiltinExperiments {
                     false))
             .collect(Collectors.toList()), BuiltinCircuitComponents.AMPLIFIER));
 
+    public static final CircuitExperiment AMPLIFIER_8 = register("amplifier_8",
+            BuiltinCircuitComponents.AMPLIFIER_8.getIcon(),
+            new CircuitExperiment(buildAmplifier8Tests(), BuiltinCircuitComponents.AMPLIFIER_8));
+
     public static final CircuitExperiment AND_GATE = register("and_gate", BuiltinCircuitComponents.AND_GATE.getIcon(), new CircuitExperiment(cartesian(List.of(List.of(0, 1, 8, 15), List.of(0, 1, 8, 15))).stream().<TestCase>map(c -> {
         int a = c.get(0), b = c.get(1);
         return new ConstantCombinationalTestCase(
@@ -154,6 +158,27 @@ public class BuiltinExperiments {
             lanes[b] = (byte) (((v >> b) & 1) != 0 ? 15 : 0);
         }
         return lanes;
+    }
+
+    /** 8 位放大器：每个通道独立放大到 0/15，输入通道强度可以各不相同。 */
+    private static List<TestCase> buildAmplifier8Tests() {
+        byte[][] samples = {
+                new byte[8],
+                analogLanes(15, 15, 15, 15, 15, 15, 15, 15),
+                analogLanes(0, 1, 2, 3, 4, 5, 6, 7),
+                analogLanes(15, 0, 7, 0, 3, 0, 0, 9),
+                analogLanes(1, 1, 1, 1, 1, 1, 1, 1),
+                analogLanes(7, 7, 7, 7, 7, 7, 7, 7),
+                analogLanes(1, 0, 15, 0, 8, 0, 4, 0),
+                analogLanes(9, 8, 7, 6, 5, 4, 3, 2)
+        };
+        List<TestCase> tests = new ArrayList<>();
+        for (byte[] sample : samples) {
+            tests.add(new ConstantCombinationalTestCase(
+                    Map.of("A", new PinValue(sample.clone())),
+                    Map.of("Y", new PinValue(amplifyLanes(sample)))));
+        }
+        return tests;
     }
 
     // ================= 时序逻辑：T / T' 触发器 =================

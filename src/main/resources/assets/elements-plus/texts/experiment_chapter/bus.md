@@ -36,6 +36,23 @@ elements-plus:bit_extract_8
 elements-plus:bit_index_8
 ```
 
+---
+
+To avoid placing the same component eight times, several 8-channel components are provided. Each channel is independent.
+
+- <color=gold>8-bit Amplifier</color>: Input A (8-bit); output Y (8-bit) is the amplified value of each bit of A (0 maps to 0, non-zero maps to 15).
+- <color=gold>8-bit Diode</color>: Input A (8-bit); output Y (8-bit) is exactly A (signal strength preserved).
+- <color=gold>8-bit Capacitor</color>: Input D (8-bit), output Q (8-bit). Each channel's input/output and component configuration are the same as a 1-bit capacitor, but the bus width is 8 and the configuration applies to every channel.
+- <color=gold>8-bit Resistor</color>: Input A (8-bit), output Y (8-bit). Each channel's input/output and component configuration are the same as a 1-bit resistor, but the bus width is 8 and the configuration applies to every channel.
+
+Except for the 8-bit amplifier, these components can be crafted directly in a crafting table: put any empty chip in the center and eight corresponding amethyst components around it to craft the corresponding 8-bit component chip.
+
+```epp-experiments
+elements-plus:amplifier_8
+```
+
+---
+
 In some analog circuits you may care about the signal strength of each channel. Here is an optional experiment for producing an arbitrary 8-bit signal.
 
 - <color=gold>8-bit Analog Constant</color>: No inputs; outputs 8-bit Y with channel strengths (high to low): 15 13 11 9 0 2 4 6

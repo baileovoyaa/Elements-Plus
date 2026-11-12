@@ -550,9 +550,11 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             int ticks = widget.testIndex >= 0 && widget.testIndex < currentTestTicks.size()
                     ? currentTestTicks.get(widget.testIndex) : -1;
             boolean sequential = widget.testCase instanceof CircuitExperiment.SequentialTestCase;
+            boolean architecture = widget.testCase instanceof CircuitExperiment.ArchitectureTestCase;
+            boolean timed = sequential || architecture;
             boolean interactive = widget.testCase instanceof CircuitExperiment.InteractiveTestCase;
             widget.bottomText = null;
-            if (status == ExperimentStatus.BUSY && (sequential || interactive)
+            if (status == ExperimentStatus.BUSY && (timed || interactive)
                     && result < 0 && widget.testIndex == currentTestIndex) {
                 widget.color = 0xFF3A6EC5;
                 widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_running");
@@ -563,6 +565,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                     if (ticks >= 0) {
                         widget.bottomText = Component.translatable("gui.elements-plus.experiment_table.test_ticks", ticks);
                     }
+                } else if (architecture) {
+                    widget.bottomText = Component.translatable("gui.elements-plus.experiment_table.test_ticks",
+                            ((CircuitExperiment.ArchitectureTestCase) widget.testCase).getTickCount());
                 } else if (sequential) {
                     widget.bottomText = Component.translatable("gui.elements-plus.experiment_table.test_ticks",
                             ((CircuitExperiment.SequentialTestCase) widget.testCase).getTickCount());
@@ -573,10 +578,12 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             } else if (result == 0) {
                 widget.color = 0xFFA00000;
                 widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_wrong");
-                if (sequential && sequentialFailure != null && sequentialFailure.testIndex() == widget.testIndex) {
+                if (timed && sequentialFailure != null && sequentialFailure.testIndex() == widget.testIndex) {
+                    int totalTicks = architecture
+                            ? ((CircuitExperiment.ArchitectureTestCase) widget.testCase).getTickCount()
+                            : ((CircuitExperiment.SequentialTestCase) widget.testCase).getTickCount();
                     widget.bottomText = Component.translatable("gui.elements-plus.experiment_table.test_ticks_fraction",
-                            sequentialFailure.failedTick(),
-                            ((CircuitExperiment.SequentialTestCase) widget.testCase).getTickCount());
+                            sequentialFailure.failedTick(), totalTicks);
                 }
             } else {
                 widget.color = 0xFF808080;
