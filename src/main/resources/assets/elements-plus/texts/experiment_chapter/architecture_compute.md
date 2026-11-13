@@ -30,7 +30,7 @@ The ALU is combinational: the result is computed during the current tick and `R0
 | `ADD` | `0010 0000` | `0x20` | `R0 <- R0 + mem[R1]` |
 | `SUB` | `0010 0001` | `0x21` | `R0 <- R0 - mem[R1]` |
 | `AND` | `0010 0010` | `0x22` | `R0 <- R0 & mem[R1]` |
-| `OR` | `0010 0011` | `0x23` | `R0 <- R0 OR mem[R1]` |
+| `OR` | `0010 0011` | `0x23` | `R0 <- R0 \| mem[R1]` |
 | `NOT` | `0010 0100` | `0x24` | `R0 <- ~R0` |
 | `XOR` | `0010 0101` | `0x25` | `R0 <- R0 ^ mem[R1]` |
 | `SHL` | `0010 0110` | `0x26` | `R0 <- R0 << (mem[R1] & 7)` |

@@ -1,0 +1,3816 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>8 位汇编解释器 · Elements Plus</title>
+<script>
+    // 在首次绘制前确定主题，避免闪烁
+    (function () {
+        try {
+            var saved = localStorage.getItem('elements-plus.asm-interpreter.theme');
+            var theme = (saved === 'dark' || saved === 'light')
+                ? saved
+                : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.dataset.theme = theme;
+        } catch (e) {
+            document.documentElement.dataset.theme = 'light';
+        }
+    })();
+</script>
+<style>
+/* ============================================================
+   基础变量与主题
+   ============================================================ */
+:root {
+    color-scheme: light;
+    --sans: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", "Noto Sans Mono", monospace;
+    --bg: #f3f4f7;
+    --panel: #ffffff;
+    --panel-2: #f7f8fb;
+    --code-bg: #fbfcfe;
+    --console-bg: #fbfcfe;
+    --border: #e4e7ee;
+    --border-strong: #cbd1dc;
+    --text: #1a1f29;
+    --muted: #657086;
+    --faint: #98a1b2;
+    --brand: #3451b2;
+    --brand-strong: #2a4396;
+    --brand-soft: #eef1fc;
+    --on-brand: #ffffff;
+    --in: #1d4ed8;
+    --in-soft: #e8efff;
+    --out: #047857;
+    --out-soft: #e3f7ee;
+    --pc: #b45309;
+    --pc-soft: #fdf1dd;
+    --on-pc: #ffffff;
+    --r1: #6d28d9;
+    --r1-soft: #f3ecff;
+    --err: #dc2626;
+    --err-soft: #fdecec;
+    --sel: #dbe4ff;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 12px 32px -18px rgba(16, 24, 40, .18);
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1115;
+    --panel: #171a20;
+    --panel-2: #1b1f27;
+    --code-bg: #12151b;
+    --console-bg: #101318;
+    --border: #262b35;
+    --border-strong: #3a4250;
+    --text: #e7eaf0;
+    --muted: #9aa3b4;
+    --faint: #6b7487;
+    --brand: #a8b1ff;
+    --brand-strong: #c4c9ff;
+    --brand-soft: #232a4b;
+    --on-brand: #151821;
+    --in: #8ab4ff;
+    --in-soft: #18233d;
+    --out: #63d9ac;
+    --out-soft: #122a21;
+    --pc: #f0b35f;
+    --pc-soft: #33260f;
+    --on-pc: #241a08;
+    --r1: #b9a0ff;
+    --r1-soft: #261d3d;
+    --err: #ff7a7a;
+    --err-soft: #351a1c;
+    --sel: #2b3760;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 18px 40px -22px rgba(0, 0, 0, .8);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--bg); }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    overflow: hidden;
+}
+button, input, select, textarea { font-family: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+::selection { background: var(--sel); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--faint); background-clip: content-box; }
+
+/* ============================================================
+   应用骨架
+   ============================================================ */
+.app { height: 100dvh; display: flex; flex-direction: column; }
+.topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 16px 9px;
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-mark {
+    width: 34px;
+    height: 34px;
+    flex: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--brand), var(--r1));
+    color: var(--on-brand);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 17px;
+    box-shadow: 0 6px 16px -8px var(--brand);
+}
+.brand-text h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: .01em; }
+.brand-text p { margin: 1px 0 0; font-size: 11px; color: var(--muted); }
+.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.doc-link {
+    font-size: 12px;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 8px;
+    border-radius: 7px;
+    white-space: nowrap;
+}
+.doc-link:hover { color: var(--brand); background: var(--brand-soft); }
+.icon-btn {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    line-height: 1;
+}
+.icon-btn:hover { color: var(--brand); border-color: var(--brand); }
+.icon-btn:focus-visible, .btn:focus-visible, .seg-btn:focus-visible,
+select:focus-visible, input:focus-visible, .link-btn:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
+}
+
+.workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 0 14px 14px;
+}
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    min-width: 0;
+}
+.right-column { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+
+/* ============================================================
+   面板通用
+   ============================================================ */
+.panel-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+}
+.panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 650;
+    letter-spacing: .01em;
+    white-space: nowrap;
+}
+.panel-head-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.meta {
+    font-size: 10.5px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.format-chip {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--brand-soft);
+    color: var(--brand);
+    letter-spacing: 0;
+}
+.lock-chip {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--pc-soft);
+    color: var(--pc);
+    font-weight: 600;
+}
+.state-badge {
+    font-size: 10.5px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+}
+.state-badge.running { background: var(--out-soft); color: var(--out); border-color: transparent; }
+.state-badge.paused { background: var(--pc-soft); color: var(--pc); border-color: transparent; }
+
+/* ============================================================
+   工具栏与按钮
+   ============================================================ */
+.toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 7px 10px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+}
+.toolbar.secondary { background: var(--panel); }
+.tool-group { display: flex; align-items: center; gap: 6px; }
+.toolbar-spacer { flex: 1 1 auto; }
+.speed-group {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+}
+.speed-group label { white-space: nowrap; }
+.speed-group input[type="range"] { width: 118px; accent-color: var(--brand); }
+.speed-label {
+    min-width: 70px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.select {
+    border: 1px solid var(--border-strong);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 4px 6px;
+    font-size: 11.5px;
+    max-width: 100%;
+}
+.check-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+.check-label input { margin: 0; accent-color: var(--brand); }
+.check-label:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--border-strong);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.45;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+.btn:active:not(:disabled) { transform: translateY(.5px); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.btn.primary:hover:not(:disabled) { background: var(--brand-strong); border-color: var(--brand-strong); color: var(--on-brand); }
+.btn.primary.running { background: var(--pc); border-color: var(--pc); color: var(--on-pc); }
+.btn.primary.running:hover:not(:disabled) { background: var(--pc); border-color: var(--pc); color: var(--on-pc); }
+.btn.tiny { padding: 3px 8px; font-size: 11px; border-radius: 7px; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+.btn.ghost:hover:not(:disabled) { background: var(--panel-2); color: var(--brand); }
+.btn:disabled { opacity: .42; cursor: not-allowed; }
+.btn.attention {
+    border-color: var(--out);
+    color: var(--out);
+    box-shadow: 0 0 0 3px var(--out-soft);
+}
+.seg {
+    display: inline-flex;
+    padding: 2px;
+    gap: 1px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+.seg-btn {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.seg-btn:hover { color: var(--brand); }
+.seg-btn.active {
+    background: var(--panel);
+    color: var(--brand);
+    font-weight: 650;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+}
+.link-btn {
+    border: 0;
+    background: transparent;
+    color: var(--brand);
+    font-size: 10.5px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 5px;
+    white-space: nowrap;
+}
+.link-btn:hover { background: var(--panel); text-decoration: underline; }
+.link-btn:disabled { opacity: .5; cursor: not-allowed; text-decoration: none; }
+
+/* ============================================================
+   编辑器
+   ============================================================ */
+.editor-panel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.editor-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    background: var(--code-bg);
+}
+.editor-gutter {
+    flex: 0 0 46px;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+    background: var(--panel-2);
+}
+.gutter-inner {
+    padding: 10px 9px 16px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 21px;
+    color: var(--faint);
+    text-align: right;
+    will-change: transform;
+}
+.ln { height: 21px; line-height: 21px; }
+.ln.active { color: var(--pc); font-weight: 700; }
+.ln.error { color: var(--err); font-weight: 700; }
+.editor-code { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.editor-code:focus-within { box-shadow: inset 0 0 0 1px var(--brand); }
+.line-highlight, .line-error {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 21px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.line-highlight { background: var(--pc-soft); border-left: 3px solid var(--pc); }
+.line-highlight.visible { opacity: 1; }
+.line-error { background: var(--err-soft); border-left: 3px solid var(--err); }
+.line-error.visible { opacity: 1; }
+#source {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 10px 16px 16px 12px;
+    border: 0;
+    outline: none;
+    resize: none;
+    background: transparent;
+    color: var(--text);
+    caret-color: var(--brand);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 21px;
+    white-space: pre;
+    overflow: auto;
+    tab-size: 4;
+    z-index: 2;
+}
+#source::placeholder { color: var(--faint); }
+#source::selection { background: var(--sel); }
+.editor-status {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    padding: 5px 12px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--panel);
+}
+#statusMsg {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#statusMsg.error { color: var(--err); }
+#byteMeta { flex: none; }
+.status-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.status-dot.running { background: var(--out); animation: pulse 1.2s ease-in-out infinite; }
+.status-dot.paused { background: var(--pc); }
+.status-dot.error { background: var(--err); }
+@keyframes pulse { 50% { opacity: .35; } }
+
+/* ============================================================
+   状态面板
+   ============================================================ */
+.state-panel { flex: 0 1 auto; max-height: 54vh; overflow: auto; }
+.reg-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+    padding: 10px 12px 0;
+}
+.reg-card {
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--panel-2);
+}
+.reg-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--muted);
+}
+.reg-value {
+    margin-top: 1px;
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+}
+.reg-sub {
+    font-size: 9.5px;
+    color: var(--faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.reg-card.pc .reg-value { color: var(--pc); }
+.reg-card.r1 .reg-value { color: var(--r1); }
+.reg-card.io { background: var(--out-soft); border-color: transparent; }
+.reg-card.io .reg-value { color: var(--out); font-size: 13px; }
+
+.signal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px 12px;
+}
+.signal-card {
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--panel);
+}
+.signal-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--muted);
+}
+.signal-head b {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text);
+}
+.sig-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--faint); }
+.signal-card.on .sig-dot { background: var(--out); box-shadow: 0 0 0 3px var(--out-soft); }
+#sigVi.on .sig-dot { background: var(--in); box-shadow: 0 0 0 3px var(--in-soft); }
+.signal-detail {
+    margin-top: 3px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mini-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--faint);
+    margin-right: 5px;
+    vertical-align: 1px;
+}
+.mini-dot.on { background: var(--in); box-shadow: 0 0 0 2px var(--in-soft); }
+.source-line {
+    padding: 0 12px 8px;
+    font-size: 10.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------ 内存 ------- */
+.memory-panel { border-top: 1px solid var(--border); padding: 0 12px 10px; }
+.memory-panel summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 8px 0 7px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 11px;
+    color: var(--muted);
+    user-select: none;
+}
+.memory-panel summary::-webkit-details-marker { display: none; }
+.memory-panel summary::before {
+    content: '▸';
+    font-size: 10px;
+    color: var(--faint);
+    transition: transform .15s ease;
+}
+.memory-panel[open] summary::before { transform: rotate(90deg); }
+.memory-panel summary b { font-weight: 600; color: var(--text); }
+.mem-sum {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--faint);
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--panel-2);
+}
+.mem-wrap {
+    max-height: 26vh;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--code-bg);
+    padding: 5px;
+}
+.memory-grid { display: flex; flex-direction: column; gap: 1px; min-width: 300px; }
+.mem-row {
+    display: grid;
+    grid-template-columns: 26px repeat(16, minmax(0, 1fr));
+    gap: 1px;
+    align-items: center;
+}
+.mem-off {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--faint);
+    text-align: right;
+    padding-right: 3px;
+}
+.mem-cell {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 3px;
+    color: var(--muted);
+}
+.mem-cell.head { color: var(--faint); font-size: 9px; }
+.mem-cell.nonzero { color: var(--text); }
+.mem-cell.prog { background: var(--panel-2); }
+.mem-cell.pc { background: var(--pc); color: var(--on-pc); font-weight: 700; }
+.mem-cell.r1 { box-shadow: inset 0 0 0 1.5px var(--r1); color: var(--r1); }
+.mem-cell.pc.r1 { color: var(--on-pc); }
+.mem-legend {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 2px 0;
+    font-size: 9.5px;
+    color: var(--faint);
+}
+.mem-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.mem-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.lg-pc { background: var(--pc); }
+.lg-r1 { border: 1.5px solid var(--r1); }
+.lg-prog { background: var(--panel-2); border: 1px solid var(--border); }
+.mem-tip { margin-left: auto; }
+
+/* ============================================================
+   控制台
+   ============================================================ */
+.console-panel {
+    flex: 1 1 0;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.console-head { gap: 8px; flex-wrap: wrap; }
+.console-controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.console-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 9px 12px 12px;
+    background: var(--console-bg);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+}
+.console-body:empty::before {
+    content: '暂无 IO 记录';
+    font-family: var(--sans);
+    font-size: 11.5px;
+    color: var(--faint);
+}
+.log-row {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+    padding: 1px 0;
+}
+.log-badge {
+    font-family: var(--sans);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-align: center;
+    padding: 2px 3px;
+    border-radius: 4px;
+    background: var(--panel-2);
+    color: var(--faint);
+    margin-top: 2px;
+}
+.log-row.sys .log-badge { background: var(--panel-2); color: var(--muted); }
+.log-row.sys.error .log-badge { background: var(--err-soft); color: var(--err); }
+.log-row.sys.warn .log-badge { background: var(--pc-soft); color: var(--pc); }
+.log-text { min-width: 0; white-space: pre-wrap; word-break: break-word; }
+.log-row.sys .log-text {
+    font-family: var(--sans);
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--muted);
+}
+.log-row.sys.error .log-text { color: var(--err); }
+.log-row.sys.warn .log-text { color: var(--pc); }
+
+.io-lanes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    margin: 5px 0 9px;
+    align-items: start;
+}
+.lane {
+    min-width: 0;
+    padding: 6px 8px 7px;
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--in);
+    border-radius: 8px;
+    background: var(--panel-2);
+}
+.lane.out { border-top-color: var(--out); }
+.lane-head {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 3px;
+    font-family: var(--sans);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--in);
+}
+.lane-head::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--in);
+}
+.lane.out .lane-head { color: var(--out); }
+.lane.out .lane-head::before { background: var(--out); }
+.lane-body {
+    min-height: 1.65em;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--in);
+    tab-size: 4;
+}
+.lane.out .lane-body { color: var(--out); }
+.lane-line { min-height: 1.65em; }
+
+.lane-body.hex-body { font-size: 11.5px; }
+.hex-lane-row {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    gap: 7px;
+    align-items: start;
+}
+.hex-lane-off {
+    color: var(--faint);
+    font-size: 9.5px;
+    line-height: 1.65;
+    font-variant-numeric: tabular-nums;
+}
+.hex-lane-bytes {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0 5px;
+    font-variant-numeric: tabular-nums;
+}
+.hex-lane-ascii {
+    border-left: 1px solid var(--border);
+    padding-left: 8px;
+    white-space: pre;
+    min-width: 8ch;
+}
+
+.buffer-strip {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    padding: 4px 12px;
+    border-top: 1px dashed var(--border);
+    background: var(--brand-soft);
+    font-size: 10.5px;
+    color: var(--muted);
+}
+.buffer-tag { font-weight: 600; color: var(--brand); white-space: nowrap; }
+.buffer-count {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--brand);
+    background: var(--panel);
+    padding: 0 5px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.buffer-preview {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--mono);
+    color: var(--text);
+}
+.file-row {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    padding: 4px 12px;
+    border-top: 1px dashed var(--border);
+    background: var(--panel-2);
+    font-size: 10.5px;
+    color: var(--muted);
+}
+.file-icon { color: var(--brand); }
+.file-name {
+    max-width: 34%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-weight: 600;
+}
+.file-progress { font-family: var(--mono); font-size: 10px; white-space: nowrap; }
+.file-bar {
+    flex: 1 1 auto;
+    height: 4px;
+    min-width: 40px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.file-bar i { display: block; height: 100%; width: 0; background: var(--brand); border-radius: 999px; }
+.file-bar i.eof { background: var(--pc); }
+
+.input-row {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    padding: 8px 12px 6px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+}
+#inputBox {
+    flex: 1 1 200px;
+    min-width: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--panel-2);
+    padding: 6px 9px;
+    font-size: 12px;
+    color: var(--text);
+}
+#inputBox::placeholder { color: var(--faint); }
+#inputBox:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+#inputBox:disabled { opacity: .55; }
+.console-hint {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 12px 8px;
+    font-size: 10px;
+    color: var(--faint);
+    line-height: 1.5;
+}
+.input-error { color: var(--err); font-weight: 600; }
+.mixed-warning { color: var(--pc); font-weight: 600; }
+.mixed-stream {
+    min-height: 1.7em;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    tab-size: 4;
+}
+.mixed-seg.in { color: var(--in); }
+.mixed-seg.out { color: var(--out); }
+
+/* ============================================================
+   模态框 / 提示
+   ============================================================ */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(7, 10, 16, .55);
+    backdrop-filter: blur(2px);
+}
+.modal {
+    width: min(900px, 100%);
+    max-height: min(86vh, 780px);
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, .4);
+    overflow: hidden;
+}
+.modal-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 13px; font-weight: 650; }
+.modal-meta { font-size: 10.5px; color: var(--muted); font-family: var(--mono); }
+.modal-x { margin-left: auto; }
+.modal-note {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--muted);
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+}
+.modal-error {
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    background: var(--err-soft);
+    color: var(--err);
+    font-size: 11px;
+    line-height: 1.6;
+    border-bottom: 1px solid var(--border);
+    white-space: pre-wrap;
+}
+.modal-hex {
+    flex: 1 1 auto;
+    min-height: 240px;
+    width: 100%;
+    margin: 0;
+    padding: 12px 14px;
+    border: 0;
+    outline: none;
+    resize: none;
+    background: var(--console-bg);
+    color: var(--text);
+    caret-color: var(--brand);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    white-space: pre;
+    overflow: auto;
+    tab-size: 4;
+}
+.modal-hex:focus { box-shadow: inset 0 0 0 1px var(--brand); }
+.modal-foot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 9px 14px;
+    border-top: 1px solid var(--border);
+}
+.modal-hint { margin-right: auto; font-size: 10.5px; color: var(--pc); }
+body.modal-open { overflow: hidden; }
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    z-index: 110;
+    max-width: min(560px, 90vw);
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+    opacity: 0;
+    transform: translate(-50%, 8px);
+    transition: opacity .18s ease, transform .18s ease;
+    pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.error { background: var(--err); color: var(--on-brand); }
+.toast.warn { background: var(--pc); color: var(--on-pc); }
+
+.epp-link {
+    text-decoration: none;
+    color: var(--brand);
+}
+
+.epp-link:hover {
+    text-decoration: underline;
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+@media (max-width: 1180px) {
+    .reg-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 980px) {
+    body { overflow: auto; }
+    .app { height: auto; min-height: 100dvh; }
+    .workspace { grid-template-columns: 1fr; padding: 0 10px 10px; }
+    .editor-panel { height: 68vh; min-height: 420px; }
+    .state-panel { max-height: none; overflow: visible; }
+    .console-panel { height: 70vh; min-height: 460px; }
+}
+@media (max-width: 640px) {
+    .topbar { padding: 8px 12px; }
+    .brand-text p, .doc-link { display: none; }
+    .workspace { padding: 0 8px 8px; gap: 8px; }
+    .signal-grid { grid-template-columns: 1fr; }
+    .console-controls { margin-left: 0; width: 100%; }
+    .memory-grid { min-width: 0; }
+    .mem-cell { font-size: 9px; }
+    .modal-backdrop { padding: 10px; }
+    .io-lanes { grid-template-columns: 1fr; }
+}
+@media (max-height: 720px) and (min-width: 981px) {
+    .state-panel { max-height: 46vh; }
+    .console-panel { min-height: 220px; }
+    .mem-wrap { max-height: 20vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+    }
+}
+</style>
+</head>
+<body>
+<div class="app">
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark" aria-hidden="true">8</span>
+            <div class="brand-text">
+                <h1>8 位汇编解释器</h1>
+                <p><a href="../" target="_blank" class="epp-link">Elements Plus</a> · 指令集演示</p>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <a class="doc-link" href="../dev/reference/8位指令集.html" target="_blank" rel="noreferrer">指令集文档 ↗</a>
+            <button class="icon-btn" id="themeBtn" type="button" title="切换主题" aria-label="切换主题">☾</button>
+        </div>
+    </header>
+
+    <main class="workspace">
+        <section class="panel editor-panel" id="editorPanel">
+            <div class="panel-head">
+                <div class="panel-title">程序 <span class="format-chip">汇编</span></div>
+                <div class="panel-head-right">
+                    <span class="lock-chip" id="lockChip" hidden>已锁定</span>
+                    <span class="meta" id="programMeta">0 行</span>
+                </div>
+            </div>
+            <div class="toolbar">
+                <div class="tool-group">
+                    <button class="btn primary" id="runBtn" type="button" title="运行 / 暂停（Ctrl+Enter）">▶ 运行</button>
+                    <button class="btn" id="stepBtn" type="button" title="执行一条指令">单步</button>
+                    <button class="btn" id="resetBtn" type="button" title="复位 CPU、输入缓冲与文件指针">复位</button>
+                </div>
+                <div class="speed-group">
+                    <label for="speedRange">速度</label>
+                    <input id="speedRange" type="range" min="0" max="100" step="1" value="80" title="拖到最右边为无限制">
+                    <span class="speed-label" id="speedLabel">—</span>
+                </div>
+            </div>
+            <div class="toolbar secondary">
+                <button class="btn" id="hexBtn" type="button" title="查看/编辑十六进制机器码；修改后可反汇编回程序区">16进制</button>
+                <label class="check-label" title="分离后程序位于只读 ROM，数据使用独立 RAM；复位后可切换">
+                    <input type="checkbox" id="separateMem">
+                    程序 / 数据分离
+                </label>
+                <span class="toolbar-spacer"></span>
+                <select id="presetSel" class="select" title="载入示例程序（会覆盖当前内容）" aria-label="载入示例程序">
+                    <option value="">载入示例…</option>
+                </select>
+            </div>
+            <div class="editor-body">
+                <div class="editor-gutter"><div class="gutter-inner" id="gutterInner"></div></div>
+                <div class="editor-code">
+                    <div class="line-highlight" id="lineHighlight"></div>
+                    <div class="line-error" id="lineError"></div>
+                    <textarea id="source" spellcheck="false" wrap="off" autocomplete="off" autocapitalize="off" aria-label="程序源码"></textarea>
+                </div>
+            </div>
+            <div class="editor-status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusMsg">就绪</span>
+                <span class="meta" id="byteMeta">未汇编</span>
+            </div>
+        </section>
+
+        <section class="right-column">
+            <section class="panel state-panel">
+                <div class="panel-head">
+                    <div class="panel-title">IO / 寄存器</div>
+                    <div class="panel-head-right">
+                        <span class="meta" id="tickMeta">tick 0</span>
+                        <span class="state-badge idle" id="stateBadge">空闲</span>
+                    </div>
+                </div>
+                <div class="reg-grid">
+                    <div class="reg-card pc">
+                        <div class="reg-label">PC</div>
+                        <div class="reg-value" id="vPc">0x00</div>
+                        <div class="reg-sub" id="sPc">程序计数器</div>
+                    </div>
+                    <div class="reg-card">
+                        <div class="reg-label">R0</div>
+                        <div class="reg-value" id="vR0">0x00</div>
+                        <div class="reg-sub" id="sR0">累加器</div>
+                    </div>
+                    <div class="reg-card r1">
+                        <div class="reg-label">R1</div>
+                        <div class="reg-value" id="vR1">0x00</div>
+                        <div class="reg-sub" id="sR1">地址寄存器</div>
+                    </div>
+                    <div class="reg-card">
+                        <div class="reg-label">R2</div>
+                        <div class="reg-value" id="vR2">0x00</div>
+                        <div class="reg-sub" id="sR2">mem[R1]</div>
+                    </div>
+                    <div class="reg-card">
+                        <div class="reg-label">TR</div>
+                        <div class="reg-value" id="vTr">0x00</div>
+                        <div class="reg-sub" id="sTr">跳转目标</div>
+                    </div>
+                    <div class="reg-card io">
+                        <div class="reg-label">R3</div>
+                        <div class="reg-value" id="vR3">IO</div>
+                        <div class="reg-sub" id="sR3">读 DI · 写 DO</div>
+                    </div>
+                </div>
+                <div class="signal-grid">
+                    <div class="signal-card" id="sigVi">
+                        <div class="signal-head"><span class="sig-dot"></span><span>VI</span><b id="viValue">0</b></div>
+                        <div class="signal-detail" id="viDetail">DI —</div>
+                    </div>
+                    <div class="signal-card" id="sigVo">
+                        <div class="signal-head"><span class="sig-dot"></span><span>VO</span><b id="voValue">0</b></div>
+                        <div class="signal-detail" id="voDetail">DO 0x00</div>
+                    </div>
+                    <div class="signal-card" id="sigRo">
+                        <div class="signal-head"><span class="sig-dot"></span><span>RO</span><b id="roValue">自动</b></div>
+                        <div class="signal-detail"><span class="mini-dot" id="riDot"></span><span id="roDetail">RO 恒为 1</span></div>
+                    </div>
+                </div>
+                <div class="source-line" id="sourceLine">输入源：手动输入 · 缓冲 0 字节</div>
+                <details class="memory-panel" id="romPanel" hidden>
+                    <summary>
+                        <span>程序 ROM <b>256 B</b></span>
+                        <span class="mem-sum" id="romSumPc">PC → 0x00</span>
+                        <span class="mem-sum" id="romSumProg">未载入程序</span>
+                    </summary>
+                    <div class="mem-wrap"><div class="memory-grid" id="romGrid"></div></div>
+                    <div class="mem-legend">
+                        <span><i class="lg-pc"></i>PC</span>
+                        <span><i class="lg-prog"></i>程序区</span>
+                        <span class="mem-tip">只读</span>
+                    </div>
+                </details>
+                <details class="memory-panel" id="memoryPanel">
+                    <summary>
+                        <span><span id="memTitle">内存</span> <b>256 B</b></span>
+                        <span class="mem-sum" id="memSumR1">R1 → 0x00</span>
+                        <span class="mem-sum" id="memSumProg">未载入程序</span>
+                    </summary>
+                    <div class="mem-wrap"><div class="memory-grid" id="memoryGrid"></div></div>
+                    <div class="mem-legend">
+                        <span id="ramLegendPc"><i class="lg-pc"></i>PC</span>
+                        <span><i class="lg-r1"></i>R1</span>
+                        <span id="ramLegendProg"><i class="lg-prog"></i>程序区</span>
+                        <span class="mem-tip">悬停查看十进制与字符</span>
+                    </div>
+                </details>
+            </section>
+
+            <section class="panel console-panel">
+                <div class="panel-head console-head">
+                    <div class="panel-title">控制台</div>
+                    <div class="console-controls">
+                        <div class="seg" id="consoleModeSeg" role="group" aria-label="控制台模式">
+                            <button class="seg-btn active" type="button" data-mode="text" aria-pressed="true">文本</button>
+                            <button class="seg-btn" type="button" data-mode="hex" aria-pressed="false">十六进制</button>
+                        </div>
+                        <div class="seg" id="viewModeSeg" role="group" aria-label="控制台查看模式">
+                            <button class="seg-btn active" type="button" data-view="split" aria-pressed="true" title="输入和输出分栏显示">并排</button>
+                            <button class="seg-btn" type="button" data-view="mixed" aria-pressed="false" title="按时间顺序混合显示输入与输出">混合</button>
+                        </div>
+                        <div class="seg" id="readModeSeg" role="group" aria-label="输出读取方式">
+                            <button class="seg-btn" type="button" data-read="manual" aria-pressed="false">手动读</button>
+                            <button class="seg-btn active" type="button" data-read="auto" aria-pressed="true">自动读</button>
+                        </div>
+                        <button class="btn tiny" id="readOutBtn" type="button" disabled title="手动读取一个输出字节（需要 VO=1）">读 1 字节</button>
+                        <button class="btn tiny ghost" id="clearConsoleBtn" type="button">清空</button>
+                    </div>
+                </div>
+                <div class="console-body" id="consoleBody" role="log" aria-label="输入输出控制台"></div>
+                <div class="buffer-strip" id="bufferStrip" hidden>
+                    <span class="buffer-tag">输入缓冲</span>
+                    <span class="buffer-count" id="bufferCount">0 B</span>
+                    <span class="buffer-preview" id="bufferPreview"></span>
+                    <button class="link-btn" id="clearBufferBtn" type="button">清空</button>
+                </div>
+                <div class="file-row" id="fileRow" hidden>
+                    <span class="file-icon" aria-hidden="true">▤</span>
+                    <span class="file-name" id="fileName"></span>
+                    <span class="file-progress" id="fileProgress">0 / 0 B</span>
+                    <span class="file-bar"><i id="fileBar"></i></span>
+                    <button class="link-btn" id="closeFileBtn" type="button">关闭文件</button>
+                </div>
+                <div class="input-row">
+                    <input id="inputBox" type="text" autocomplete="off" spellcheck="false" aria-label="输入" placeholder="输入文本，回车提交（自动附加换行符）">
+                    <button class="btn" id="sendBtn" type="button">发送</button>
+                    <button class="btn" id="fileBtn" type="button" title="打开文件作为输入源；复位后文件指针归 0">打开文件</button>
+                    <input id="filePicker" type="file" hidden>
+                </div>
+                <div class="console-hint">
+                    <span id="inputHint"></span>
+                    <span class="mixed-warning" id="mixedWarning" hidden></span>
+                    <span class="input-error" id="inputError" hidden></span>
+                </div>
+            </section>
+        </section>
+    </main>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-head">
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-meta" id="modalMeta"></div>
+            <button class="icon-btn modal-x" id="modalX" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="modal-note" id="modalNote"></div>
+        <div class="modal-error" id="modalError" hidden></div>
+        <textarea class="modal-hex" id="modalHex" spellcheck="false" wrap="off" autocomplete="off" aria-label="十六进制机器码"></textarea>
+        <div class="modal-foot">
+            <span class="modal-hint" id="modalActionHint"></span>
+            <button class="btn" id="modalCopy" type="button">复制</button>
+            <button class="btn primary" id="modalDisassemble" type="button" disabled>反汇编</button>
+            <button class="btn ghost" id="modalClose" type="button">关闭</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+    'use strict';
+
+    /* ============================================================
+       工具函数
+       ============================================================ */
+    const $ = (id) => document.getElementById(id);
+    const hex2 = (value) => (value & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+    const hex4 = (value) => (value & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+    const hexNibble = (value) => (value & 0xF).toString(16).toUpperCase();
+    const toSigned = (value) => (value & 0x80 ? (value & 0xFF) - 256 : value & 0xFF);
+    const isPrintableAscii = (value) => value >= 0x20 && value <= 0x7E;
+
+    function charSuffix(value) {
+        return isPrintableAscii(value) ? " · '" + String.fromCharCode(value) + "'" : '';
+    }
+
+    function setText(element, text) {
+        if (element && element.textContent !== text) element.textContent = text;
+    }
+
+    function singleLinePreview(text) {
+        let out = '';
+        for (const ch of text) {
+            const code = ch.codePointAt(0);
+            if (ch === '\n') out += '↵';
+            else if (ch === '\r') continue;
+            else if (ch === '\t') out += '⇥';
+            else if (code < 0x20 || (code >= 0x7F && code < 0xA0)) {
+                out += '\\x' + code.toString(16).toUpperCase().padStart(2, '0');
+            } else {
+                out += ch;
+            }
+        }
+        return out;
+    }
+
+    /* ============================================================
+       指令表 / 反汇编
+       ============================================================ */
+    const ALU_NAMES = ['ADD', 'SUB', 'AND', 'OR', 'NOT', 'XOR', 'SHL', 'SHR'];
+    const ALU_DEFS = {};
+    ALU_NAMES.forEach((name, index) => { ALU_DEFS[name] = 0x20 + index; });
+
+    const JUMP_DEFS = {
+        JMP: 0xC0, JZ: 0xC1, JN: 0xC2, JP: 0xC3, JEQ: 0xC4, 'JLT.U': 0xC5, 'JGT.U': 0xC6,
+        JNZ: 0xC9, JNN: 0xCA, JNP: 0xCB, JNE: 0xCC, 'JGE.U': 0xCD, 'JLE.U': 0xCE,
+        JVI: 0xD0, JVO: 0xD1, JNVI: 0xD8, JNVO: 0xD9,
+        JLT: 0xE4, JGT: 0xE5, JGE: 0xE6, JLE: 0xE7
+    };
+    const JUMP_BYTE_TO_NAME = {};
+    const JUMP_BYTE_SET = new Set();
+    Object.keys(JUMP_DEFS).forEach((name) => {
+        const byte = JUMP_DEFS[name];
+        JUMP_BYTE_TO_NAME[byte] = name;
+        JUMP_BYTE_SET.add(byte);
+    });
+
+    const OP_DEFS = { NOP: { kind: 'raw', op: 0x00 } };
+    Object.keys(ALU_DEFS).forEach((name) => { OP_DEFS[name] = { kind: 'raw', op: ALU_DEFS[name] }; });
+    Object.keys(JUMP_DEFS).forEach((name) => { OP_DEFS[name] = { kind: 'jump', op: JUMP_DEFS[name] }; });
+    OP_DEFS.MOV = { kind: 'mov' };
+    OP_DEFS.LDL = { kind: 'ldl' };
+    OP_DEFS.LDH = { kind: 'ldh' };
+    OP_DEFS.LDI = { kind: 'ldi' };
+    OP_DEFS.SETTARGET = { kind: 'settarget' };
+
+    const MNEMONIC_ALIASES = { JLTU: 'JLT.U', JGTU: 'JGT.U', JGEU: 'JGE.U', JLEU: 'JLE.U' };
+
+    function normalizeMnemonic(raw) {
+        const upper = String(raw).toUpperCase();
+        const key = MNEMONIC_ALIASES[upper] || upper;
+        return Object.prototype.hasOwnProperty.call(OP_DEFS, key) ? key : null;
+    }
+
+    function parseRegister(token) {
+        const match = /^[Rr]([0-3])$/.exec(String(token).trim());
+        return match ? Number(match[1]) : null;
+    }
+
+    function parseNumberLiteral(body) {
+        const text = String(body).trim();
+        if (/^0[xX][0-9a-fA-F]+$/.test(text)) return parseInt(text.slice(2), 16);
+        if (/^0[bB][01]+$/.test(text)) return parseInt(text.slice(2), 2);
+        if (/^\d+$/.test(text)) return parseInt(text, 10);
+        return null;
+    }
+
+    function disassembleByte(byte) {
+        const instruction = byte & 0xFF;
+        if (instruction === 0x00) return { text: 'NOP', reserved: false };
+        if ((instruction & 0xC0) === 0x40) {
+            const register = (instruction >> 4) & 0x3;
+            if (register <= 1) {
+                return { text: 'LDL R' + register + ', #0x' + hexNibble(instruction & 0xF), reserved: false };
+            }
+            return { text: 'NOP', reserved: true };
+        }
+        if ((instruction & 0xC0) === 0x80) {
+            const register = (instruction >> 4) & 0x3;
+            if (register <= 1) {
+                return { text: 'LDH R' + register + ', #0x' + hexNibble(instruction & 0xF), reserved: false };
+            }
+            return { text: 'NOP', reserved: true };
+        }
+        if (instruction >= 0x30 && instruction <= 0x3F) {
+            const destination = instruction & 0x3;
+            const source = (instruction >> 2) & 0x3;
+            return { text: 'MOV R' + destination + ', R' + source, reserved: false };
+        }
+        if (instruction >= 0x20 && instruction <= 0x27) {
+            return { text: ALU_NAMES[instruction - 0x20], reserved: false };
+        }
+        if (instruction >= 0xE0 && instruction <= 0xE2) {
+            return { text: 'SETTARGET R' + (instruction & 0x3), reserved: false };
+        }
+        const jump = JUMP_BYTE_TO_NAME[instruction];
+        if (jump) return { text: jump, reserved: false };
+        return { text: 'NOP', reserved: true };
+    }
+
+    /* ============================================================
+       汇编器
+       ============================================================ */
+    function assembleProgram(text) {
+        const errors = [];
+        const sourceText = String(text == null ? '' : text).replace(/^\uFEFF/, '');
+        const lines = sourceText.split(/\r?\n/);
+        const labels = new Map();
+        const items = [];
+        let address = 0;
+
+        const addError = (line, message) => {
+            if (errors.length < 40) errors.push({ line: Math.max(0, line), message: message });
+        };
+
+        function parseImmediate(operand, allowLabel, line, min, max, rangeMessage) {
+            const raw = String(operand).trim();
+            if (!raw.startsWith('#')) {
+                addError(line, '立即数需要以 # 开头，例如 #0x0F');
+                return null;
+            }
+            const body = raw.slice(1).trim();
+            const number = parseNumberLiteral(body);
+            if (number !== null) {
+                if (number < min || number > max) {
+                    addError(line, rangeMessage);
+                    return null;
+                }
+                return number;
+            }
+            if (allowLabel) {
+                if (labels.has(body)) {
+                    const value = labels.get(body);
+                    if (value < 0 || value > 0xFF) {
+                        addError(line, '标签 "' + body + '" 的地址超出 0x00~0xFF');
+                        return null;
+                    }
+                    return value;
+                }
+                addError(line, '未定义的标签 "' + body + '"');
+                return null;
+            }
+            addError(line, '无效的立即数 "' + raw + '"');
+            return null;
+        }
+
+        function parseTargetOperand(operand, line) {
+            const raw = String(operand).trim();
+            if (!raw.startsWith('#')) {
+                addError(line, '目标需要写成 #label 或 #0xNN');
+                return null;
+            }
+            const body = raw.slice(1).trim();
+            const number = parseNumberLiteral(body);
+            if (number !== null) {
+                if (number < 0 || number > 0xFF) {
+                    addError(line, '目标地址范围是 0x00~0xFF');
+                    return null;
+                }
+                return { type: 'imm', value: number };
+            }
+            if (!/^[A-Za-z_.$][A-Za-z0-9_.$]*$/.test(body)) {
+                addError(line, '无效的目标 "' + raw + '"');
+                return null;
+            }
+            return { type: 'label', name: body };
+        }
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            let code = lines[lineIndex].split(';')[0];
+            let labelMatch;
+            while ((labelMatch = /^\s*([A-Za-z_.$][A-Za-z0-9_.$]*)\s*:/.exec(code)) !== null) {
+                const name = labelMatch[1];
+                if (labels.has(name)) addError(lineIndex, '标签 "' + name + '" 重复定义');
+                else labels.set(name, address);
+                code = code.slice(labelMatch[0].length);
+            }
+            const statement = code.trim();
+            if (!statement) continue;
+
+            const mnemonicMatch = /^([A-Za-z][A-Za-z0-9.]*)(?:\s+(.*))?$/.exec(statement);
+            if (!mnemonicMatch) {
+                addError(lineIndex, '无法解析的行：' + statement);
+                continue;
+            }
+            const mnemonic = normalizeMnemonic(mnemonicMatch[1]);
+            if (!mnemonic) {
+                addError(lineIndex, '未知指令 "' + mnemonicMatch[1] + '"');
+                continue;
+            }
+            const definition = OP_DEFS[mnemonic];
+            const rest = (mnemonicMatch[2] || '').trim();
+            const operands = rest ? rest.split(',').map((item) => item.trim()) : [];
+            let item = null;
+
+            if (definition.kind === 'raw') {
+                if (operands.length) {
+                    addError(lineIndex, mnemonic + ' 不接受操作数');
+                } else {
+                    item = { line: lineIndex, size: 1, kind: 'raw', op: definition.op };
+                }
+            } else if (definition.kind === 'jump') {
+                if (mnemonic === 'JMP' && operands.length === 1) {
+                    const target = parseTargetOperand(operands[0], lineIndex);
+                    if (target) item = { line: lineIndex, size: 4, kind: 'jmpImm', target: target };
+                } else if (operands.length) {
+                    addError(lineIndex, mnemonic + ' 不接受操作数；条件跳转的目标要先用 SETTARGET 设置 TR');
+                } else {
+                    item = { line: lineIndex, size: 1, kind: 'raw', op: definition.op };
+                }
+            } else if (definition.kind === 'mov') {
+                if (operands.length !== 2) {
+                    addError(lineIndex, 'MOV 需要两个寄存器操作数，例如 MOV R0, R1');
+                } else {
+                    const destination = parseRegister(operands[0]);
+                    const source = parseRegister(operands[1]);
+                    if (destination === null || source === null) {
+                        addError(lineIndex, 'MOV 的操作数必须是 R0~R3');
+                    } else {
+                        item = { line: lineIndex, size: 1, kind: 'mov', destination: destination, source: source };
+                    }
+                }
+            } else if (definition.kind === 'ldl' || definition.kind === 'ldh') {
+                if (operands.length !== 2) {
+                    addError(lineIndex, mnemonic + ' 需要寄存器与立即数，例如 ' + mnemonic + ' R0, #0x0');
+                } else {
+                    const register = parseRegister(operands[0]);
+                    const value = parseImmediate(operands[1], false, lineIndex, 0, 15, mnemonic + ' 的立即数范围是 0~15');
+                    if (register === null || register > 1) {
+                        addError(lineIndex, mnemonic + ' 只能使用 R0 或 R1');
+                    } else if (value !== null) {
+                        item = { line: lineIndex, size: 1, kind: definition.kind, register: register, value: value };
+                    }
+                }
+            } else if (definition.kind === 'ldi') {
+                if (operands.length !== 2) {
+                    addError(lineIndex, 'LDI 需要寄存器与立即数，例如 LDI R0, #0x80');
+                } else {
+                    const register = parseRegister(operands[0]);
+                    const value = parseImmediate(operands[1], false, lineIndex, 0, 255, 'LDI 的立即数范围是 0~255');
+                    if (register === null || register > 1) {
+                        addError(lineIndex, 'LDI 只能使用 R0 或 R1');
+                    } else if (value !== null) {
+                        item = { line: lineIndex, size: 2, kind: 'ldi', register: register, value: value };
+                    }
+                }
+            } else if (definition.kind === 'settarget') {
+                if (operands.length !== 1) {
+                    addError(lineIndex, 'SETTARGET 需要一个目标，例如 SETTARGET R0 或 SETTARGET #label');
+                } else {
+                    const register = parseRegister(operands[0]);
+                    if (register !== null) {
+                        if (register === 3) addError(lineIndex, 'SETTARGET R3 是保留编码，请使用 R0/R1/R2');
+                        else item = { line: lineIndex, size: 1, kind: 'settargetReg', register: register };
+                    } else {
+                        const target = parseTargetOperand(operands[0], lineIndex);
+                        if (target) item = { line: lineIndex, size: 3, kind: 'settargetImm', target: target };
+                    }
+                }
+            }
+
+            if (item) {
+                if (address + item.size > 256) {
+                    addError(lineIndex, '程序超过 256 字节（当前至少 ' + (address + item.size) + ' 字节）');
+                }
+                items.push(item);
+                address += item.size;
+            } else {
+                address += 1;
+            }
+        }
+
+        if (!items.length && !errors.length) addError(0, '程序为空');
+        if (errors.length) {
+            return { ok: false, errors: errors, image: null, count: 0, end: 0, lineForAddr: null, labels: labels };
+        }
+
+        const image = new Uint8Array(256);
+        const lineForAddr = new Int16Array(256);
+        lineForAddr.fill(-1);
+        let position = 0;
+
+        const emit = (value, line) => {
+            if (position < 256) {
+                image[position] = value & 0xFF;
+                lineForAddr[position] = line;
+                position++;
+            }
+        };
+
+        const resolveTarget = (target, line) => {
+            if (target.type === 'imm') return target.value;
+            if (!labels.has(target.name)) {
+                addError(line, '未定义的标签 "' + target.name + '"');
+                return null;
+            }
+            const value = labels.get(target.name);
+            if (value < 0 || value > 0xFF) {
+                addError(line, '标签 "' + target.name + '" 的地址超出 0x00~0xFF');
+                return null;
+            }
+            return value;
+        };
+
+        const emitLdiR0 = (value, line) => {
+            emit(0x40 | (value & 0x0F), line);
+            emit(0x80 | ((value >> 4) & 0x0F), line);
+        };
+
+        for (const item of items) {
+            const line = item.line;
+            switch (item.kind) {
+                case 'raw':
+                    emit(item.op, line);
+                    break;
+                case 'mov':
+                    emit(0x30 | (item.source << 2) | item.destination, line);
+                    break;
+                case 'ldl':
+                    emit(0x40 | (item.register << 4) | item.value, line);
+                    break;
+                case 'ldh':
+                    emit(0x80 | (item.register << 4) | item.value, line);
+                    break;
+                case 'ldi':
+                    emit(0x40 | (item.register << 4) | (item.value & 0x0F), line);
+                    emit(0x80 | (item.register << 4) | ((item.value >> 4) & 0x0F), line);
+                    break;
+                case 'settargetReg':
+                    emit(0xE0 | item.register, line);
+                    break;
+                case 'settargetImm': {
+                    const value = resolveTarget(item.target, line);
+                    if (value === null) break;
+                    emitLdiR0(value, line);
+                    emit(0xE0, line);
+                    break;
+                }
+                case 'jmpImm': {
+                    const value = resolveTarget(item.target, line);
+                    if (value === null) break;
+                    emitLdiR0(value, line);
+                    emit(0xE0, line);
+                    emit(0xC0, line);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        if (position === 0 && !errors.length) addError(0, '程序为空');
+        return {
+            ok: errors.length === 0 && position > 0,
+            errors: errors,
+            image: image,
+            count: position,
+            end: position,
+            lineForAddr: lineForAddr,
+            labels: labels
+        };
+    }
+
+    function parseHexProgram(text) {
+        const errors = [];
+        const sourceText = String(text == null ? '' : text).replace(/^\uFEFF/, '');
+        const lines = sourceText.split(/\r?\n/);
+        const image = new Uint8Array(256);
+        const lineForAddr = new Int16Array(256);
+        lineForAddr.fill(-1);
+        let address = 0;
+        let maxAddress = -1;
+        let count = 0;
+
+        const addError = (line, message) => {
+            if (errors.length < 40) errors.push({ line: Math.max(0, line), message: message });
+        };
+
+        const writeByte = (line, value) => {
+            if (address > 255) {
+                addError(line, '写入地址超出 0x00~0xFF');
+                return;
+            }
+            image[address] = value & 0xFF;
+            lineForAddr[address] = line;
+            if (address > maxAddress) maxAddress = address;
+            count++;
+            address++;
+        };
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            let code = lines[lineIndex];
+            const semicolon = code.indexOf(';');
+            if (semicolon >= 0) code = code.slice(0, semicolon);
+            const comment = code.indexOf('//');
+            if (comment >= 0) code = code.slice(0, comment);
+            code = code.trim();
+            if (!code) continue;
+
+            const tokens = code.split(/[\s,]+/).filter(Boolean);
+            for (const token of tokens) {
+                const addressMatch = /^(?:0[xX])?([0-9a-fA-F]{1,4}):$/.exec(token);
+                if (addressMatch) {
+                    const value = parseInt(addressMatch[1], 16);
+                    if (value > 255) addError(lineIndex, '地址 0x' + addressMatch[1] + ' 超出 0x00~0xFF');
+                    else address = value;
+                    continue;
+                }
+
+                const byteMatch = /^(?:0[xX])?([0-9a-fA-F]{2})$/.exec(token);
+                if (byteMatch) {
+                    writeByte(lineIndex, parseInt(byteMatch[1], 16));
+                    continue;
+                }
+
+                const blobMatch = /^(?:0[xX])?([0-9a-fA-F]+)$/.exec(token);
+                if (blobMatch && blobMatch[1].length >= 4) {
+                    const digits = blobMatch[1];
+                    if (digits.length % 2 !== 0) {
+                        addError(lineIndex, '十六进制串长度必须为偶数："' + token + '"');
+                        continue;
+                    }
+                    for (let index = 0; index < digits.length; index += 2) {
+                        if (address > 255) {
+                            addError(lineIndex, '写入地址超出 0x00~0xFF');
+                            break;
+                        }
+                        writeByte(lineIndex, parseInt(digits.slice(index, index + 2), 16));
+                    }
+                    continue;
+                }
+
+                addError(lineIndex, '无法识别的十六进制字节 "' + token + '"');
+            }
+        }
+
+        if (!errors.length && count === 0) addError(0, '没有找到任何十六进制字节');
+        return {
+            ok: errors.length === 0 && count > 0,
+            errors: errors,
+            image: image,
+            count: count,
+            end: maxAddress + 1,
+            lineForAddr: lineForAddr
+        };
+    }
+
+    function formatHexProgram(image, end) {
+        const lines = [];
+        for (let address = 0; address < end; address += 16) {
+            let line = hex2(address) + ':';
+            const stop = Math.min(end, address + 16);
+            for (let index = address; index < stop; index++) {
+                line += ' ' + hex2(image[index]);
+            }
+            lines.push(line);
+        }
+        return lines.join('\n');
+    }
+
+    function formatDisassembly(image, end) {
+        const lines = [];
+        lines.push('; Elements Plus 8-bit ISA · 反汇编');
+        lines.push('; 标签、注释与伪指令不可恢复；保留编码按 NOP 显示');
+        for (let address = 0; address < end; address++) {
+            const description = disassembleByte(image[address]);
+            const suffix = description.reserved ? ' · 保留编码' : '';
+            lines.push(description.text.padEnd(24, ' ') + '; 0x' + hex2(address) + suffix);
+        }
+        return lines.join('\n');
+    }
+
+    /* ============================================================
+       CPU 参考模型（与 ArchitectureTestSupport.ReferenceCpu 对齐）
+       ============================================================ */
+    class CpuCore {
+        constructor() {
+            this.mem = new Uint8Array(256);
+            this.program = new Uint8Array(256);
+            this.separated = false;
+            this.reset();
+        }
+
+        reset() {
+            this.pc = 0;
+            this.r0 = 0;
+            this.r1 = 0;
+            this.tr = 0;
+            this.vo = false;
+            this.dout = 0;
+            this.ticks = 0;
+        }
+
+        readSource(source) {
+            switch (source) {
+                case 0: return this.r0;
+                case 1: return this.r1;
+                case 2: return this.mem[this.r1 & 0xFF];
+                default: return 0;
+            }
+        }
+
+        jumpCondition(instruction, vi, ro) {
+            const memoryValue = this.mem[this.r1 & 0xFF];
+            switch (instruction) {
+                case 0xC0: return true;
+                case 0xC1: return this.r0 === 0;
+                case 0xC2: return (this.r0 & 0x80) !== 0;
+                case 0xC3: return this.r0 !== 0 && (this.r0 & 0x80) === 0;
+                case 0xC4: return this.r0 === memoryValue;
+                case 0xC5: return this.r0 < memoryValue;
+                case 0xC6: return this.r0 > memoryValue;
+                case 0xC9: return this.r0 !== 0;
+                case 0xCA: return (this.r0 & 0x80) === 0;
+                case 0xCB: return this.r0 === 0 || (this.r0 & 0x80) !== 0;
+                case 0xCC: return this.r0 !== memoryValue;
+                case 0xCD: return this.r0 >= memoryValue;
+                case 0xCE: return this.r0 <= memoryValue;
+                case 0xD0: return vi !== 0;
+                case 0xD1: return !!this.vo;
+                case 0xD8: return vi === 0;
+                case 0xD9: return !this.vo;
+                case 0xE4: return toSigned(this.r0) < toSigned(memoryValue);
+                case 0xE5: return toSigned(this.r0) > toSigned(memoryValue);
+                case 0xE6: return toSigned(this.r0) >= toSigned(memoryValue);
+                case 0xE7: return toSigned(this.r0) <= toSigned(memoryValue);
+                default: return false;
+            }
+        }
+
+        step(vi, di, ro) {
+            vi = vi ? 1 : 0;
+            ro = ro ? 1 : 0;
+            const mem = this.mem;
+            const code = this.separated ? this.program : this.mem;
+            const instruction = code[this.pc & 0xFF] & 0xFF;
+            const pcBefore = this.pc;
+            let nextPc = (this.pc + 1) & 0xFF;
+            let ri = false;
+            let outputWrite = false;
+            let outputValue = 0;
+            let memoryWrite = false;
+            let memoryValue = 0;
+            let newR0 = this.r0;
+            let newR1 = this.r1;
+            let newTr = this.tr;
+
+            if ((instruction & 0xC0) === 0x40) {
+                const register = (instruction >> 4) & 0x3;
+                const value = instruction & 0xF;
+                if (register === 0) newR0 = (this.r0 & 0xF0) | value;
+                else if (register === 1) newR1 = (this.r1 & 0xF0) | value;
+            } else if ((instruction & 0xC0) === 0x80) {
+                const register = (instruction >> 4) & 0x3;
+                const value = instruction & 0xF;
+                if (register === 0) newR0 = (this.r0 & 0x0F) | (value << 4);
+                else if (register === 1) newR1 = (this.r1 & 0x0F) | (value << 4);
+            } else if (instruction >= 0x30 && instruction <= 0x3F) {
+                const destination = instruction & 0x3;
+                const source = (instruction >> 2) & 0x3;
+
+                if (destination === 3 && source === 3) {
+                    if (vi && !(this.vo && !ro)) {
+                        ri = true;
+                        outputWrite = true;
+                        outputValue = di;
+                    }
+                } else if (destination === 3) {
+                    if (!(this.vo && !ro)) {
+                        outputWrite = true;
+                        outputValue = this.readSource(source);
+                    }
+                } else if (source === 3) {
+                    if (vi) {
+                        ri = true;
+                        if (destination === 2) {
+                            memoryWrite = true;
+                            memoryValue = di;
+                        } else if (destination === 0) {
+                            newR0 = di;
+                        } else {
+                            newR1 = di;
+                        }
+                    }
+                } else {
+                    const value = this.readSource(source);
+                    if (destination === 2) {
+                        memoryWrite = true;
+                        memoryValue = value;
+                    } else if (destination === 0) {
+                        newR0 = value;
+                    } else {
+                        newR1 = value;
+                    }
+                }
+            } else if (instruction >= 0x20 && instruction <= 0x27) {
+                const operand = mem[this.r1 & 0xFF];
+                switch (instruction) {
+                    case 0x20: newR0 = (this.r0 + operand) & 0xFF; break;
+                    case 0x21: newR0 = (this.r0 - operand) & 0xFF; break;
+                    case 0x22: newR0 = this.r0 & operand; break;
+                    case 0x23: newR0 = this.r0 | operand; break;
+                    case 0x24: newR0 = (~this.r0) & 0xFF; break;
+                    case 0x25: newR0 = this.r0 ^ operand; break;
+                    case 0x26: newR0 = (this.r0 << (operand & 0x07)) & 0xFF; break;
+                    case 0x27: newR0 = (this.r0 & 0xFF) >> (operand & 0x07); break;
+                    default: break;
+                }
+            } else if (instruction >= 0xE0 && instruction <= 0xE2) {
+                const register = instruction & 0x3;
+                newTr = register === 0 ? this.r0 : register === 1 ? this.r1 : mem[this.r1 & 0xFF];
+            } else if (JUMP_BYTE_SET.has(instruction)) {
+                if (this.jumpCondition(instruction, vi, ro)) nextPc = this.tr;
+            }
+
+            // 时钟沿：RO 握手优先，随后应用本 tick 的输出写、内存写与寄存器写。
+            if (this.vo && ro) this.vo = false;
+            if (outputWrite) {
+                this.dout = outputValue & 0xFF;
+                this.vo = true;
+            }
+            if (memoryWrite) mem[this.r1 & 0xFF] = memoryValue & 0xFF;
+            this.r0 = newR0 & 0xFF;
+            this.r1 = newR1 & 0xFF;
+            this.tr = newTr & 0xFF;
+            this.pc = nextPc;
+            this.ticks++;
+
+            return {
+                ri: ri,
+                output: outputWrite ? (outputValue & 0xFF) : null,
+                pcBefore: pcBefore,
+                pcAfter: nextPc,
+                opcode: instruction
+            };
+        }
+    }
+
+    /* ============================================================
+       示例程序
+       ============================================================ */
+    const PRESET_ECHO = [
+        '; 回显程序：读到什么就输出什么',
+        '; 在下方输入框按回车提交字节流；程序通过 VI/DI 与 VO/DO 握手收发',
+        'start:',
+        '    SETTARGET #wait_vi      ; 伪指令：把 TR 指向 wait_vi',
+        'wait_vi:',
+        '    JNVI                    ; 输入缓冲为空时忙等（VI=0）',
+        '    MOV R3, R3              ; DI -> DO（IO 直通，不占用 R0）',
+        '    JMP #start              ; 回到开头'
+    ].join('\n');
+
+    const PRESET_AB = [
+        '; A+B：读两个字节，相加后输出，然后继续下一组',
+        '; 调试提示：在十六进制控制台输入 03 04，可看到输出 07',
+        'start:',
+        '    LDI R1, #0x80',
+        '',
+        '    ; 等第一个输入',
+        '    SETTARGET #wait1',
+        'wait1:',
+        '    JNVI',
+        '    MOV R2, R3              ; [0x80] <- DI',
+        '',
+        '    ; 等第二个输入',
+        '    SETTARGET #wait2',
+        'wait2:',
+        '    JNVI',
+        '    MOV R0, R3              ; R0 <- DI',
+        '    ADD                     ; R0 <- R0 + [0x80]',
+        '    MOV R2, R0              ; [0x80] <- sum',
+        '',
+        '    ; 等输出空闲',
+        '    SETTARGET #waitout',
+        'waitout:',
+        '    JVO',
+        '    MOV R3, R2              ; DO <- sum',
+        '',
+        '    JMP #start'
+    ].join('\n');
+
+    function makeHelloProgram() {
+        const text = 'Hello, World!\n';
+        const lines = [
+            '; Hello, World!：逐字节输出',
+            '; 自动读模式下连续输出；手动读模式下每个字节都要点“读 1 字节”'
+        ];
+        Array.from(text).forEach((character, index) => {
+            const label = 'out' + index;
+            lines.push('    SETTARGET #' + label);
+            lines.push(label + ':');
+            lines.push('    JVO                     ; 等上一个输出被读走');
+            lines.push('    LDI R0, #0x' + hex2(character.charCodeAt(0) & 0xFF));
+            lines.push('    MOV R3, R0');
+        });
+        lines.push('    JMP #halt');
+        lines.push('halt:');
+        lines.push('    JMP                     ; TR 已指向 halt，忙等待');
+        return lines.join('\n');
+    }
+
+    const PRESETS = [
+        { id: 'echo', name: '回显（Echo）', text: PRESET_ECHO },
+        { id: 'ab', name: 'A+B 求和（文档示例）', text: PRESET_AB },
+        { id: 'hello', name: 'Hello, World!', text: makeHelloProgram() }
+    ];
+
+    /* ============================================================
+       DOM 引用
+       ============================================================ */
+    const ui = {};
+    function cacheUi() {
+        ui.themeBtn = $('themeBtn');
+        ui.lockChip = $('lockChip');
+        ui.programMeta = $('programMeta');
+        ui.runBtn = $('runBtn');
+        ui.stepBtn = $('stepBtn');
+        ui.resetBtn = $('resetBtn');
+        ui.speedRange = $('speedRange');
+        ui.speedLabel = $('speedLabel');
+        ui.hexBtn = $('hexBtn');
+        ui.separateMem = $('separateMem');
+        ui.presetSel = $('presetSel');
+        ui.gutterInner = $('gutterInner');
+        ui.lineHighlight = $('lineHighlight');
+        ui.lineError = $('lineError');
+        ui.source = $('source');
+        ui.statusDot = $('statusDot');
+        ui.statusMsg = $('statusMsg');
+        ui.byteMeta = $('byteMeta');
+        ui.editorPanel = $('editorPanel');
+        ui.stateBadge = $('stateBadge');
+        ui.tickMeta = $('tickMeta');
+        ui.vPc = $('vPc'); ui.sPc = $('sPc');
+        ui.vR0 = $('vR0'); ui.sR0 = $('sR0');
+        ui.vR1 = $('vR1'); ui.sR1 = $('sR1');
+        ui.vR2 = $('vR2'); ui.sR2 = $('sR2');
+        ui.vTr = $('vTr'); ui.sTr = $('sTr');
+        ui.vR3 = $('vR3'); ui.sR3 = $('sR3');
+        ui.sigVi = $('sigVi'); ui.viValue = $('viValue'); ui.viDetail = $('viDetail');
+        ui.sigVo = $('sigVo'); ui.voValue = $('voValue'); ui.voDetail = $('voDetail');
+        ui.sigRo = $('sigRo'); ui.roValue = $('roValue'); ui.roDetail = $('roDetail');
+        ui.riDot = $('riDot');
+        ui.sourceLine = $('sourceLine');
+        ui.romPanel = $('romPanel');
+        ui.romGrid = $('romGrid');
+        ui.romSumPc = $('romSumPc');
+        ui.romSumProg = $('romSumProg');
+        ui.memoryPanel = $('memoryPanel');
+        ui.memTitle = $('memTitle');
+        ui.memSumR1 = $('memSumR1');
+        ui.memSumProg = $('memSumProg');
+        ui.ramLegendPc = $('ramLegendPc');
+        ui.ramLegendProg = $('ramLegendProg');
+        ui.memoryGrid = $('memoryGrid');
+        ui.consoleModeSeg = $('consoleModeSeg');
+        ui.viewModeSeg = $('viewModeSeg');
+        ui.readModeSeg = $('readModeSeg');
+        ui.readOutBtn = $('readOutBtn');
+        ui.clearConsoleBtn = $('clearConsoleBtn');
+        ui.consoleBody = $('consoleBody');
+        ui.bufferStrip = $('bufferStrip');
+        ui.bufferCount = $('bufferCount');
+        ui.bufferPreview = $('bufferPreview');
+        ui.clearBufferBtn = $('clearBufferBtn');
+        ui.fileRow = $('fileRow');
+        ui.fileName = $('fileName');
+        ui.fileProgress = $('fileProgress');
+        ui.fileBar = $('fileBar');
+        ui.closeFileBtn = $('closeFileBtn');
+        ui.inputBox = $('inputBox');
+        ui.sendBtn = $('sendBtn');
+        ui.fileBtn = $('fileBtn');
+        ui.filePicker = $('filePicker');
+        ui.inputHint = $('inputHint');
+        ui.mixedWarning = $('mixedWarning');
+        ui.inputError = $('inputError');
+        ui.modalBackdrop = $('modalBackdrop');
+        ui.modalTitle = $('modalTitle');
+        ui.modalMeta = $('modalMeta');
+        ui.modalNote = $('modalNote');
+        ui.modalError = $('modalError');
+        ui.modalHex = $('modalHex');
+        ui.modalCopy = $('modalCopy');
+        ui.modalDisassemble = $('modalDisassemble');
+        ui.modalActionHint = $('modalActionHint');
+        ui.modalClose = $('modalClose');
+        ui.modalX = $('modalX');
+        ui.toast = $('toast');
+    }
+
+    /* ============================================================
+       应用状态
+       ============================================================ */
+    const cpu = new CpuCore();
+    const mem = cpu.mem;
+    const program = cpu.program;
+
+    const LINE_HEIGHT = 21;
+    const PAD_TOP = 10;
+    const MAX_IO_EVENTS = 8192;
+    const MAX_STEPS_PER_FRAME = 30000;
+    const MAX_FILE_BYTES = 16 * 1024 * 1024;
+    const THEME_KEY = 'elements-plus.asm-interpreter.theme';
+    const TEXT_FILE_ACCEPT = '.txt,.md,.markdown,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.ini,.cfg,.conf,.html,.htm,.css,.js,.mjs,.ts,.c,.h,.cpp,.java,.py,.asm,.s,.sh,.bat,text/*';
+
+    let phase = 'idle';
+    let separated = false;
+    let session = null;
+    let statusError = null;
+    let consoleMode = 'text';
+    let viewMode = 'split';
+    let readMode = 'auto';
+    let roPulse = false;
+    let lastRiAt = -Infinity;
+    let lastManualReadAt = -Infinity;
+    let manualInput = { bytes: [], head: 0 };
+    let fileInput = null;
+    let fileEofLogged = false;
+    let ioEventCount = 0;
+    let limitHit = false;
+    let inputErrorTimer = 0;
+    let toastTimer = 0;
+    let modalInitialHex = '';
+    let lastFocused = null;
+    let currentIps = 256;
+    let rafId = 0;
+    let lastFrameTime = 0;
+    let speedAccumulator = 0;
+    let activeLine = -1;
+    let errorLine = -1;
+    let gutterLines = [];
+    let lastPcCell = null;
+    let lastR1Cell = null;
+    const memCells = new Array(256);
+    const romCells = new Array(256);
+    const memCache = new Int16Array(256);
+    const romCache = new Int16Array(256);
+    memCache.fill(-1);
+    romCache.fill(-1);
+
+    const con = {
+        log: [],
+        flushed: 0,
+        io: makeIoState(),
+        mixed: { streamEl: null, pending: null }
+    };
+
+    function makeLaneState() {
+        return {
+            bodyEl: null,
+            lineEl: null,
+            rowEl: null,
+            hexEl: null,
+            asciiEl: null,
+            cellCount: 0,
+            offset: 0,
+            decoder: null
+        };
+    }
+
+    function makeIoState() {
+        return {
+            blockEl: null,
+            lanes: {
+                in: makeLaneState(),
+                out: makeLaneState()
+            }
+        };
+    }
+
+    /* ============================================================
+       控制台渲染
+       ============================================================ */
+    function resetConsoleRenderState() {
+        con.io = makeIoState();
+        con.mixed = { streamEl: null, pending: null };
+    }
+
+    function isConsolePinned() {
+        const body = ui.consoleBody;
+        return body.scrollHeight - body.scrollTop - body.clientHeight < 40;
+    }
+
+    function scrollConsoleToBottom() {
+        ui.consoleBody.scrollTop = ui.consoleBody.scrollHeight;
+    }
+
+    function createLaneBlock() {
+        const block = document.createElement('div');
+        block.className = 'io-lanes';
+        for (const dir of ['in', 'out']) {
+            const laneEl = document.createElement('div');
+            laneEl.className = 'lane ' + dir;
+            const head = document.createElement('div');
+            head.className = 'lane-head';
+            head.textContent = (dir === 'in' ? '输入' : '输出') + (consoleMode === 'hex' ? ' · HEX' : '');
+            const body = document.createElement('div');
+            body.className = 'lane-body' + (consoleMode === 'hex' ? ' hex-body' : '');
+            laneEl.appendChild(head);
+            laneEl.appendChild(body);
+            block.appendChild(laneEl);
+            const lane = con.io.lanes[dir];
+            lane.bodyEl = body;
+            lane.lineEl = null;
+            lane.rowEl = null;
+            lane.hexEl = null;
+            lane.asciiEl = null;
+            lane.cellCount = 0;
+        }
+        ui.consoleBody.appendChild(block);
+        con.io.blockEl = block;
+    }
+
+    function endIoBlock() {
+        con.io.blockEl = null;
+        for (const dir of ['in', 'out']) {
+            const lane = con.io.lanes[dir];
+            lane.bodyEl = null;
+            lane.lineEl = null;
+            lane.rowEl = null;
+            lane.hexEl = null;
+            lane.asciiEl = null;
+            lane.cellCount = 0;
+        }
+    }
+
+    function ensureLaneLine(lane) {
+        if (!lane.lineEl) {
+            const line = document.createElement('div');
+            line.className = 'lane-line';
+            lane.bodyEl.appendChild(line);
+            lane.lineEl = line;
+        }
+        return lane.lineEl;
+    }
+
+    function escapeConsoleChar(ch) {
+        const code = ch.codePointAt(0);
+        if (ch === '\t') return '\t';
+        if (code < 0x20 || (code >= 0x7F && code < 0xA0)) {
+            return '\\x' + code.toString(16).toUpperCase().padStart(2, '0');
+        }
+        return ch;
+    }
+
+    function appendTextBytes(dir, bytes) {
+        if (!con.io.blockEl) createLaneBlock();
+        const lane = con.io.lanes[dir];
+        if (!lane.decoder) lane.decoder = new TextDecoder('utf-8');
+        const decoded = lane.decoder.decode(Uint8Array.from(bytes), { stream: true });
+        if (!decoded) return;
+
+        let buffer = '';
+        const flush = () => {
+            if (!buffer) return;
+            ensureLaneLine(lane).textContent += buffer;
+            buffer = '';
+        };
+
+        for (const ch of decoded) {
+            if (ch === '\r') continue;
+            if (ch === '\n') {
+                ensureLaneLine(lane);
+                flush();
+                lane.lineEl = null;
+                continue;
+            }
+            buffer += escapeConsoleChar(ch);
+        }
+        flush();
+    }
+
+    function appendHexBytes(dir, bytes) {
+        if (!con.io.blockEl) createLaneBlock();
+        const lane = con.io.lanes[dir];
+        for (const byte of bytes) {
+            if (!lane.rowEl || lane.cellCount >= 8) {
+                const row = document.createElement('div');
+                row.className = 'hex-lane-row';
+                const offset = document.createElement('span');
+                offset.className = 'hex-lane-off';
+                offset.textContent = hex4(lane.offset);
+                const hex = document.createElement('span');
+                hex.className = 'hex-lane-bytes';
+                const ascii = document.createElement('span');
+                ascii.className = 'hex-lane-ascii';
+                row.appendChild(offset);
+                row.appendChild(hex);
+                row.appendChild(ascii);
+                lane.bodyEl.appendChild(row);
+                lane.rowEl = row;
+                lane.hexEl = hex;
+                lane.asciiEl = ascii;
+                lane.cellCount = 0;
+            }
+            const hexCell = document.createElement('span');
+            hexCell.textContent = hex2(byte);
+            lane.hexEl.appendChild(hexCell);
+            const asciiCell = document.createElement('span');
+            asciiCell.textContent = isPrintableAscii(byte) ? String.fromCharCode(byte) : '.';
+            lane.asciiEl.appendChild(asciiCell);
+            lane.offset++;
+            lane.cellCount++;
+        }
+    }
+
+    /**
+     * 按“同方向连续字节”解码 UTF-8。运行段在字符中途结束时，每个剩余字节输出一个 U+FFFD，
+     * 因此跨输入/输出的半个字符不会融合，而同方向的完整字符仍能正常显示。
+     */
+    function decodeUtf8Run(bytes) {
+        const glyphs = [];
+        let index = 0;
+        while (index < bytes.length) {
+            const first = bytes[index];
+            if (first < 0x80) {
+                glyphs.push(String.fromCharCode(first));
+                index++;
+                continue;
+            }
+            let needed;
+            let codePoint;
+            let minimum;
+            if (first >= 0xC2 && first <= 0xDF) {
+                needed = 1;
+                codePoint = first & 0x1F;
+                minimum = 0x80;
+            } else if (first >= 0xE0 && first <= 0xEF) {
+                needed = 2;
+                codePoint = first & 0x0F;
+                minimum = 0x800;
+            } else if (first >= 0xF0 && first <= 0xF4) {
+                needed = 3;
+                codePoint = first & 0x07;
+                minimum = 0x10000;
+            } else {
+                glyphs.push('\uFFFD');
+                index++;
+                continue;
+            }
+
+            let cursor = index + 1;
+            let valid = true;
+            while (cursor <= index + needed && cursor < bytes.length) {
+                const continuation = bytes[cursor];
+                if ((continuation & 0xC0) !== 0x80) {
+                    valid = false;
+                    break;
+                }
+                codePoint = (codePoint << 6) | (continuation & 0x3F);
+                cursor++;
+            }
+            if (!valid) {
+                glyphs.push('\uFFFD');
+                index++;
+                continue;
+            }
+            if (cursor <= index + needed) {
+                while (index < bytes.length) {
+                    glyphs.push('\uFFFD');
+                    index++;
+                }
+                break;
+            }
+            if (codePoint < minimum || codePoint > 0x10FFFF || (codePoint >= 0xD800 && codePoint <= 0xDFFF)) {
+                glyphs.push('\uFFFD');
+                index++;
+                continue;
+            }
+            glyphs.push(String.fromCodePoint(codePoint));
+            index += needed + 1;
+        }
+        return glyphs;
+    }
+
+    function ensureMixedStream() {
+        if (!con.mixed.streamEl) {
+            const stream = document.createElement('div');
+            stream.className = 'mixed-stream';
+            ui.consoleBody.appendChild(stream);
+            con.mixed.streamEl = stream;
+        }
+        return con.mixed.streamEl;
+    }
+
+    function renderMixedRun(dir, bytes) {
+        if (consoleMode === 'hex') {
+            return bytes.map(hex2).join(' ') + ' ';
+        }
+        const glyphs = decodeUtf8Run(bytes);
+        let text = '';
+        for (const glyph of glyphs) {
+            const code = glyph.codePointAt(0);
+            if (glyph === '\n') text += '\n';
+            else if (glyph === '\r') continue;
+            else if (glyph === '\t') text += '\t';
+            else if (code < 0x20 || (code >= 0x7F && code < 0xA0)) {
+                text += '\\x' + code.toString(16).toUpperCase().padStart(2, '0');
+            } else {
+                text += glyph;
+            }
+        }
+        return text;
+    }
+
+    function appendMixedBytes(dir, bytes) {
+        const stream = ensureMixedStream();
+        let pending = con.mixed.pending;
+        if (!pending || pending.dir !== dir) {
+            const span = document.createElement('span');
+            span.className = 'mixed-seg ' + dir;
+            stream.appendChild(span);
+            pending = { dir: dir, bytes: [], spanEl: span };
+            con.mixed.pending = pending;
+        }
+        for (const byte of bytes) pending.bytes.push(byte);
+        pending.spanEl.textContent = renderMixedRun(dir, pending.bytes);
+    }
+
+    function appendSystemRow(event) {
+        const row = document.createElement('div');
+        row.className = 'log-row sys ' + (event.k || 'info');
+        const badge = document.createElement('span');
+        badge.className = 'log-badge';
+        badge.textContent = event.k === 'error' ? 'ERR' : event.k === 'warn' ? '!' : 'SYS';
+        const text = document.createElement('span');
+        text.className = 'log-text';
+        text.textContent = event.t;
+        row.appendChild(badge);
+        row.appendChild(text);
+        if (viewMode === 'mixed') {
+            ensureMixedStream().appendChild(row);
+            con.mixed.pending = null;
+        } else {
+            endIoBlock();
+            ui.consoleBody.appendChild(row);
+        }
+    }
+
+    function flushConsole(forceScroll) {
+        if (con.flushed >= con.log.length) {
+            if (forceScroll) scrollConsoleToBottom();
+            return;
+        }
+        const pinned = forceScroll || isConsolePinned();
+        let index = con.flushed;
+        while (index < con.log.length) {
+            const event = con.log[index];
+            if (event.d === 'sys') {
+                appendSystemRow(event);
+                index++;
+                continue;
+            }
+            const dir = event.d;
+            const bytes = [];
+            while (index < con.log.length && con.log[index].d === dir) {
+                bytes.push(con.log[index].b);
+                index++;
+            }
+            if (viewMode === 'mixed') appendMixedBytes(dir, bytes);
+            else if (consoleMode === 'text') appendTextBytes(dir, bytes);
+            else appendHexBytes(dir, bytes);
+        }
+        con.flushed = index;
+        if (pinned) scrollConsoleToBottom();
+    }
+
+    function logSystem(text, kind) {
+        con.log.push({ d: 'sys', t: String(text), k: kind || 'info' });
+        if (phase !== 'running') flushConsole(false);
+    }
+
+    function logIo(dir, byte) {
+        if (ioEventCount >= MAX_IO_EVENTS) {
+            pauseForLimit();
+            return;
+        }
+        ioEventCount++;
+        con.log.push({ d: dir, b: byte & 0xFF });
+    }
+
+    function rebuildConsole() {
+        resetConsoleRenderState();
+        ui.consoleBody.replaceChildren();
+        con.flushed = 0;
+        flushConsole(true);
+    }
+
+    function clearConsole() {
+        con.log.length = 0;
+        con.flushed = 0;
+        ioEventCount = 0;
+        limitHit = false;
+        resetConsoleRenderState();
+        ui.consoleBody.replaceChildren();
+        ui.consoleBody.scrollTop = 0;
+    }
+
+    function pauseForLimit() {
+        if (limitHit) return;
+        limitHit = true;
+        if (phase === 'running') setPhase('paused');
+        logSystem('控制台 IO 记录达到上限（' + MAX_IO_EVENTS + ' 字节），已自动暂停。清空控制台后可继续。', 'warn');
+        showToast('控制台记录已达上限，已自动暂停', 'warn');
+    }
+
+    /* ============================================================
+       输入缓冲区 / 文件
+       ============================================================ */
+    function pendingManualCount() {
+        return Math.max(0, manualInput.bytes.length - manualInput.head);
+    }
+
+    function pendingManualBytes(limit) {
+        const count = pendingManualCount();
+        const take = Math.min(count, limit);
+        return manualInput.bytes.slice(manualInput.head, manualInput.head + take);
+    }
+
+    function inputValid() {
+        if (fileInput) return fileInput.pos < fileInput.bytes.length;
+        return manualInput.head < manualInput.bytes.length;
+    }
+
+    function peekInput() {
+        if (fileInput) return fileInput.bytes[fileInput.pos];
+        return manualInput.bytes[manualInput.head];
+    }
+
+    function consumeInput() {
+        if (fileInput) {
+            if (fileInput.pos < fileInput.bytes.length) fileInput.pos++;
+            if (fileInput.pos >= fileInput.bytes.length && !fileEofLogged) {
+                fileEofLogged = true;
+                logSystem('输入文件已读完（EOF，共 ' + fileInput.bytes.length + ' 字节）。复位后文件指针归 0。', 'warn');
+                showToast('输入文件已读完（EOF）', 'warn');
+            }
+        } else {
+            if (manualInput.head < manualInput.bytes.length) manualInput.head++;
+            if (manualInput.head > 2048 && manualInput.head * 2 > manualInput.bytes.length) {
+                manualInput.bytes = manualInput.bytes.slice(manualInput.head);
+                manualInput.head = 0;
+            }
+        }
+    }
+
+    function enqueueBytes(bytes) {
+        for (const byte of bytes) manualInput.bytes.push(byte & 0xFF);
+    }
+
+    function clearInputBuffer(silent) {
+        manualInput = { bytes: [], head: 0 };
+        clearInputError();
+        if (!silent) {
+            renderAll(false);
+            showToast('输入缓冲区已清空', 'info');
+        }
+    }
+
+    function parseHexInput(raw) {
+        const stripped = String(raw).replace(/0[xX]/g, '');
+        const compact = stripped.replace(/[\s,;]+/g, '');
+        if (!compact) return { ok: false, error: '请输入十六进制字节，例如 48 65 6C' };
+        if (!/^[0-9a-fA-F]+$/.test(compact)) return { ok: false, error: '包含非十六进制字符' };
+        if (compact.length % 2 !== 0) return { ok: false, error: '十六进制字节必须成对（2 位 = 1 字节）' };
+        const bytes = [];
+        for (let index = 0; index < compact.length; index += 2) {
+            bytes.push(parseInt(compact.slice(index, index + 2), 16));
+        }
+        return { ok: true, bytes: bytes };
+    }
+
+    function submitInput() {
+        if (fileInput) {
+            showToast('正在使用文件输入，关闭文件后可手动输入', 'warn');
+            return;
+        }
+        const raw = ui.inputBox.value;
+        if (consoleMode === 'hex') {
+            const parsed = parseHexInput(raw);
+            if (!parsed.ok) {
+                showInputError(parsed.error);
+                return;
+            }
+            enqueueBytes(parsed.bytes);
+        } else {
+            const bytes = Array.from(new TextEncoder().encode(raw));
+            bytes.push(0x0A);
+            enqueueBytes(bytes);
+        }
+        ui.inputBox.value = '';
+        clearInputError();
+        renderAll(false);
+        ui.inputBox.focus();
+    }
+
+    function showInputError(message) {
+        ui.inputError.textContent = message;
+        ui.inputError.hidden = false;
+        clearTimeout(inputErrorTimer);
+        inputErrorTimer = setTimeout(clearInputError, 3500);
+    }
+
+    function clearInputError() {
+        clearTimeout(inputErrorTimer);
+        if (!ui.inputError) return;
+        ui.inputError.hidden = true;
+        ui.inputError.textContent = '';
+    }
+
+    function updateFileAccept() {
+        ui.filePicker.accept = consoleMode === 'hex' ? '' : TEXT_FILE_ACCEPT;
+    }
+
+    async function loadInputFile() {
+        if (phase === 'running') {
+            showToast('运行中不能更换输入文件，请先暂停', 'warn');
+            ui.filePicker.value = '';
+            return;
+        }
+        const files = ui.filePicker.files;
+        if (!files || !files[0]) return;
+        const file = files[0];
+        ui.filePicker.value = '';
+        if (file.size > MAX_FILE_BYTES) {
+            logSystem('文件过大（上限 16 MiB）：' + file.name, 'error');
+            showToast('文件过大，无法作为输入', 'error');
+            return;
+        }
+        try {
+            const buffer = await file.arrayBuffer();
+            fileInput = { name: file.name, bytes: new Uint8Array(buffer), pos: 0 };
+            fileEofLogged = false;
+            manualInput = { bytes: [], head: 0 };
+            clearInputError();
+            logSystem('已载入输入文件 ' + file.name + '（' + file.size + ' 字节，' + (consoleMode === 'hex' ? '二进制' : '文本') + '模式）。复位后文件指针归 0。', 'info');
+            if (file.size === 0) logSystem('文件为空：VI 将一直为 0。', 'warn');
+            showToast('已载入 ' + file.name + '（' + file.size + ' 字节）', 'info');
+            renderAll(true);
+        } catch (error) {
+            logSystem('读取文件失败：' + (error && error.message ? error.message : String(error)), 'error');
+            showToast('读取文件失败', 'error');
+        }
+    }
+
+    function closeInputFile() {
+        if (!fileInput) return;
+        if (phase === 'running') {
+            showToast('运行中不能关闭输入文件，请先暂停', 'warn');
+            return;
+        }
+        const name = fileInput.name;
+        fileInput = null;
+        fileEofLogged = false;
+        logSystem('已关闭输入文件 ' + name + '，恢复手动输入。', 'info');
+        renderAll(true);
+    }
+
+    /* ============================================================
+       运行控制
+       ============================================================ */
+    function setPhase(next) {
+        if (phase === next) return;
+        phase = next;
+        if (next === 'running') startRunLoop();
+        else stopRunLoop();
+        updateControls();
+    }
+
+    function startRunLoop() {
+        if (rafId) return;
+        lastFrameTime = performance.now();
+        speedAccumulator = 0;
+        rafId = requestAnimationFrame(runFrame);
+    }
+
+    function stopRunLoop() {
+        if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = 0;
+        }
+    }
+
+    function runFrame(timestamp) {
+        rafId = 0;
+        if (phase !== 'running') return;
+        const elapsed = Math.min(0.1, Math.max(0, (timestamp - lastFrameTime) / 1000));
+        lastFrameTime = timestamp;
+
+        if (currentIps === Infinity) {
+            for (let index = 0; index < MAX_STEPS_PER_FRAME && phase === 'running'; index++) {
+                stepOnce();
+            }
+        } else {
+            speedAccumulator += elapsed * currentIps;
+            let allowed = Math.floor(speedAccumulator);
+            speedAccumulator -= allowed;
+            if (allowed > MAX_STEPS_PER_FRAME) {
+                allowed = MAX_STEPS_PER_FRAME;
+                speedAccumulator = 0;
+            }
+            for (let index = 0; index < allowed && phase === 'running'; index++) {
+                stepOnce();
+            }
+        }
+
+        renderAll(false);
+        if (phase === 'running') rafId = requestAnimationFrame(runFrame);
+    }
+
+    function stepOnce() {
+        const vi = inputValid() ? 1 : 0;
+        const di = vi ? peekInput() : 0;
+        const ro = (readMode === 'auto' || roPulse) ? 1 : 0;
+        const info = cpu.step(vi, di, ro);
+
+        if (info.ri) {
+            logIo('in', di);
+            lastRiAt = performance.now();
+        }
+        if (info.output !== null) logIo('out', info.output);
+        // 先记录本拍的 IO，再消费输入；文件读完的系统消息因此排在最后一个字节之后。
+        if (info.ri) consumeInput();
+        if (roPulse) roPulse = false;
+    }
+
+    function toggleRun() {
+        if (phase === 'running') {
+            setPhase('paused');
+            renderAll(false);
+            return;
+        }
+        if (phase === 'paused') {
+            if (limitHit) {
+                showToast('控制台记录已满，先清空控制台再继续', 'warn');
+                return;
+            }
+            setPhase('running');
+            renderAll(false);
+            return;
+        }
+        beginExecution(true);
+    }
+
+    function stepFromUi() {
+        if (phase === 'running') return;
+        if (limitHit) {
+            showToast('控制台记录已满，先清空控制台再继续', 'warn');
+            return;
+        }
+        if (phase === 'idle') {
+            if (!beginExecution(false)) return;
+        }
+        stepOnce();
+        renderAll(false);
+    }
+
+    function beginExecution(autoRun) {
+        const result = assembleProgram(ui.source.value);
+        if (!result.ok) {
+            showCompileErrors(result.errors, '汇编失败');
+            return false;
+        }
+        mem.fill(0);
+        program.fill(0);
+        if (separated) program.set(result.image);
+        else mem.set(result.image);
+        cpu.separated = separated;
+        session = {
+            count: result.count,
+            end: result.end,
+            lineForAddr: result.lineForAddr
+        };
+        cpu.reset();
+        roPulse = false;
+        lastRiAt = -Infinity;
+        lastManualReadAt = -Infinity;
+        if (fileInput) {
+            fileInput.pos = 0;
+            fileEofLogged = false;
+        }
+        clearErrorLine();
+        statusError = null;
+        logSystem('已载入 ' + result.count + ' 字节（汇编源码）' + (autoRun ? '，开始运行。' : '，等待单步。'), 'info');
+        setPhase(autoRun ? 'running' : 'paused');
+        updateProgramRange();
+        updateMeta();
+        updateStatus();
+        renderAll(true);
+        return true;
+    }
+
+    function resetAll() {
+        setPhase('idle');
+        stopRunLoop();
+        session = null;
+        mem.fill(0);
+        program.fill(0);
+        cpu.separated = separated;
+        cpu.reset();
+        roPulse = false;
+        lastRiAt = -Infinity;
+        lastManualReadAt = -Infinity;
+        manualInput = { bytes: [], head: 0 };
+        if (fileInput) {
+            fileInput.pos = 0;
+            fileEofLogged = false;
+        }
+        clearInputError();
+        clearErrorLine();
+        setActiveLine(-1);
+        statusError = null;
+        clearConsole();
+        updateProgramRange();
+        const fileNote = fileInput ? '；文件 ' + fileInput.name + ' 指针归 0' : '';
+        const memNote = separated ? '，程序 ROM 与数据 RAM 清零' : '';
+        logSystem('已复位：PC=0x00，寄存器与输入缓冲清零' + memNote + fileNote + '。', 'info');
+        updateMeta();
+        updateStatus();
+        renderAll(true);
+    }
+
+    /* ============================================================
+       编译错误 / 状态 / 编辑器
+       ============================================================ */
+    function showCompileErrors(errors, prefix) {
+        const list = Array.isArray(errors) && errors.length ? errors : [{ line: 0, message: '未知错误' }];
+        const first = list[0];
+        statusError = (prefix || '汇编失败') + ' · 第 ' + (first.line + 1) + ' 行：' + first.message;
+        showErrorLine(first.line);
+        const max = Math.min(list.length, 8);
+        for (let index = 0; index < max; index++) {
+            logSystem('第 ' + (list[index].line + 1) + ' 行：' + list[index].message, 'error');
+        }
+        if (list.length > max) logSystem('…还有 ' + (list.length - max) + ' 个错误未显示', 'error');
+        showToast(prefix || '汇编失败', 'error');
+        updateStatus();
+        renderAll(false);
+    }
+
+    function updateStatus() {
+        ui.statusMsg.classList.toggle('error', !!statusError);
+        if (statusError) {
+            setText(ui.statusMsg, statusError);
+            ui.statusDot.className = 'status-dot error';
+            return;
+        }
+        if (phase === 'idle') {
+            setText(ui.statusMsg, '就绪 · 编辑程序后点击运行');
+            ui.statusDot.className = 'status-dot idle';
+            return;
+        }
+        const instruction = disassembleByte(codeByte(cpu.pc)).text;
+        const prefix = phase === 'running' ? '运行中' : '已暂停';
+        const suffix = phase === 'paused' ? ' · 复位后可编辑' : '';
+        setText(ui.statusMsg, prefix + ' · PC 0x' + hex2(cpu.pc) + ' · ' + instruction + suffix);
+        ui.statusDot.className = 'status-dot ' + phase;
+    }
+
+    function updateMeta() {
+        const lineCount = ui.source.value.split('\n').length;
+        setText(ui.programMeta, lineCount + ' 行');
+        if (session && phase !== 'idle') setText(ui.byteMeta, session.count + ' / 256 字节');
+        else setText(ui.byteMeta, '未汇编');
+    }
+
+    function updateControls() {
+        const locked = phase !== 'idle';
+        ui.source.readOnly = locked;
+        ui.source.setAttribute('aria-readonly', locked ? 'true' : 'false');
+        ui.presetSel.disabled = locked;
+        ui.separateMem.disabled = locked;
+        ui.separateMem.checked = separated;
+        ui.separateMem.title = locked
+            ? '复位后可切换程序/数据分离'
+            : '分离后程序位于只读 ROM，数据使用独立 RAM';
+        ui.hexBtn.title = locked
+            ? '查看十六进制机器码；复位后才能反汇编'
+            : '查看/编辑十六进制机器码；修改后可反汇编回程序区';
+        ui.lockChip.hidden = !locked;
+        ui.editorPanel.classList.toggle('locked', locked);
+        ui.runBtn.textContent = phase === 'running' ? '⏸ 暂停' : phase === 'paused' ? '▶ 继续' : '▶ 运行';
+        ui.runBtn.classList.toggle('running', phase === 'running');
+        ui.stepBtn.disabled = phase === 'running';
+        ui.stepBtn.title = phase === 'running' ? '运行中不可单步' : '执行一条指令';
+        const canRead = readMode === 'manual' && cpu.vo;
+        ui.readOutBtn.disabled = !canRead;
+        ui.readOutBtn.classList.toggle('attention', canRead);
+        ui.fileBtn.disabled = phase === 'running';
+        ui.closeFileBtn.disabled = phase === 'running';
+        ui.filePicker.disabled = phase === 'running';
+        ui.inputBox.disabled = !!fileInput;
+        ui.sendBtn.disabled = !!fileInput;
+        ui.fileBtn.textContent = fileInput ? '更换文件' : '打开文件';
+        ui.consoleModeSeg.querySelectorAll('[data-mode]').forEach((button) => {
+            const active = button.dataset.mode === consoleMode;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        ui.viewModeSeg.querySelectorAll('[data-view]').forEach((button) => {
+            const active = button.dataset.view === viewMode;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        ui.readModeSeg.querySelectorAll('[data-read]').forEach((button) => {
+            const active = button.dataset.read === readMode;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+
+    function setSourceText(text) {
+        if (phase !== 'idle') return false;
+        ui.source.value = text;
+        ui.source.scrollTop = 0;
+        ui.source.scrollLeft = 0;
+        ui.source.setSelectionRange(0, 0);
+        session = null;
+        statusError = null;
+        clearErrorLine();
+        setActiveLine(-1);
+        clearInputError();
+        renderGutter();
+        updateMeta();
+        updateControls();
+        syncEditorScroll();
+        updateHighlightVisibility();
+        updateStatus();
+        return true;
+    }
+
+    function onSourceEdited() {
+        if (phase !== 'idle') return;
+        statusError = null;
+        session = null;
+        clearErrorLine();
+        setActiveLine(-1);
+        clearInputError();
+        renderGutter();
+        updateMeta();
+        updateStatus();
+        updateHighlightVisibility();
+        syncEditorScroll();
+    }
+
+    /* ============================================================
+       编辑器行号 / 高亮
+       ============================================================ */
+    function renderGutter() {
+        const count = ui.source.value.split('\n').length;
+        const fragment = document.createDocumentFragment();
+        gutterLines = new Array(count);
+        for (let index = 0; index < count; index++) {
+            const line = document.createElement('div');
+            line.className = 'ln';
+            line.textContent = String(index + 1);
+            fragment.appendChild(line);
+            gutterLines[index] = line;
+        }
+        ui.gutterInner.replaceChildren(fragment);
+        ui.gutterInner.style.transform = 'translateY(' + (-ui.source.scrollTop) + 'px)';
+        setText(ui.programMeta, count + ' 行');
+    }
+
+    function setActiveLine(line) {
+        if (line === activeLine) return;
+        if (activeLine >= 0 && gutterLines[activeLine]) gutterLines[activeLine].classList.remove('active');
+        activeLine = line;
+        if (line >= 0 && gutterLines[line]) {
+            gutterLines[line].classList.add('active');
+            updateLineHighlightPosition();
+            scrollLineIntoView(line);
+        }
+    }
+
+    function showErrorLine(line) {
+        if (errorLine >= 0 && gutterLines[errorLine]) gutterLines[errorLine].classList.remove('error');
+        errorLine = line;
+        if (line >= 0 && gutterLines[line]) {
+            gutterLines[line].classList.add('error');
+            updateErrorPosition();
+            scrollLineIntoView(line);
+        }
+        ui.lineError.classList.toggle('visible', line >= 0);
+    }
+
+    function clearErrorLine() {
+        if (errorLine >= 0 && gutterLines[errorLine]) gutterLines[errorLine].classList.remove('error');
+        errorLine = -1;
+        ui.lineError.classList.remove('visible');
+    }
+
+    function updateLineHighlightPosition() {
+        if (activeLine < 0) {
+            ui.lineHighlight.classList.remove('visible');
+            return;
+        }
+        const top = PAD_TOP + activeLine * LINE_HEIGHT - ui.source.scrollTop;
+        ui.lineHighlight.style.transform = 'translateY(' + top + 'px)';
+        ui.lineHighlight.classList.toggle('visible', phase !== 'idle');
+    }
+
+    function updateErrorPosition() {
+        if (errorLine < 0) {
+            ui.lineError.classList.remove('visible');
+            return;
+        }
+        const top = PAD_TOP + errorLine * LINE_HEIGHT - ui.source.scrollTop;
+        ui.lineError.style.transform = 'translateY(' + top + 'px)';
+        ui.lineError.classList.add('visible');
+    }
+
+    function updateHighlightVisibility() {
+        if (phase === 'idle' || !session) {
+            ui.lineHighlight.classList.remove('visible');
+            updateErrorPosition();
+            return;
+        }
+        setActiveLine(session.lineForAddr[cpu.pc]);
+        updateLineHighlightPosition();
+        updateErrorPosition();
+    }
+
+    function syncEditorScroll() {
+        ui.gutterInner.style.transform = 'translateY(' + (-ui.source.scrollTop) + 'px)';
+        updateLineHighlightPosition();
+        updateErrorPosition();
+    }
+
+    function scrollLineIntoView(line) {
+        if (line < 0) return;
+        const top = PAD_TOP + line * LINE_HEIGHT;
+        const viewTop = ui.source.scrollTop;
+        const viewHeight = ui.source.clientHeight;
+        if (top < viewTop + PAD_TOP || top + LINE_HEIGHT > viewTop + viewHeight - 12) {
+            ui.source.scrollTop = Math.max(0, top - viewHeight / 2 + LINE_HEIGHT / 2);
+            syncEditorScroll();
+        }
+    }
+
+    /* ============================================================
+       渲染
+       ============================================================ */
+    function codeByte(address) {
+        return separated ? program[address & 0xFF] : mem[address & 0xFF];
+    }
+
+    function updateProgramRange() {
+        const end = session && phase !== 'idle' ? session.end : 0;
+        for (let index = 0; index < 256; index++) {
+            memCells[index].classList.toggle('prog', !separated && index < end);
+            romCells[index].classList.toggle('prog', separated && index < end);
+        }
+    }
+
+    function buildGrid(container, cells, cache) {
+        const fragment = document.createDocumentFragment();
+        const header = document.createElement('div');
+        header.className = 'mem-row head';
+        const blank = document.createElement('span');
+        blank.className = 'mem-off';
+        header.appendChild(blank);
+        for (let column = 0; column < 16; column++) {
+            const cell = document.createElement('span');
+            cell.className = 'mem-cell head';
+            cell.textContent = hexNibble(column);
+            header.appendChild(cell);
+        }
+        fragment.appendChild(header);
+
+        for (let rowIndex = 0; rowIndex < 16; rowIndex++) {
+            const row = document.createElement('div');
+            row.className = 'mem-row';
+            const offset = document.createElement('span');
+            offset.className = 'mem-off';
+            offset.textContent = hex2(rowIndex * 16);
+            row.appendChild(offset);
+            for (let column = 0; column < 16; column++) {
+                const index = rowIndex * 16 + column;
+                const cell = document.createElement('span');
+                cell.className = 'mem-cell';
+                cell.textContent = '00';
+                cell.title = '0x' + hex2(index) + ' = 0x00 (0)';
+                cell.dataset.addr = String(index);
+                cells[index] = cell;
+                row.appendChild(cell);
+            }
+            fragment.appendChild(row);
+        }
+        container.replaceChildren(fragment);
+        cache.fill(-1);
+    }
+
+    function buildMemoryGrids() {
+        buildGrid(ui.memoryGrid, memCells, memCache);
+        buildGrid(ui.romGrid, romCells, romCache);
+    }
+
+    function updateGrid(data, cells, cache, force) {
+        for (let index = 0; index < 256; index++) {
+            const value = data[index];
+            if (force || cache[index] !== value) {
+                const cell = cells[index];
+                cell.textContent = hex2(value);
+                cell.title = '0x' + hex2(index) + ' = 0x' + hex2(value) + ' (' + value + ')' + charSuffix(value);
+                cell.classList.toggle('nonzero', value !== 0);
+                cache[index] = value;
+            }
+        }
+    }
+
+    function updateMemoryLayout() {
+        ui.romPanel.hidden = !separated;
+        setText(ui.memTitle, separated ? '数据 RAM' : '内存');
+        ui.memSumProg.hidden = separated;
+        ui.ramLegendPc.hidden = separated;
+        ui.ramLegendProg.hidden = separated;
+    }
+
+    function updateMemory(force) {
+        const active = phase !== 'idle' && !!session;
+        updateGrid(mem, memCells, memCache, force);
+        if (separated) updateGrid(program, romCells, romCache, force);
+
+        const pcCell = active ? (separated ? romCells[cpu.pc] : memCells[cpu.pc]) : null;
+        if (pcCell !== lastPcCell) {
+            if (lastPcCell) lastPcCell.classList.remove('pc');
+            lastPcCell = pcCell;
+            if (pcCell) pcCell.classList.add('pc');
+        }
+        const r1Cell = active ? memCells[cpu.r1] : null;
+        if (r1Cell !== lastR1Cell) {
+            if (lastR1Cell) lastR1Cell.classList.remove('r1');
+            lastR1Cell = r1Cell;
+            if (r1Cell) r1Cell.classList.add('r1');
+        }
+
+        const summary = active
+            ? '程序区 0x00~0x' + hex2(Math.max(session.end, 1) - 1) + ' · ' + session.count + ' 字节'
+            : '未载入程序';
+        setText(ui.memSumR1, 'R1 → 0x' + hex2(cpu.r1));
+        if (separated) {
+            setText(ui.romSumPc, 'PC → 0x' + hex2(cpu.pc));
+            setText(ui.romSumProg, summary);
+        } else {
+            setText(ui.memSumProg, summary);
+        }
+    }
+
+    function updateRegisters() {
+        setText(ui.vPc, '0x' + hex2(cpu.pc));
+        setText(ui.sPc, phase === 'idle' ? '程序计数器' : disassembleByte(codeByte(cpu.pc)).text);
+        setText(ui.vR0, '0x' + hex2(cpu.r0));
+        setText(ui.sR0, String(cpu.r0) + charSuffix(cpu.r0));
+        setText(ui.vR1, '0x' + hex2(cpu.r1));
+        setText(ui.sR1, '地址寄存器');
+        const r2 = mem[cpu.r1];
+        setText(ui.vR2, '0x' + hex2(r2));
+        setText(ui.sR2, '[0x' + hex2(cpu.r1) + '] = 0x' + hex2(r2));
+        setText(ui.vTr, '0x' + hex2(cpu.tr));
+        setText(ui.sTr, '跳转目标');
+        setText(ui.vR3, 'IO');
+        setText(ui.sR3, '读 DI · 写 DO');
+    }
+
+    function updateSignals() {
+        const now = performance.now();
+        const vi = inputValid() ? 1 : 0;
+        setText(ui.viValue, String(vi));
+        ui.sigVi.classList.toggle('on', vi === 1);
+        if (vi) {
+            const next = peekInput();
+            setText(ui.viDetail, 'DI 0x' + hex2(next) + charSuffix(next));
+        } else {
+            setText(ui.viDetail, 'DI —（等待输入）');
+        }
+
+        setText(ui.voValue, cpu.vo ? '1' : '0');
+        ui.sigVo.classList.toggle('on', !!cpu.vo);
+        setText(ui.voDetail, cpu.vo
+            ? 'DO 0x' + hex2(cpu.dout) + charSuffix(cpu.dout) + ' · 待读取'
+            : 'DO 0x' + hex2(cpu.dout) + ' · 空闲');
+
+        const auto = readMode === 'auto';
+        const roLevel = auto || roPulse || (now - lastManualReadAt < 150);
+        const riActive = now - lastRiAt < 180;
+        setText(ui.roValue, auto ? '自动' : '手动');
+        ui.sigRo.classList.toggle('on', roLevel);
+        ui.riDot.classList.toggle('on', riActive);
+        const roState = auto ? 'RO 恒为 1' : (cpu.vo ? '可读取' : '等待 VO');
+        setText(ui.roDetail, roState + ' · RI ' + (riActive ? '1' : '0'));
+    }
+
+    function updateSourceLine() {
+        if (fileInput) {
+            const end = fileInput.bytes.length;
+            const pos = Math.min(fileInput.pos, end);
+            setText(ui.sourceLine, '输入源：' + fileInput.name + ' · ' + pos + ' / ' + end + ' 字节' + (pos >= end ? ' · EOF' : ''));
+        } else {
+            setText(ui.sourceLine, '输入源：手动输入 · 缓冲 ' + pendingManualCount() + ' 字节 · VI=' + (inputValid() ? 1 : 0));
+        }
+    }
+
+    function previewPayload() {
+        const count = pendingManualCount();
+        if (consoleMode === 'hex') {
+            const preview = pendingManualBytes(48);
+            return {
+                text: preview.map(hex2).join(' ') + (count > preview.length ? ' …' : ''),
+                title: pendingManualBytes(256).map(hex2).join(' ') + (count > 256 ? ' …' : '')
+            };
+        }
+        const decoder = new TextDecoder('utf-8');
+        const previewBytes = pendingManualBytes(96);
+        let text = singleLinePreview(decoder.decode(Uint8Array.from(previewBytes)));
+        if (text.length > 140) text = text.slice(0, 140) + '…';
+        if (count > previewBytes.length) text += ' …';
+        let title = singleLinePreview(decoder.decode(Uint8Array.from(pendingManualBytes(512))));
+        if (title.length > 400) title = title.slice(0, 400) + '…';
+        if (count > 512) title += ' …';
+        return { text: text, title: title };
+    }
+
+    function updateBufferUi() {
+        const count = pendingManualCount();
+        const show = !fileInput && count > 0;
+        ui.bufferStrip.hidden = !show;
+        if (!show) return;
+        const payload = previewPayload();
+        setText(ui.bufferCount, count + ' B');
+        setText(ui.bufferPreview, payload.text);
+        ui.bufferPreview.title = payload.title;
+    }
+
+    function updateFileUi() {
+        ui.fileRow.hidden = !fileInput;
+        ui.inputBox.disabled = !!fileInput;
+        ui.sendBtn.disabled = !!fileInput;
+        ui.fileBtn.textContent = fileInput ? '更换文件' : '打开文件';
+        ui.fileBtn.disabled = phase === 'running';
+        ui.closeFileBtn.disabled = phase === 'running';
+        ui.filePicker.disabled = phase === 'running';
+        if (!fileInput) {
+            ui.fileName.textContent = '';
+            return;
+        }
+        const end = fileInput.bytes.length;
+        const pos = Math.min(fileInput.pos, end);
+        setText(ui.fileName, fileInput.name);
+        ui.fileName.title = fileInput.name;
+        setText(ui.fileProgress, pos + ' / ' + end + ' B' + (pos >= end ? ' · EOF' : ''));
+        ui.fileBar.style.width = (end ? (pos / end) * 100 : 0) + '%';
+        ui.fileBar.classList.toggle('eof', pos >= end);
+    }
+
+    function updateInputHint() {
+        let hint;
+        if (fileInput) {
+            const end = fileInput.bytes.length;
+            const pos = Math.min(fileInput.pos, end);
+            hint = pos >= end
+                ? '输入文件已读完（EOF）；复位后指针归 0，可重新运行。'
+                : '文件输入中：' + pos + ' / ' + end + ' 字节；复位后文件指针归 0。';
+        } else if (consoleMode === 'hex') {
+            hint = viewMode === 'mixed'
+                ? '十六进制模式（混合）：输入如 48 65 6C（不加换行）；蓝 = 输入，绿 = 输出，按字节处理顺序显示。'
+                : '十六进制模式（并排）：输入如 48 65 6C（不加换行）；蓝 = 输入，绿 = 输出，右侧为 ASCII 对照。';
+        } else {
+            hint = viewMode === 'mixed'
+                ? '文本模式（混合）：回车提交文本并附加 0x0A；蓝 = 输入，绿 = 输出，按字符处理顺序显示。'
+                : '文本模式（并排）：回车提交文本并附加 0x0A；蓝 = 输入，绿 = 输出。';
+        }
+        setText(ui.inputHint, hint);
+    }
+
+    function updateMixedWarning() {
+        const show = viewMode === 'mixed' && consoleMode === 'text';
+        ui.mixedWarning.hidden = !show;
+        if (show) {
+            setText(ui.mixedWarning, '混合查看模式下，不连续输入/输出的非 ASCII 字符可能不会正常显示（显示为 �）。');
+        }
+    }
+
+    function updateInputPlaceholder() {
+        if (fileInput) {
+            ui.inputBox.placeholder = '正在使用文件输入；复位后文件指针归 0';
+        } else if (consoleMode === 'hex') {
+            ui.inputBox.placeholder = '输入十六进制字节，如 48 65 6C，回车提交（不加换行）';
+        } else {
+            ui.inputBox.placeholder = '输入文本，回车提交（自动附加换行符）';
+        }
+    }
+
+    function updateStateBadge() {
+        const text = phase === 'running' ? '运行中' : phase === 'paused' ? '已暂停' : '空闲';
+        setText(ui.stateBadge, text);
+        ui.stateBadge.className = 'state-badge ' + phase;
+        setText(ui.tickMeta, 'tick ' + cpu.ticks);
+    }
+
+    function renderAll(force) {
+        updateControls();
+        updateStateBadge();
+        updateRegisters();
+        updateSignals();
+        updateSourceLine();
+        updateBufferUi();
+        updateFileUi();
+        updateInputHint();
+        updateMixedWarning();
+        updateInputPlaceholder();
+        updateMemoryLayout();
+        updateMemory(force);
+        updateStatus();
+        updateHighlightVisibility();
+        flushConsole(false);
+    }
+
+    /* ============================================================
+       速度 / 手动读取 / 模式
+       ============================================================ */
+    function updateSpeed() {
+        const value = Number(ui.speedRange.value);
+        if (value >= 100) {
+            currentIps = Infinity;
+            setText(ui.speedLabel, '无限制');
+        } else {
+            currentIps = Math.pow(2, (value / 100) * 10);
+            setText(ui.speedLabel, (currentIps < 10 ? currentIps.toFixed(1) : Math.round(currentIps)) + ' 条/秒');
+        }
+        speedAccumulator = 0;
+    }
+
+    function readOutputByte() {
+        if (readMode !== 'manual' || !cpu.vo) return;
+        lastManualReadAt = performance.now();
+        if (phase === 'running') {
+            roPulse = true;
+            showToast('已请求读取 0x' + hex2(cpu.dout) + '，将在下一拍生效', 'info');
+        } else {
+            roPulse = false;
+            cpu.vo = false;
+            showToast('已读取 1 字节：0x' + hex2(cpu.dout) + charSuffix(cpu.dout), 'info');
+        }
+        renderAll(false);
+    }
+
+    function setConsoleMode(mode) {
+        const next = mode === 'hex' ? 'hex' : 'text';
+        if (next === consoleMode) return;
+        consoleMode = next;
+        if (ui.inputBox.value) {
+            ui.inputBox.value = '';
+            showToast('输入模式已切换，输入框已清空', 'info');
+        }
+        clearInputError();
+        updateFileAccept();
+        updateControls();
+        updateInputHint();
+        updateMixedWarning();
+        updateInputPlaceholder();
+        rebuildConsole();
+        renderAll(false);
+    }
+
+    function setViewMode(mode) {
+        const next = mode === 'mixed' ? 'mixed' : 'split';
+        if (next === viewMode) return;
+        viewMode = next;
+        updateControls();
+        updateInputHint();
+        updateMixedWarning();
+        rebuildConsole();
+        renderAll(false);
+    }
+
+    function setReadMode(mode) {
+        const next = mode === 'auto' ? 'auto' : 'manual';
+        if (next === readMode) return;
+        readMode = next;
+        roPulse = false;
+        updateControls();
+        renderAll(false);
+    }
+
+    function setSeparated(next) {
+        if (phase !== 'idle') {
+            ui.separateMem.checked = separated;
+            showToast('复位后才能切换程序/数据分离', 'warn');
+            return;
+        }
+        next = !!next;
+        if (next === separated) return;
+        separated = next;
+        cpu.separated = separated;
+        updateControls();
+        updateMemoryLayout();
+        updateProgramRange();
+        updateMemory(true);
+        renderAll(true);
+        showToast(separated
+            ? '已启用程序/数据分离：程序位于只读 ROM，数据读写独立 RAM'
+            : '已合并程序与数据内存', 'info');
+    }
+
+    /* ============================================================
+       十六进制模态框
+       ============================================================ */
+    function isHexModalModified() {
+        return ui.modalHex.value.trim() !== modalInitialHex.trim();
+    }
+
+    function updateHexModalState() {
+        const locked = phase !== 'idle';
+        const modified = isHexModalModified();
+        ui.modalDisassemble.disabled = locked || !modified;
+        let hint;
+        if (locked) hint = '程序已载入；复位后才能反汇编到程序区。';
+        else if (!modified) hint = '修改十六进制内容后，反汇编按钮才会启用。';
+        else hint = '反汇编会替换程序区内容（标签、注释和伪指令不可恢复）。';
+        setText(ui.modalActionHint, hint);
+    }
+
+    function openHexModal() {
+        const result = assembleProgram(ui.source.value);
+        if (!result.ok) {
+            showCompileErrors(result.errors, '汇编失败');
+            return;
+        }
+        statusError = null;
+        clearErrorLine();
+        updateStatus();
+
+        const code = formatHexProgram(result.image, result.end);
+        modalInitialHex = code;
+        setText(ui.modalTitle, '16进制');
+        setText(ui.modalMeta, result.count + ' 字节 · 0x00~0x' + hex2(Math.max(result.end - 1, 0)));
+        setText(ui.modalNote, '当前汇编程序已转换为十六进制机器码。内容可编辑、复制；修改后才能反汇编回程序区。反汇编不可逆，会丢失标签、注释和伪指令。');
+        ui.modalHex.value = code;
+        ui.modalHex.scrollTop = 0;
+        ui.modalHex.readOnly = phase !== 'idle';
+        ui.modalError.hidden = true;
+        ui.modalError.textContent = '';
+        updateHexModalState();
+
+        lastFocused = document.activeElement;
+        ui.modalBackdrop.hidden = false;
+        document.body.classList.add('modal-open');
+        ui.modalHex.focus();
+        ui.modalHex.setSelectionRange(0, 0);
+    }
+
+    function closeModal() {
+        if (ui.modalBackdrop.hidden) return;
+        ui.modalBackdrop.hidden = true;
+        document.body.classList.remove('modal-open');
+        ui.modalError.hidden = true;
+        ui.modalError.textContent = '';
+        if (lastFocused && typeof lastFocused.focus === 'function' && lastFocused.isConnected) {
+            lastFocused.focus();
+        }
+        lastFocused = null;
+    }
+
+    function onModalHexInput() {
+        ui.modalError.hidden = true;
+        ui.modalError.textContent = '';
+        updateHexModalState();
+    }
+
+    function disassembleHexModal() {
+        if (ui.modalDisassemble.disabled) return;
+        const result = parseHexProgram(ui.modalHex.value);
+        if (!result.ok) {
+            const first = result.errors[0] || { line: 0, message: '未知错误' };
+            ui.modalError.textContent = '十六进制解析失败 · 第 ' + (first.line + 1) + ' 行：' + first.message
+                + (result.errors.length > 1 ? '（共 ' + result.errors.length + ' 个错误）' : '');
+            ui.modalError.hidden = false;
+            return;
+        }
+        const assembly = formatDisassembly(result.image, result.end);
+        closeModal();
+        setSourceText(assembly);
+        logSystem('已从 16 进制反汇编载入 ' + result.count + ' 个有效字节（范围 ' + result.end + ' 字节）。', 'info');
+        showToast('已反汇编并载入程序区', 'info');
+        renderAll(false);
+    }
+
+    async function copyModalHex(button) {
+        const text = ui.modalHex.value;
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            flashButton(button, '已复制');
+        } catch (error) {
+            try {
+                const helper = document.createElement('textarea');
+                helper.value = text;
+                helper.style.position = 'fixed';
+                helper.style.opacity = '0';
+                document.body.appendChild(helper);
+                helper.select();
+                document.execCommand('copy');
+                helper.remove();
+                flashButton(button, '已复制');
+            } catch (fallbackError) {
+                showToast('复制失败，请手动选择文本', 'error');
+            }
+        }
+    }
+
+    function flashButton(button, text) {
+        if (!button) return;
+        const original = button.dataset.originalLabel || button.textContent;
+        button.dataset.originalLabel = original;
+        button.textContent = text;
+        clearTimeout(button._flashTimer);
+        button._flashTimer = setTimeout(() => {
+            button.textContent = original;
+            delete button.dataset.originalLabel;
+        }, 1400);
+    }
+
+    /* ============================================================
+       示例 / 提示 / 主题
+       ============================================================ */
+    function buildPresetSelect() {
+        for (const preset of PRESETS) {
+            const option = document.createElement('option');
+            option.value = preset.id;
+            option.textContent = preset.name;
+            ui.presetSel.appendChild(option);
+        }
+    }
+
+    function loadPreset(id) {
+        if (!id) return;
+        if (phase !== 'idle') {
+            showToast('程序已载入，复位后才能载入示例', 'warn');
+            ui.presetSel.value = '';
+            return;
+        }
+        const preset = PRESETS.find((item) => item.id === id);
+        ui.presetSel.value = '';
+        if (!preset) return;
+        setSourceText(preset.text);
+        logSystem('已载入示例：' + preset.name, 'info');
+        showToast('已载入示例：' + preset.name, 'info');
+        renderAll(false);
+    }
+
+    function showToast(message, kind) {
+        clearTimeout(toastTimer);
+        ui.toast.textContent = message;
+        ui.toast.className = 'toast show' + (kind ? ' ' + kind : '');
+        toastTimer = setTimeout(() => {
+            ui.toast.className = 'toast' + (kind ? ' ' + kind : '');
+        }, 2600);
+    }
+
+    function updateThemeButton() {
+        const dark = document.documentElement.dataset.theme === 'dark';
+        ui.themeBtn.textContent = dark ? '☀' : '☾';
+        ui.themeBtn.title = dark ? '切换到浅色模式' : '切换到深色模式';
+        ui.themeBtn.setAttribute('aria-label', ui.themeBtn.title);
+    }
+
+    function toggleTheme() {
+        const dark = document.documentElement.dataset.theme === 'dark';
+        const next = dark ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+            localStorage.setItem(THEME_KEY, next);
+        } catch (error) {
+            /* 忽略存储失败 */
+        }
+        updateThemeButton();
+    }
+
+    /* ============================================================
+       事件绑定
+       ============================================================ */
+    function bindEvents() {
+        ui.themeBtn.addEventListener('click', toggleTheme);
+        ui.runBtn.addEventListener('click', toggleRun);
+        ui.stepBtn.addEventListener('click', stepFromUi);
+        ui.resetBtn.addEventListener('click', resetAll);
+        ui.speedRange.addEventListener('input', updateSpeed);
+
+        ui.hexBtn.addEventListener('click', openHexModal);
+        ui.presetSel.addEventListener('change', () => loadPreset(ui.presetSel.value));
+
+        ui.source.addEventListener('input', onSourceEdited);
+        ui.source.addEventListener('scroll', syncEditorScroll);
+        ui.source.addEventListener('keydown', (event) => {
+            if (event.key === 'Tab' && !event.shiftKey && phase === 'idle') {
+                event.preventDefault();
+                const start = ui.source.selectionStart;
+                const end = ui.source.selectionEnd;
+                ui.source.setRangeText('  ', start, end, 'end');
+                onSourceEdited();
+                return;
+            }
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.isComposing) {
+                event.preventDefault();
+                toggleRun();
+            }
+        });
+
+        ui.consoleModeSeg.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-mode]');
+            if (button) setConsoleMode(button.dataset.mode);
+        });
+        ui.viewModeSeg.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-view]');
+            if (button) setViewMode(button.dataset.view);
+        });
+        ui.readModeSeg.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-read]');
+            if (button) setReadMode(button.dataset.read);
+        });
+        ui.readOutBtn.addEventListener('click', readOutputByte);
+        ui.clearConsoleBtn.addEventListener('click', () => {
+            const wasLimit = limitHit;
+            clearConsole();
+            renderAll(false);
+            if (wasLimit) showToast('控制台已清空，可继续运行', 'info');
+        });
+
+        ui.clearBufferBtn.addEventListener('click', () => clearInputBuffer(false));
+        ui.sendBtn.addEventListener('click', submitInput);
+        ui.inputBox.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) {
+                event.preventDefault();
+                submitInput();
+            }
+        });
+        ui.inputBox.addEventListener('input', clearInputError);
+
+        ui.fileBtn.addEventListener('click', () => {
+            if (phase === 'running') {
+                showToast('运行中不能更换输入文件，请先暂停', 'warn');
+                return;
+            }
+            ui.filePicker.click();
+        });
+        ui.filePicker.addEventListener('change', loadInputFile);
+        ui.closeFileBtn.addEventListener('click', closeInputFile);
+
+        ui.memoryPanel.addEventListener('toggle', () => {
+            updateMemory(false);
+        });
+        ui.romPanel.addEventListener('toggle', () => {
+            updateMemory(false);
+        });
+        ui.separateMem.addEventListener('change', () => {
+            setSeparated(ui.separateMem.checked);
+        });
+
+        ui.modalCopy.addEventListener('click', () => copyModalHex(ui.modalCopy));
+        ui.modalDisassemble.addEventListener('click', disassembleHexModal);
+        ui.modalHex.addEventListener('input', onModalHexInput);
+        ui.modalClose.addEventListener('click', closeModal);
+        ui.modalX.addEventListener('click', closeModal);
+        ui.modalBackdrop.addEventListener('click', (event) => {
+            if (event.target === ui.modalBackdrop) closeModal();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                if (!ui.modalBackdrop.hidden) {
+                    event.preventDefault();
+                    closeModal();
+                } else {
+                    clearInputError();
+                }
+                return;
+            }
+            if (!ui.modalBackdrop.hidden && event.key === 'Tab') {
+                const focusable = Array.from(ui.modalBackdrop.querySelectorAll(
+                    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )).filter((element) => element.offsetParent !== null);
+                if (!focusable.length) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            }
+        });
+    }
+
+    /* ============================================================
+       初始化
+       ============================================================ */
+    function init() {
+        cacheUi();
+        buildMemoryGrids();
+        buildPresetSelect();
+        if (!document.documentElement.dataset.theme) {
+            document.documentElement.dataset.theme = window.matchMedia
+                && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        updateThemeButton();
+
+        ui.source.value = PRESET_ECHO;
+        ui.separateMem.checked = separated;
+        updateSpeed();
+        bindEvents();
+
+        updateFileAccept();
+        renderGutter();
+        updateMeta();
+        updateControls();
+        updateInputPlaceholder();
+        updateInputHint();
+        updateMixedWarning();
+        updateMemoryLayout();
+        updateProgramRange();
+        updateStatus();
+        logSystem('欢迎使用 8 位汇编解释器。点击“运行”开始；在下方输入框按回车提交输入（文本模式会自动附加 0x0A 换行）。', 'info');
+        renderAll(true);
+        exposeDebugApi();
+    }
+
+    /* ============================================================
+       调试 / 测试 API
+       ============================================================ */
+    function exposeDebugApi() {
+        window.__asmDemo = {
+            CpuCore: CpuCore,
+            assemble: assembleProgram,
+            parseHex: parseHexProgram,
+            disassembleByte: disassembleByte,
+            formatHexProgram: formatHexProgram,
+            formatDisassembly: formatDisassembly,
+            decodeUtf8Run: decodeUtf8Run,
+            getState: function () {
+                return {
+                    phase: phase,
+                    ticks: cpu.ticks,
+                    pc: cpu.pc,
+                    r0: cpu.r0,
+                    r1: cpu.r1,
+                    r2: mem[cpu.r1],
+                    tr: cpu.tr,
+                    vo: cpu.vo,
+                    dout: cpu.dout,
+                    session: session ? { count: session.count, end: session.end } : null,
+                    readMode: readMode,
+                    consoleMode: consoleMode,
+                    viewMode: viewMode,
+                    separated: separated,
+                    bufferCount: pendingManualCount(),
+                    file: fileInput ? { name: fileInput.name, pos: fileInput.pos, length: fileInput.bytes.length } : null,
+                    ioEventCount: ioEventCount,
+                    limitHit: limitHit,
+                    mem: Array.from(mem),
+                    rom: Array.from(program)
+                };
+            },
+            getConsoleText: function () { return ui.consoleBody.textContent; },
+            getLog: function () {
+                return con.log.map(function (event) {
+                    return event.d === 'sys'
+                        ? { direction: 'sys', text: event.t, kind: event.k }
+                        : { direction: event.d, byte: event.b };
+                });
+            },
+            ui: {
+                setSource: function (text) {
+                    if (phase !== 'idle') resetAll();
+                    return setSourceText(String(text));
+                },
+                run: toggleRun,
+                step: stepFromUi,
+                reset: resetAll,
+                setReadMode: setReadMode,
+                setConsoleMode: setConsoleMode,
+                setViewMode: setViewMode,
+                setSeparated: setSeparated,
+                submitText: function (text) {
+                    ui.inputBox.value = String(text);
+                    submitInput();
+                },
+                submitInput: submitInput,
+                readOutput: readOutputByte,
+                clearConsole: function () { clearConsole(); renderAll(false); },
+                clearBuffer: function () { clearInputBuffer(false); },
+                openHex: openHexModal,
+                getModalText: function () { return ui.modalHex.value; }
+            }
+        };
+    }
+
+    init();
+})();
+</script>
+</body>
+</html>

@@ -173,7 +173,10 @@ const themeConfig = {
     nav: [
         {text: 'Home', link: '/'},
         {text: '用户文档', link: '/user/'},
-        {text: '开发文档', link: '/dev/'}
+        {text: '开发文档', link: '/dev/'},
+        // demo 是 public 下的独立静态页面，不能走 SPA 路由（会去找同名的 .md 而 404），
+        // target 属性会让 VitePress 路由放行，交给浏览器整页跳转
+        {text: '汇编解释器', link: '/demo/asm-interpreter.html', target: '_self'}
     ],
 
     /**
