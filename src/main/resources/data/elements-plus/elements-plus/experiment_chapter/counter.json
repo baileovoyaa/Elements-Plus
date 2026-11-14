@@ -10,6 +10,7 @@
     "elements-plus:sawtooth_generator"
   ],
   "optional": [
+    "elements-plus:ripple_counter_8",
     "elements-plus:sawtooth_generator"
   ]
 }

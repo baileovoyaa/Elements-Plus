@@ -67,7 +67,8 @@ public class ModItemGroups {
                 ModItems.HIGH_VOLTAGE_COIL,
                 ModItems.CATALYST,
                 ModItems.LIGHTNING_BOTTLE,
-                ModItems.WASTE_BOTTLE
+                ModItems.WASTE_BOTTLE,
+                ModItems.NETHERITE_FRAGMENT
                 // 可以继续添加更多物品
         );
         registerTab(
@@ -106,7 +107,6 @@ public class ModItemGroups {
                 ModItems.DOPED_GLOWSTONE_DUST,
                 ModItems.HEAT_SINK_SUBSTRATE,
                 ModItems.INSULATING_LAYER,
-                ModItems.NETHERITE_FRAGMENT,
                 ModItems.PHOTORESIST,
                 ModItems.LITHOGRAPHY_MASK,
                 ModItems.COMPUTER
