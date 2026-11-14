@@ -19,6 +19,8 @@ import com.elementsplus.core.circuit.diagram.CircuitDiagram.Wire;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram.Wire.WireMaterial;
 import com.elementsplus.core.circuit.storage.StoredCircuit;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -166,6 +168,127 @@ public class CircuitSimulator {
         this.diagram = diagram;
         rebuild();
         evaluate();
+    }
+
+    /** 保存时序元件、RAM 和自定义元件的内部运行状态。 */
+    public CompoundTag saveState() {
+        CompoundTag tag = new CompoundTag();
+        tag.put("cap_q", saveLongMap(capQ));
+        tag.put("res_phase", saveIntMap(resPhase));
+        tag.put("tff_q", saveIntMap(tffQ));
+        tag.put("tff_prev", saveIntMap(tffPrevClock));
+        tag.put("register_q", saveLongMap(registerQ));
+        tag.put("ripple_q", saveIntMap(rippleCounterQ));
+        tag.put("ripple_prev", saveIntMap(rippleCounterPreviousClock));
+        tag.put("ripple_pending", saveIntMap(rippleCounterPendingToggles));
+        tag.put("counter_q", saveIntMap(counterQ));
+        tag.put("sawtooth_phase", saveIntMap(sawtoothPhase));
+        tag.put("ram", saveRam());
+        ListTag custom = new ListTag();
+        for (Map.Entry<Long, CustomRuntime> entry : customRuntimes.entrySet()) {
+            CustomRuntime runtime = entry.getValue();
+            if (runtime == null || runtime.simulator == null) continue;
+            CompoundTag item = new CompoundTag();
+            item.putLong("k", entry.getKey());
+            item.put("state", runtime.simulator.saveState());
+            custom.add(item);
+        }
+        tag.put("custom", custom);
+        return tag;
+    }
+
+    /** 在 setDiagram 之后恢复 saveState() 保存的状态。 */
+    public void loadState(CompoundTag tag) {
+        if (tag == null) return;
+        capQ.clear();
+        capQ.putAll(loadLongMap(tag.getList("cap_q", CompoundTag.TAG_COMPOUND)));
+        resPhase.clear();
+        resPhase.putAll(loadIntMap(tag.getList("res_phase", CompoundTag.TAG_COMPOUND)));
+        tffQ.clear();
+        tffQ.putAll(loadIntMap(tag.getList("tff_q", CompoundTag.TAG_COMPOUND)));
+        tffPrevClock.clear();
+        tffPrevClock.putAll(loadIntMap(tag.getList("tff_prev", CompoundTag.TAG_COMPOUND)));
+        registerQ.clear();
+        registerQ.putAll(loadLongMap(tag.getList("register_q", CompoundTag.TAG_COMPOUND)));
+        rippleCounterQ.clear();
+        rippleCounterQ.putAll(loadIntMap(tag.getList("ripple_q", CompoundTag.TAG_COMPOUND)));
+        rippleCounterPreviousClock.clear();
+        rippleCounterPreviousClock.putAll(loadIntMap(tag.getList("ripple_prev", CompoundTag.TAG_COMPOUND)));
+        rippleCounterPendingToggles.clear();
+        rippleCounterPendingToggles.putAll(loadIntMap(tag.getList("ripple_pending", CompoundTag.TAG_COMPOUND)));
+        counterQ.clear();
+        counterQ.putAll(loadIntMap(tag.getList("counter_q", CompoundTag.TAG_COMPOUND)));
+        sawtoothPhase.clear();
+        sawtoothPhase.putAll(loadIntMap(tag.getList("sawtooth_phase", CompoundTag.TAG_COMPOUND)));
+        loadRam(tag.getList("ram", CompoundTag.TAG_COMPOUND));
+        ListTag custom = tag.getList("custom", CompoundTag.TAG_COMPOUND);
+        for (int i = 0; i < custom.size(); i++) {
+            CompoundTag item = custom.getCompound(i);
+            CustomRuntime runtime = customRuntimes.get(item.getLong("k"));
+            if (runtime != null && runtime.simulator != null) {
+                runtime.simulator.loadState(item.getCompound("state"));
+            }
+        }
+        evaluate();
+    }
+
+    private static ListTag saveLongMap(Map<Long, Long> map) {
+        ListTag list = new ListTag();
+        for (Map.Entry<Long, Long> entry : map.entrySet()) {
+            CompoundTag item = new CompoundTag();
+            item.putLong("k", entry.getKey());
+            item.putLong("v", entry.getValue());
+            list.add(item);
+        }
+        return list;
+    }
+
+    private static Map<Long, Long> loadLongMap(ListTag list) {
+        Map<Long, Long> map = new HashMap<>();
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag item = list.getCompound(i);
+            map.put(item.getLong("k"), item.getLong("v"));
+        }
+        return map;
+    }
+
+    private static ListTag saveIntMap(Map<Long, Integer> map) {
+        ListTag list = new ListTag();
+        for (Map.Entry<Long, Integer> entry : map.entrySet()) {
+            CompoundTag item = new CompoundTag();
+            item.putLong("k", entry.getKey());
+            item.putInt("v", entry.getValue());
+            list.add(item);
+        }
+        return list;
+    }
+
+    private static Map<Long, Integer> loadIntMap(ListTag list) {
+        Map<Long, Integer> map = new HashMap<>();
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag item = list.getCompound(i);
+            map.put(item.getLong("k"), item.getInt("v"));
+        }
+        return map;
+    }
+
+    private ListTag saveRam() {
+        ListTag list = new ListTag();
+        for (Map.Entry<Long, int[]> entry : ramMemory.entrySet()) {
+            CompoundTag item = new CompoundTag();
+            item.putLong("k", entry.getKey());
+            item.putIntArray("v", entry.getValue());
+            list.add(item);
+        }
+        return list;
+    }
+
+    private void loadRam(ListTag list) {
+        ramMemory.clear();
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag item = list.getCompound(i);
+            ramMemory.put(item.getLong("k"), item.getIntArray("v"));
+        }
     }
 
     public void reset() {

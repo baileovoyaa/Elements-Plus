@@ -4,6 +4,7 @@ import com.elementsplus.blocks.entity.CrystallizerBlockEntity;
 import com.elementsplus.blocks.entity.ExperimentTableBlockEntity;
 import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
 import com.elementsplus.blocks.entity.PressureMachineBlockEntity;
+import com.elementsplus.blocks.entity.RedstoneInterfaceBlockEntity;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -16,6 +17,7 @@ public class ModBlockEntityTypes {
     public static final BlockEntityType<MetalCatalystBlockEntity> METAL_CATALYST = register("metal_catalyst", MetalCatalystBlockEntity::new, ModBlocks.METAL_CATALYST);
     public static final BlockEntityType<PressureMachineBlockEntity> PRESSURE_MACHINE = register("pressure_machine", PressureMachineBlockEntity::new, ModBlocks.PRESSURE_MACHINE);
     public static final BlockEntityType<ExperimentTableBlockEntity> EXPERIMENT_TABLE = register("experiment_table", ExperimentTableBlockEntity::new, ModBlocks.EXPERIMENT_TABLE);
+    public static final BlockEntityType<RedstoneInterfaceBlockEntity> REDSTONE_INTERFACE = register("redstone_interface", RedstoneInterfaceBlockEntity::new, ModBlocks.REDSTONE_INTERFACE);
 
     private static <T extends BlockEntity> BlockEntityType<T> register(String name, BlockEntityType.BlockEntitySupplier<T> entityFactory, Block... blocks) {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, name);

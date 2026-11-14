@@ -8,6 +8,7 @@ import com.elementsplus.client.screen.ExperimentTableScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
 import com.elementsplus.client.screen.MetalCatalystScreen;
 import com.elementsplus.client.screen.PressureMachineScreen;
+import com.elementsplus.client.screen.RedstoneInterfaceScreen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screens.MenuScreens;
@@ -21,6 +22,7 @@ public class ModMenuScreens {
         MenuScreens.register(ModMenuTypes.PRESSURE_MACHINE, PressureMachineScreen::new);
         MenuScreens.register(ModMenuTypes.LITHOGRAPHY_MACHINE, LithographyMachineScreen::new);
         MenuScreens.register(ModMenuTypes.EXPERIMENT_TABLE, ExperimentTableScreen::new);
+        MenuScreens.register(ModMenuTypes.REDSTONE_INTERFACE, RedstoneInterfaceScreen::new);
         MenuScreens.register(ModMenuTypes.CIRCUIT_ALBUM, CircuitAlbumScreen::new);
     }
 }

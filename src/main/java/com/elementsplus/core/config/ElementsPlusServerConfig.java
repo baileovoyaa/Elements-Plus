@@ -29,13 +29,19 @@ public final class ElementsPlusServerConfig {
     public static final String ASYNC_EXPERIMENT_TESTS = "async_experiment_tests";
     public static final String ALLOW_SURVIVAL_CREATIVE_COMPONENT = "allow_survival_creative_component";
     public static final String CIRCUIT_ALBUM_CAPACITY = "circuit_album_capacity";
+    public static final String INTERFACE_SAMPLE_TICKS = "interface_sample_ticks";
+    public static final String INTERFACE_AVG_MSPT_LIMIT = "interface_avg_mspt_limit";
+    public static final String INTERFACE_MAX_MSPT_LIMIT = "interface_max_mspt_limit";
 
     public static final List<String> OPTIONS = List.of(
             CUSTOM_COMPONENT_NESTING_LIMIT,
             ALLOW_INFINITE_IN_FINITE_CIRCUIT,
             ASYNC_EXPERIMENT_TESTS,
             ALLOW_SURVIVAL_CREATIVE_COMPONENT,
-            CIRCUIT_ALBUM_CAPACITY
+            CIRCUIT_ALBUM_CAPACITY,
+            INTERFACE_SAMPLE_TICKS,
+            INTERFACE_AVG_MSPT_LIMIT,
+            INTERFACE_MAX_MSPT_LIMIT
     );
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -44,12 +50,18 @@ public final class ElementsPlusServerConfig {
     private static final boolean DEFAULT_ASYNC_EXPERIMENT_TESTS = false;
     private static final boolean DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT = false;
     private static final int DEFAULT_CIRCUIT_ALBUM_CAPACITY = 50;
+    private static final int DEFAULT_INTERFACE_SAMPLE_TICKS = 100;
+    private static final int DEFAULT_INTERFACE_AVG_MSPT_LIMIT = 10;
+    private static final int DEFAULT_INTERFACE_MAX_MSPT_LIMIT = 100;
 
     private static volatile int customComponentNestingLimit = DEFAULT_NESTING_LIMIT;
     private static volatile boolean allowInfiniteInFiniteCircuit = DEFAULT_ALLOW_INFINITE_IN_FINITE;
     private static volatile boolean asyncExperimentTests = DEFAULT_ASYNC_EXPERIMENT_TESTS;
     private static volatile boolean allowSurvivalCreativeComponent = DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT;
     private static volatile int circuitAlbumCapacity = DEFAULT_CIRCUIT_ALBUM_CAPACITY;
+    private static volatile int interfaceSampleTicks = DEFAULT_INTERFACE_SAMPLE_TICKS;
+    private static volatile int interfaceAvgMsptLimit = DEFAULT_INTERFACE_AVG_MSPT_LIMIT;
+    private static volatile int interfaceMaxMsptLimit = DEFAULT_INTERFACE_MAX_MSPT_LIMIT;
     private static volatile @Nullable Path configFile;
 
     private ElementsPlusServerConfig() {
@@ -75,6 +87,18 @@ public final class ElementsPlusServerConfig {
         return circuitAlbumCapacity;
     }
 
+    public static int interfaceSampleTicks() {
+        return interfaceSampleTicks;
+    }
+
+    public static int interfaceAvgMsptLimit() {
+        return interfaceAvgMsptLimit;
+    }
+
+    public static int interfaceMaxMsptLimit() {
+        return interfaceMaxMsptLimit;
+    }
+
     public static boolean isOption(String option) {
         return OPTIONS.contains(option);
     }
@@ -86,6 +110,9 @@ public final class ElementsPlusServerConfig {
             case ASYNC_EXPERIMENT_TESTS -> Boolean.toString(asyncExperimentTests);
             case ALLOW_SURVIVAL_CREATIVE_COMPONENT -> Boolean.toString(allowSurvivalCreativeComponent);
             case CIRCUIT_ALBUM_CAPACITY -> Integer.toString(circuitAlbumCapacity);
+            case INTERFACE_SAMPLE_TICKS -> Integer.toString(interfaceSampleTicks);
+            case INTERFACE_AVG_MSPT_LIMIT -> Integer.toString(interfaceAvgMsptLimit);
+            case INTERFACE_MAX_MSPT_LIMIT -> Integer.toString(interfaceMaxMsptLimit);
             default -> "";
         };
     }
@@ -156,6 +183,36 @@ public final class ElementsPlusServerConfig {
         return false;
     }
 
+    public static boolean setInterfaceSampleTicks(int value) {
+        int previous = interfaceSampleTicks;
+        interfaceSampleTicks = Math.max(0, value);
+        if (save()) {
+            return true;
+        }
+        interfaceSampleTicks = previous;
+        return false;
+    }
+
+    public static boolean setInterfaceAvgMsptLimit(int value) {
+        int previous = interfaceAvgMsptLimit;
+        interfaceAvgMsptLimit = Math.max(0, value);
+        if (save()) {
+            return true;
+        }
+        interfaceAvgMsptLimit = previous;
+        return false;
+    }
+
+    public static boolean setInterfaceMaxMsptLimit(int value) {
+        int previous = interfaceMaxMsptLimit;
+        interfaceMaxMsptLimit = Math.max(0, value);
+        if (save()) {
+            return true;
+        }
+        interfaceMaxMsptLimit = previous;
+        return false;
+    }
+
     /**
      * 收到服务端同步的配置时调用。客户端只使用这些值进行预览校验。
      */
@@ -178,6 +235,9 @@ public final class ElementsPlusServerConfig {
         asyncExperimentTests = DEFAULT_ASYNC_EXPERIMENT_TESTS;
         allowSurvivalCreativeComponent = DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT;
         circuitAlbumCapacity = DEFAULT_CIRCUIT_ALBUM_CAPACITY;
+        interfaceSampleTicks = DEFAULT_INTERFACE_SAMPLE_TICKS;
+        interfaceAvgMsptLimit = DEFAULT_INTERFACE_AVG_MSPT_LIMIT;
+        interfaceMaxMsptLimit = DEFAULT_INTERFACE_MAX_MSPT_LIMIT;
 
         if (!Files.exists(configFile)) {
             save();
@@ -206,6 +266,18 @@ public final class ElementsPlusServerConfig {
                     && root.get(CIRCUIT_ALBUM_CAPACITY).isJsonPrimitive()) {
                 circuitAlbumCapacity = Math.max(0, root.get(CIRCUIT_ALBUM_CAPACITY).getAsInt());
             }
+            if (root.has(INTERFACE_SAMPLE_TICKS)
+                    && root.get(INTERFACE_SAMPLE_TICKS).isJsonPrimitive()) {
+                interfaceSampleTicks = Math.max(0, root.get(INTERFACE_SAMPLE_TICKS).getAsInt());
+            }
+            if (root.has(INTERFACE_AVG_MSPT_LIMIT)
+                    && root.get(INTERFACE_AVG_MSPT_LIMIT).isJsonPrimitive()) {
+                interfaceAvgMsptLimit = Math.max(0, root.get(INTERFACE_AVG_MSPT_LIMIT).getAsInt());
+            }
+            if (root.has(INTERFACE_MAX_MSPT_LIMIT)
+                    && root.get(INTERFACE_MAX_MSPT_LIMIT).isJsonPrimitive()) {
+                interfaceMaxMsptLimit = Math.max(0, root.get(INTERFACE_MAX_MSPT_LIMIT).getAsInt());
+            }
         } catch (Exception e) {
             ElementsPlus.LOGGER.warn("Failed to load server config {}", configFile, e);
             return;
@@ -226,6 +298,9 @@ public final class ElementsPlusServerConfig {
         root.addProperty(ASYNC_EXPERIMENT_TESTS, asyncExperimentTests);
         root.addProperty(ALLOW_SURVIVAL_CREATIVE_COMPONENT, allowSurvivalCreativeComponent);
         root.addProperty(CIRCUIT_ALBUM_CAPACITY, circuitAlbumCapacity);
+        root.addProperty(INTERFACE_SAMPLE_TICKS, interfaceSampleTicks);
+        root.addProperty(INTERFACE_AVG_MSPT_LIMIT, interfaceAvgMsptLimit);
+        root.addProperty(INTERFACE_MAX_MSPT_LIMIT, interfaceMaxMsptLimit);
         try {
             Files.createDirectories(file.getParent());
             Files.writeString(file, GSON.toJson(root) + System.lineSeparator(), StandardCharsets.UTF_8);
@@ -244,5 +319,8 @@ public final class ElementsPlusServerConfig {
         asyncExperimentTests = DEFAULT_ASYNC_EXPERIMENT_TESTS;
         allowSurvivalCreativeComponent = DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT;
         circuitAlbumCapacity = DEFAULT_CIRCUIT_ALBUM_CAPACITY;
+        interfaceSampleTicks = DEFAULT_INTERFACE_SAMPLE_TICKS;
+        interfaceAvgMsptLimit = DEFAULT_INTERFACE_AVG_MSPT_LIMIT;
+        interfaceMaxMsptLimit = DEFAULT_INTERFACE_MAX_MSPT_LIMIT;
     }
 }

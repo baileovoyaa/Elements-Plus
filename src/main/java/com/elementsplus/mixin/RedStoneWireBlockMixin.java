@@ -1,5 +1,6 @@
 package com.elementsplus.mixin;
 
+import com.elementsplus.blocks.RedstoneInterfaceBlock;
 import com.elementsplus.blocks.pipe.AbstractPipeBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -29,6 +30,13 @@ public class RedStoneWireBlockMixin {
     private static void shouldConnectTo(BlockState blockState, Direction direction, CallbackInfoReturnable<Boolean> cir) {
         if (blockState.getBlock() instanceof AbstractPipeBlock pipeBlock) {
             cir.setReturnValue(pipeBlock.isSideConnectable(blockState, direction));
+        } else if (blockState.getBlock() instanceof RedstoneInterfaceBlock) {
+            int mask = blockState.getValue(RedstoneInterfaceBlock.REDSTONE_CONNECTIONS);
+            if (direction == null) {
+                cir.setReturnValue(mask != 0);
+            } else {
+                cir.setReturnValue((mask & (1 << direction.getOpposite().ordinal())) != 0);
+            }
         }
     }
 

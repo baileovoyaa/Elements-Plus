@@ -1,0 +1,9 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "elements-plus:block/redstone_interface"
+      }
+    }
+  ]
+}

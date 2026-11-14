@@ -260,6 +260,14 @@ public class ModBlocks {
             "experiment_table"
     );
 
+    public static final Block REDSTONE_INTERFACE = register(
+            new RedstoneInterfaceBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f)
+                    .sound(SoundType.STONE)
+            ),
+            "redstone_interface"
+    );
+
 
     public static final Block CHARGED_LIGHTNING_ROD = register(
             new ChargedLightningRodBlock(BlockBehaviour.Properties.of()
@@ -306,6 +314,7 @@ public class ModBlocks {
         Items.registerBlock(new BlockItem(PRESSURE_MACHINE, new Item.Properties()) );
         Items.registerBlock(new BlockItem(LITHOGRAPHY_MACHINE, new Item.Properties()) );
         Items.registerBlock(new BlockItem(EXPERIMENT_TABLE, new Item.Properties()) );
+        Items.registerBlock(new BlockItem(REDSTONE_INTERFACE, new Item.Properties()) );
         Items.registerBlock(new BlockItem(CHARGED_LIGHTNING_ROD, new Item.Properties()) );
         Items.registerBlock(new BlockItem(SILVER_ORE, new Item.Properties()) );
         Items.registerBlock(new BlockItem(SILVER_BLOCK, new Item.Properties()) );

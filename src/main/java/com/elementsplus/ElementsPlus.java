@@ -32,6 +32,7 @@ import com.elementsplus.network.ExperimentTableSelectionChangePayload;
 import com.elementsplus.network.ExperimentTableSelectionUpdatePayload;
 import com.elementsplus.network.ExperimentTableStatusPayload;
 import com.elementsplus.network.LithographyTabPayload;
+import com.elementsplus.network.RedstoneInterfaceActionPayload;
 import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.ServerConfigSyncPayload;
 import com.elementsplus.network.SyringeChargePayload;
@@ -192,6 +193,9 @@ public class ElementsPlus implements ModInitializer {
                     }
                 }));
 
+        PayloadTypeRegistry.playC2S().register(RedstoneInterfaceActionPayload.TYPE, RedstoneInterfaceActionPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(RedstoneInterfaceActionPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> RedstoneInterfaceActionPayload.handle(payload, context)));
         PayloadTypeRegistry.playC2S().register(ReturnCarriedPayload.TYPE, ReturnCarriedPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ReturnCarriedPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
@@ -1079,7 +1083,10 @@ public class ElementsPlus implements ModInitializer {
         String previous = ElementsPlusServerConfig.valueOf(option);
         boolean saved;
         if (ElementsPlusServerConfig.CUSTOM_COMPONENT_NESTING_LIMIT.equals(option)
-                || ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)) {
+                || ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)
+                || ElementsPlusServerConfig.INTERFACE_SAMPLE_TICKS.equals(option)
+                || ElementsPlusServerConfig.INTERFACE_AVG_MSPT_LIMIT.equals(option)
+                || ElementsPlusServerConfig.INTERFACE_MAX_MSPT_LIMIT.equals(option)) {
             int value;
             try {
                 value = Integer.parseInt(raw);
@@ -1088,9 +1095,17 @@ public class ElementsPlus implements ModInitializer {
                         "command.elements-plus.config.invalid_integer", option, raw));
                 return 0;
             }
-            saved = ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)
-                    ? ElementsPlusServerConfig.setCircuitAlbumCapacity(value)
-                    : ElementsPlusServerConfig.setNestingLimit(value);
+            if (ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)) {
+                saved = ElementsPlusServerConfig.setCircuitAlbumCapacity(value);
+            } else if (ElementsPlusServerConfig.INTERFACE_SAMPLE_TICKS.equals(option)) {
+                saved = ElementsPlusServerConfig.setInterfaceSampleTicks(value);
+            } else if (ElementsPlusServerConfig.INTERFACE_AVG_MSPT_LIMIT.equals(option)) {
+                saved = ElementsPlusServerConfig.setInterfaceAvgMsptLimit(value);
+            } else if (ElementsPlusServerConfig.INTERFACE_MAX_MSPT_LIMIT.equals(option)) {
+                saved = ElementsPlusServerConfig.setInterfaceMaxMsptLimit(value);
+            } else {
+                saved = ElementsPlusServerConfig.setNestingLimit(value);
+            }
         } else if (ElementsPlusServerConfig.ALLOW_INFINITE_IN_FINITE_CIRCUIT.equals(option)
                 || ElementsPlusServerConfig.ASYNC_EXPERIMENT_TESTS.equals(option)
                 || ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)) {
@@ -1164,6 +1179,15 @@ public class ElementsPlus implements ModInitializer {
         } else if (ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)) {
             builder.suggest("50");
             builder.suggest("100");
+        } else if (ElementsPlusServerConfig.INTERFACE_SAMPLE_TICKS.equals(option)) {
+            builder.suggest("100");
+            builder.suggest("0");
+        } else if (ElementsPlusServerConfig.INTERFACE_AVG_MSPT_LIMIT.equals(option)) {
+            builder.suggest("10");
+            builder.suggest("0");
+        } else if (ElementsPlusServerConfig.INTERFACE_MAX_MSPT_LIMIT.equals(option)) {
+            builder.suggest("100");
+            builder.suggest("0");
         }
         return builder.buildFuture();
     }

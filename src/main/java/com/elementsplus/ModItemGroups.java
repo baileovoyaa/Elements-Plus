@@ -77,6 +77,7 @@ public class ModItemGroups {
                 "itemGroup.elements-plus.circuit",
                 ModBlocks.LITHOGRAPHY_MACHINE,
                 ModBlocks.EXPERIMENT_TABLE,
+                ModBlocks.REDSTONE_INTERFACE,
                 ModItems.AMETHYST_TRANSISTOR,
                 ModItems.AMETHYST_DIODE,
                 ModItems.AMETHYST_CAPACITOR,

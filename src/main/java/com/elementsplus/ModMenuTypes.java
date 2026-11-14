@@ -7,6 +7,7 @@ import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.menu.MetalCatalystMenu;
 import com.elementsplus.menu.PressureMachineMenu;
+import com.elementsplus.menu.RedstoneInterfaceMenu;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -24,6 +25,7 @@ public class ModMenuTypes {
     public static final MenuType<PressureMachineMenu> PRESSURE_MACHINE = register("pressure_machine", PressureMachineMenu::new);
     public static final MenuType<LithographyMachineMenu> LITHOGRAPHY_MACHINE = register("lithography_machine", LithographyMachineMenu::new);
     public static final MenuType<ExperimentTableMenu> EXPERIMENT_TABLE = register("experiment_table", ExperimentTableMenu::new);
+    public static final MenuType<RedstoneInterfaceMenu> REDSTONE_INTERFACE = register("redstone_interface", RedstoneInterfaceMenu::new);
     public static final MenuType<CircuitAlbumMenu> CIRCUIT_ALBUM = register("circuit_album", CircuitAlbumMenu::new);
 
     private static <T extends AbstractContainerMenu> MenuType<T> register(String string, MenuType.MenuSupplier<T> menuSupplier) {
