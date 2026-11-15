@@ -88,6 +88,15 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
     private double averageMs;
     private double lastStepMs;
     private final java.util.ArrayDeque<Double> samples = new java.util.ArrayDeque<>();
+    /** 同步给客户端的渲染状态（方块表面状态点使用）。 */
+    private boolean displayHasCircuit;
+    private boolean displayHasBattery;
+    private double displayAverageMs;
+    private int displayAverageLimit;
+    private boolean lastKnownHasCircuit;
+    private boolean lastKnownHasBattery;
+    private int lastKnownAverageLimit = -1;
+    private int lastAverageBand = -2;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -206,6 +215,22 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         return lastStepMs;
     }
 
+    public boolean getDisplayHasCircuit() {
+        return displayHasCircuit;
+    }
+
+    public boolean getDisplayHasBattery() {
+        return displayHasBattery;
+    }
+
+    public double getDisplayAverageMs() {
+        return displayAverageMs;
+    }
+
+    public int getDisplayAverageLimit() {
+        return displayAverageLimit;
+    }
+
     public boolean hasBattery() {
         return items.get(SLOT_BATTERY).is(ModItems.AMETHYST_BATTERY);
     }
@@ -283,7 +308,17 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
 
         refreshCircuit();
         updateRedstoneConnections();
-        if (!hasBattery() || !hasCircuit() || hibernating) {
+        boolean hasCircuit = hasCircuit();
+        boolean hasBattery = hasBattery();
+        int averageLimit = ElementsPlusServerConfig.interfaceAvgMsptLimit();
+        if (hasCircuit != lastKnownHasCircuit || hasBattery != lastKnownHasBattery
+                || averageLimit != lastKnownAverageLimit) {
+            lastKnownHasCircuit = hasCircuit;
+            lastKnownHasBattery = hasBattery;
+            lastKnownAverageLimit = averageLimit;
+            sync();
+        }
+        if (!hasBattery || !hasCircuit || hibernating) {
             if (hibernating) {
                 emitSmoke();
             } else if (!hasBattery() || !hasCircuit()) {
@@ -555,6 +590,11 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
             max = Math.max(max, sample);
         }
         averageMs = sum / samples.size();
+        int band = averageBand();
+        if (band != lastAverageBand) {
+            lastAverageBand = band;
+            sync();
+        }
         if (sampleTicks == 0) {
             return;
         }
@@ -570,6 +610,24 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
                 && (averageMs > avgLimit || max > maxLimit)) {
             hibernate();
         }
+    }
+
+    /** 0=未运行，1=绿色，2=橙色，3=红色。 */
+    private int averageBand() {
+        if (!hasCircuit() || !hasBattery() || !running) {
+            return 0;
+        }
+        int limit = ElementsPlusServerConfig.interfaceAvgMsptLimit();
+        if (limit <= 0) {
+            return averageMs > 0 ? 3 : 1;
+        }
+        if (averageMs >= limit * 0.75) {
+            return 3;
+        }
+        if (averageMs >= limit * 0.5) {
+            return 2;
+        }
+        return 1;
     }
 
     private void hibernate() {
@@ -597,6 +655,7 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         samples.clear();
         averageMs = 0;
         lastStepMs = 0;
+        lastAverageBand = -2;
     }
 
     private void setChangedAndSync() {
@@ -662,6 +721,10 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
             }
             running = tag.getBoolean("Running");
             hibernating = tag.getBoolean("Hibernating");
+            displayHasCircuit = tag.getBoolean("HasCircuit");
+            displayHasBattery = tag.getBoolean("HasBattery");
+            displayAverageMs = tag.getDouble("AverageMs");
+            displayAverageLimit = tag.getInt("AverageLimit");
             if (simulator != null && pendingSimulatorState != null) {
                 simulator.loadState(pendingSimulatorState);
                 pendingSimulatorState = null;
@@ -678,6 +741,10 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         ContainerHelper.saveAllItems(tag, items, provider);
         tag.putBoolean("Running", running);
         tag.putBoolean("Hibernating", hibernating);
+        tag.putBoolean("HasCircuit", hasCircuit());
+        tag.putBoolean("HasBattery", hasBattery());
+        tag.putDouble("AverageMs", averageMs);
+        tag.putInt("AverageLimit", ElementsPlusServerConfig.interfaceAvgMsptLimit());
         tag.put("Pins", savePins());
         tag.put("Assignments", saveAssignments());
         tag.put("FaceValues", saveFaceValues());
@@ -696,6 +763,10 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         tag.put("FaceValues", saveFaceValues());
         tag.putBoolean("Running", running);
         tag.putBoolean("Hibernating", hibernating);
+        tag.putBoolean("HasCircuit", hasCircuit());
+        tag.putBoolean("HasBattery", hasBattery());
+        tag.putDouble("AverageMs", averageMs);
+        tag.putInt("AverageLimit", ElementsPlusServerConfig.interfaceAvgMsptLimit());
         return tag;
     }
 

@@ -35,6 +35,47 @@ public class RedstoneInterfaceRenderer implements BlockEntityRenderer<RedstoneIn
                     : ((signal * 255 / 15) << 16);
             renderSquare(consumer, poseStack, face, 0.0625F, 0.002F, innerColor);
         }
+
+        int runColor = runStatusColor(blockEntity);
+        int averageColor = averageStatusColor(blockEntity);
+        for (Direction face : RedstoneInterfaceBlockEntity.FACES) {
+            // 每个面的纹理左上角：运行状态 (2,2)，平均 MSPT 状态 (4,2)。
+            renderPixelSquare(consumer, poseStack, face, 2, 2, runColor);
+            renderPixelSquare(consumer, poseStack, face, 4, 2, averageColor);
+        }
+    }
+
+    private static int runStatusColor(RedstoneInterfaceBlockEntity blockEntity) {
+        if (blockEntity.isHibernating()) {
+            return 0xFFFF0000;
+        }
+        if (!blockEntity.getDisplayHasCircuit() || !blockEntity.getDisplayHasBattery()) {
+            return 0xFF000000;
+        }
+        if (blockEntity.isRunning()) {
+            return 0xFF00FF00;
+        }
+        return 0xFF3377FF;
+    }
+
+    private static int averageStatusColor(RedstoneInterfaceBlockEntity blockEntity) {
+        if (!blockEntity.isRunning()
+                || !blockEntity.getDisplayHasCircuit()
+                || !blockEntity.getDisplayHasBattery()) {
+            return 0xFF000000;
+        }
+        double average = blockEntity.getDisplayAverageMs();
+        int limit = blockEntity.getDisplayAverageLimit();
+        if (limit <= 0) {
+            return average > 0 ? 0xFFFF0000 : 0xFF00FF00;
+        }
+        if (average >= limit * 0.75) {
+            return 0xFFFF0000;
+        }
+        if (average >= limit * 0.5) {
+            return 0xFFFFA500;
+        }
+        return 0xFF00FF00;
     }
 
     private static void renderSquare(VertexConsumer consumer, PoseStack poseStack, Direction face,
@@ -75,6 +116,63 @@ public class RedstoneInterfaceRenderer implements BlockEntityRenderer<RedstoneIn
                 x0 = x1 = 1.0F + offset;
                 y0 = 0.5F - half; y1 = 0.5F + half;
                 z0 = 0.5F - half; z1 = 0.5F + half;
+            }
+        }
+        int r = (rgb >> 16) & 0xFF;
+        int g = (rgb >> 8) & 0xFF;
+        int b = rgb & 0xFF;
+        switch (face) {
+            case UP, DOWN -> addQuad(consumer, poseStack, r, g, b,
+                    x0, y0, z0, x0, y0, z1, x1, y0, z1, x1, y0, z0);
+            case NORTH, SOUTH -> addQuad(consumer, poseStack, r, g, b,
+                    x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0);
+            default -> addQuad(consumer, poseStack, r, g, b,
+                    x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0);
+        }
+    }
+
+    private static void renderPixelSquare(VertexConsumer consumer, PoseStack poseStack, Direction face,
+                                          int u, int v, int rgb) {
+        float u0 = u / 16.0F;
+        float u1 = (u + 1) / 16.0F;
+        float v0 = v / 16.0F;
+        float v1 = (v + 1) / 16.0F;
+        float x0;
+        float x1;
+        float y0;
+        float y1;
+        float z0;
+        float z1;
+        switch (face) {
+            case UP -> {
+                x0 = u0; x1 = u1;
+                y0 = y1 = 1.0F + 0.003F;
+                z0 = v0; z1 = v1;
+            }
+            case DOWN -> {
+                x0 = u0; x1 = u1;
+                y0 = y1 = -0.003F;
+                z0 = 1.0F - v1; z1 = 1.0F - v0;
+            }
+            case NORTH -> {
+                x0 = 1.0F - u1; x1 = 1.0F - u0;
+                y0 = 1.0F - v1; y1 = 1.0F - v0;
+                z0 = z1 = -0.003F;
+            }
+            case SOUTH -> {
+                x0 = u0; x1 = u1;
+                y0 = 1.0F - v1; y1 = 1.0F - v0;
+                z0 = z1 = 1.0F + 0.003F;
+            }
+            case WEST -> {
+                x0 = x1 = -0.003F;
+                y0 = 1.0F - v1; y1 = 1.0F - v0;
+                z0 = u0; z1 = u1;
+            }
+            default -> { // EAST
+                x0 = x1 = 1.0F + 0.003F;
+                y0 = 1.0F - v1; y1 = 1.0F - v0;
+                z0 = 1.0F - u1; z1 = 1.0F - u0;
             }
         }
         int r = (rgb >> 16) & 0xFF;
