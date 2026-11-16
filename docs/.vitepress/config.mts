@@ -100,7 +100,7 @@ const devSidebar: DefaultTheme.SidebarItem[] = [
             {text: '本地配置 Gradle 发行版镜像', link: '/dev/deploy/gradle-mirror'},
         ],
     },
-    { text: '贡献指南', link: '/contributing' },
+    {text: '贡献指南', link: '/contributing'},
     {
         text: 'v1.0.0 阶段',
         collapsed: false,
@@ -144,6 +144,30 @@ const devSidebar: DefaultTheme.SidebarItem[] = [
                     {
                         text: '自定义元件与分离存储',
                         link: '/dev/phases/v1.0.0/007-自定义元件与分离存储/自定义元件与分离存储'
+                    },
+                    {
+                        text: '架构测例',
+                        link: '/dev/phases/v1.0.0/008-架构测例/架构测例'
+                    },
+                    {
+                        text: '光刻机帮助页',
+                        link: '/dev/phases/v1.0.0/009-光刻机帮助页/光刻机帮助页'
+                    },
+                    {
+                        text: '光刻机ROM行视图',
+                        link: '/dev/phases/v1.0.0/010-光刻机ROM行视图/光刻机ROM行视图'
+                    },
+                    {
+                        text: '网页汇编解释器',
+                        link: '/dev/phases/v1.0.0/011-网页汇编解释器/网页汇编解释器'
+                    },
+                    {
+                        text: '红石接口',
+                        link: '/dev/phases/v1.0.0/012-红石接口/红石接口'
+                    },
+                    {
+                        text: '电路板',
+                        link: '/dev/phases/v1.0.0/013-电路板/电路板'
                     }
                 ]
             }
