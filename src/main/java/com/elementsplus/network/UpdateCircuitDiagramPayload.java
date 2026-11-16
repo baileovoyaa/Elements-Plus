@@ -7,7 +7,12 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-public record UpdateCircuitDiagramPayload(CircuitDiagram diagram) implements CustomPacketPayload {
+public record UpdateCircuitDiagramPayload(CircuitDiagram diagram, boolean dropRefunds)
+        implements CustomPacketPayload {
+    public UpdateCircuitDiagramPayload(CircuitDiagram diagram) {
+        this(diagram, false);
+    }
+
     public static final Type<UpdateCircuitDiagramPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, "update_circuit_diagram"));
     public static final StreamCodec<FriendlyByteBuf, UpdateCircuitDiagramPayload> STREAM_CODEC = StreamCodec.of(
             UpdateCircuitDiagramPayload::write,
@@ -16,10 +21,11 @@ public record UpdateCircuitDiagramPayload(CircuitDiagram diagram) implements Cus
 
     private static void write(FriendlyByteBuf buf, UpdateCircuitDiagramPayload payload) {
         CircuitDiagram.PAYLOAD_STREAM_CODEC.encode(buf, payload.diagram());
+        buf.writeBoolean(payload.dropRefunds());
     }
 
     private static UpdateCircuitDiagramPayload read(FriendlyByteBuf buf) {
-        return new UpdateCircuitDiagramPayload(CircuitDiagram.PAYLOAD_STREAM_CODEC.decode(buf));
+        return new UpdateCircuitDiagramPayload(CircuitDiagram.PAYLOAD_STREAM_CODEC.decode(buf), buf.readBoolean());
     }
 
     @Override

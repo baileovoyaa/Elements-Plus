@@ -446,7 +446,22 @@ public class CircuitDiagramPanel extends AbstractWidget {
 
     public boolean isReadOnly() {
         ItemStack stack = menu.slots.get(36).getItem();
+        if (stack.is(com.elementsplus.ModItems.CIRCUIT_BOARD)) {
+            return false;
+        }
         return CircuitItemData.isCompiled(stack) || stack.has(ModDataComponents.EQUIVALENT_COMPONENT);
+    }
+
+    /** 服务端拒绝编辑后，清空本地历史并从物品同步显示。 */
+    public void onExternalDiagramChanged() {
+        historyStack = ItemStack.EMPTY;
+        historyStored = null;
+        historyBaseline = null;
+        undoStack.clear();
+        redoStack.clear();
+        simulationDirty = true;
+        previewDiagram = null;
+        previewSource = null;
     }
 
     public boolean hasDiagram() {
@@ -894,6 +909,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
         if (!component.isCustom() || component.getCustomScale() == null) {
             return true;
         }
+        // 电路板允许任意规模的自定义元件嵌套。
+        if (menu.slots.get(36).getItem().is(ModItems.CIRCUIT_BOARD)) {
+            return true;
+        }
         CircuitDiagram.Scale parent = diagramScale();
         return parent == null || ElementsPlusServerConfig.canNest(parent, component.getCustomScale());
     }
@@ -1110,6 +1129,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
     }
 
     private void commitDiagram(ItemStack stack, CircuitDiagram editor) {
+        commitDiagram(stack, editor, false);
+    }
+
+    private void commitDiagram(ItemStack stack, CircuitDiagram editor, boolean dropRefunds) {
         if (editor == null) {
             return;
         }
@@ -1122,7 +1145,27 @@ public class CircuitDiagramPanel extends AbstractWidget {
         historyGraceUntil = Util.getMillis() + 250L;
         simulationDirty = true;
         menu.onDiagramChanged();
-        ClientPlayNetworking.send(new UpdateCircuitDiagramPayload(editor));
+        ClientPlayNetworking.send(new UpdateCircuitDiagramPayload(editor, dropRefunds));
+    }
+
+    /** Q 键：移除悬停格，并让服务端把返还物直接丢到地上。 */
+    public boolean dropHoveredCell() {
+        if (isReadOnly() || lastMouseX == null || lastMouseY == null
+                || !contains(lastMouseX, lastMouseY)) {
+            return false;
+        }
+        ItemStack stack = menu.slots.get(36).getItem();
+        CircuitDiagram diagram = stack.get(ModDataComponents.CIRCUIT_DIAGRAM);
+        if (diagram == null) return false;
+        int gx = cellX(lastMouseX);
+        int gy = cellY(lastMouseY);
+        CircuitDiagram.Block block = diagram.getBlock(gx, gy);
+        if (block == null) return false;
+        CircuitDiagram editor = diagram.copy();
+        editor.setBlock(gx, gy, null);
+        playSound(block instanceof CircuitDiagram.Component ? COMPONENT_ERASE_SOUND : WIRE_ERASE_SOUND);
+        commitDiagram(stack, editor, true);
+        return true;
     }
 
     /** 当物品栈或存储的电路图对象发生变化时，维护/清空历史，避免撤销到另一张电路图。 */
@@ -1514,6 +1557,10 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return;
         }
         CircuitDiagram editor = diagram.copy();
+        boolean boardEditing = stack.is(ModItems.CIRCUIT_BOARD)
+                && Minecraft.getInstance().player != null
+                && !Minecraft.getInstance().player.isCreative();
+        int remainingWire = boardEditing ? boardWireBudget(stack, draggingWire) : Integer.MAX_VALUE;
         boolean previousSuppress = suppressWireSound;
         suppressWireSound = true;
         try {
@@ -1529,17 +1576,125 @@ public class CircuitDiagramPanel extends AbstractWidget {
                         dx = 0;
                     }
                 }
-                applyConnection(editor, x, y, x + dx, y + dy, draggingWire);
+                if (boardEditing) {
+                    remainingWire -= applyConnectionLimited(
+                            editor, x, y, x + dx, y + dy, draggingWire, remainingWire);
+                } else {
+                    applyConnection(editor, x, y, x + dx, y + dy, draggingWire);
+                }
                 x += dx;
                 y += dy;
             }
         } finally {
             suppressWireSound = previousSuppress;
         }
+        if (boardEditing && sameDiagram(editor, diagram)) {
+            return;
+        }
         playSound(WIRE_PLACE_SOUND);
         commitDiagram(stack, editor);
         ElementsPlusClient.awardAdvancement("all_rounder", "place_wire");
         ElementsPlusClient.awardAdvancement("keyboard_fury", "straight_wire");
+    }
+
+    private int boardWireBudget(ItemStack boardStack, CircuitDiagram.Wire.WireMaterial material) {
+        if (boardStack.isEmpty() || material == null) return 0;
+        net.minecraft.world.item.Item wireItem = material == CircuitDiagram.Wire.WireMaterial.COPPER
+                ? ModItems.COPPER_WIRE : ModItems.GOLD_WIRE;
+        ChipManufacture.ItemRequirement requirement =
+                new ChipManufacture.ItemRequirement(new ItemStack(wireItem), 1);
+        int owned = ChipManufacture.countOwned(menu.getPlayerInventory().items, requirement);
+        // 屏幕在拖拽预览时会临时清空 menu carried；此时必须仍然把鼠标上的导线计入预算。
+        ItemStack carried = displayCarried();
+        if (!carried.isEmpty()) {
+            owned += ChipManufacture.countOwned(List.of(carried), requirement);
+        }
+        return owned;
+    }
+
+    private int wireSideAdditionCost(CircuitDiagram diagram, int x, int y,
+                                     CircuitDiagram.Wire.WireMaterial material) {
+        CircuitDiagram.Block block = diagram.getBlock(x, y);
+        if (block instanceof CircuitDiagram.Component) return 0;
+        if (block instanceof CircuitDiagram.Wire wire && wire.hasMaterial(material)) return 0;
+        return Math.max(1, wirePlaceBitWidth);
+    }
+
+    /** 在预算内放置一条连接：新格子导线不足时跳过，已有材料格仍可添加连接侧。 */
+    private int applyConnectionLimited(CircuitDiagram diagram, int fromX, int fromY,
+                                       int toX, int toY,
+                                       CircuitDiagram.Wire.WireMaterial material, int budget) {
+        int dx = toX - fromX;
+        int dy = toY - fromY;
+        if (Math.abs(dx) + Math.abs(dy) != 1) return 0;
+        Direction fromSide = dx > 0 ? Direction.EAST
+                : (dx < 0 ? Direction.WEST : (dy > 0 ? Direction.SOUTH : Direction.NORTH));
+        if (!inBounds(fromX, fromY) || !inBounds(toX, toY)) return 0;
+        boolean force = Screen.hasShiftDown();
+        CircuitDiagram.Block toBlock = diagram.getBlock(toX, toY);
+        if (toBlock instanceof CircuitDiagram.Component && !force) {
+            return setWireSideLimited(diagram, fromX, fromY, fromSide, material, budget);
+        }
+        if (toBlock instanceof CircuitDiagram.Component) {
+            int fromCost = wireSideAdditionCost(diagram, fromX, fromY, material);
+            int toCost = Math.max(1, wirePlaceBitWidth);
+            if (fromCost + toCost > budget) {
+                return setWireSideLimited(diagram, fromX, fromY, fromSide, material, budget);
+            }
+            diagram.setBlock(toX, toY, null);
+            ElementsPlusClient.awardAdvancement("keyboard_fury", "shift_force");
+        }
+        int used = setWireSideLimited(diagram, fromX, fromY, fromSide, material, budget);
+        used += setWireSideLimited(diagram, toX, toY, fromSide.getOpposite(), material, budget - used);
+        return used;
+    }
+
+    private int setWireSideLimited(CircuitDiagram diagram, int x, int y, Direction side,
+                                   CircuitDiagram.Wire.WireMaterial material, int budget) {
+        CircuitDiagram.Block block = diagram.getBlock(x, y);
+        if (block instanceof CircuitDiagram.Component) return 0;
+        boolean existed = block instanceof CircuitDiagram.Wire;
+        if (existed && ((CircuitDiagram.Wire) block).hasMaterial(material)) {
+            if (!suppressWireSound) {
+                playSound(WIRE_PLACE_SOUND);
+            }
+            applyWireSide((CircuitDiagram.Wire) block, side, material);
+            ElementsPlusClient.awardAdvancement("all_rounder", "place_wire");
+            return 0;
+        }
+        int cost = Math.max(1, wirePlaceBitWidth);
+        if (budget < cost) return 0;
+        CircuitDiagram.Wire wire;
+        if (block instanceof CircuitDiagram.Wire existing) {
+            wire = existing;
+        } else if (block == null) {
+            wire = new CircuitDiagram.Wire(null, null, null, null);
+            wire.x = x;
+            wire.y = y;
+            diagram.setBlock(x, y, wire);
+        } else {
+            return 0;
+        }
+        if (!suppressWireSound) {
+            playSound(WIRE_PLACE_SOUND);
+        }
+        boolean newMaterial = material != null && !wire.hasMaterial(material);
+        applyWireSide(wire, side, material);
+        if (newMaterial) {
+            wire.setBitWidth(material, wirePlaceBitWidth);
+        }
+        ElementsPlusClient.awardAdvancement("all_rounder", "place_wire");
+        return cost;
+    }
+
+    private void applyWireSide(CircuitDiagram.Wire wire, Direction side,
+                               CircuitDiagram.Wire.WireMaterial material) {
+        switch (side) {
+            case NORTH -> wire.north = material;
+            case EAST -> wire.east = material;
+            case SOUTH -> wire.south = material;
+            case WEST -> wire.west = material;
+        }
     }
 
     private void commitConnection(int fromX, int fromY, int toX, int toY, CircuitDiagram.Wire.WireMaterial material) {
@@ -1549,7 +1704,18 @@ public class CircuitDiagramPanel extends AbstractWidget {
             return;
         }
         CircuitDiagram editor = diagram.copy();
-        applyConnection(editor, fromX, fromY, toX, toY, material);
+        boolean boardEditing = stack.is(ModItems.CIRCUIT_BOARD)
+                && Minecraft.getInstance().player != null
+                && !Minecraft.getInstance().player.isCreative();
+        if (boardEditing) {
+            applyConnectionLimited(editor, fromX, fromY, toX, toY, material,
+                    boardWireBudget(stack, material));
+            if (sameDiagram(editor, diagram)) {
+                return;
+            }
+        } else {
+            applyConnection(editor, fromX, fromY, toX, toY, material);
+        }
         commitDiagram(stack, editor);
     }
 

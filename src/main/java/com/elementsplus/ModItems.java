@@ -186,7 +186,7 @@ public class ModItems {
     public static final Item DOPED_GLOWSTONE_DUST = register(new Item(new Item.Properties()), "doped_glowstone_dust");
 
     // 电路载体
-    public static final Item CIRCUIT_BOARD = register(new Item(new Item.Properties().stacksTo(1)), "circuit_board");
+    public static final Item CIRCUIT_BOARD = register(new com.elementsplus.item.CircuitBoardItem(new Item.Properties()), "circuit_board");
     public static final Item CIRCUIT_ALBUM = register(new CircuitAlbumItem(new Item.Properties().stacksTo(1)), "circuit_album");
     public static final Item CIRCUIT_DIAGRAM = register(new Item(new Item.Properties()
             .stacksTo(1)

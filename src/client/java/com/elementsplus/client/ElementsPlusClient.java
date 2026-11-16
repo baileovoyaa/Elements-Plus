@@ -15,6 +15,7 @@ import com.elementsplus.core.experiment.BuiltinExperimentChapters;
 import com.elementsplus.entity.SyringeProjectile;
 import com.elementsplus.item.SyringeItem;
 import com.elementsplus.network.AdvancementActionPayload;
+import com.elementsplus.network.BoardEditResultPayload;
 import com.elementsplus.network.CircuitAlbumDataPayload;
 import com.elementsplus.network.CircuitStorageSyncPayload;
 import com.elementsplus.core.config.ElementsPlusServerConfig;
@@ -141,6 +142,13 @@ public class ElementsPlusClient implements ClientModInitializer {
                 (itemStack, clientWorld, livingEntity, seed) ->
                         itemStack.has(ModDataComponents.EQUIVALENT_COMPONENT) ? 1.0f : 0.0f
         );
+
+        ClientPlayNetworking.registerGlobalReceiver(BoardEditResultPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> {
+                    if (Minecraft.getInstance().screen instanceof LithographyMachineScreen screen) {
+                        screen.onBoardEditResult(payload.diagram());
+                    }
+                }));
 
         ClientPlayNetworking.registerGlobalReceiver(CircuitStorageSyncPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> CircuitStorage.get().replaceAll(payload.circuits())));

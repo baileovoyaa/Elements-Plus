@@ -510,6 +510,9 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
             // 电路图不是实际电路载体，不能放进电路槽。
             return false;
         }
+        if (stack.is(ModItems.CIRCUIT_BOARD)) {
+            return CircuitItemData.diagram(stack) != null;
+        }
         if (ChipManufacture.isCreativeComponent(stack)) {
             return true;
         }

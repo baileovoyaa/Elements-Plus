@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -89,6 +90,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
     private final Listener listener;
     private final BooleanSupplier readOnly;
     private final Supplier<ItemStack> carried;
+    private final Predicate<CircuitComponent> available;
 
     private PlayerToolbox toolbox;
 
@@ -110,11 +112,19 @@ public class PlayerToolboxWidget extends AbstractWidget {
     public PlayerToolboxWidget(int x, int y, int width, ScrollPanelWidget panel,
                                Listener listener, PlayerToolbox toolbox,
                                BooleanSupplier readOnly, Supplier<ItemStack> carried) {
+        this(x, y, width, panel, listener, toolbox, readOnly, carried, component -> true);
+    }
+
+    public PlayerToolboxWidget(int x, int y, int width, ScrollPanelWidget panel,
+                               Listener listener, PlayerToolbox toolbox,
+                               BooleanSupplier readOnly, Supplier<ItemStack> carried,
+                               Predicate<CircuitComponent> available) {
         super(x, y, width, HEADER_HEIGHT, Component.empty());
         this.panel = panel;
         this.listener = listener;
         this.readOnly = readOnly;
         this.carried = carried;
+        this.available = available;
         this.toolbox = toolbox;
         refreshLayout();
     }
@@ -402,7 +412,7 @@ public class PlayerToolboxWidget extends AbstractWidget {
         PlayerToolbox.Group g = toolbox.groups.get(groupIndex);
         if (entryIndex < 0 || entryIndex >= g.components.size()) return;
         CircuitComponent component = CircuitComponentRegistry.byId(g.components.get(entryIndex));
-        if (component != null) listener.onPickup(component);
+        if (component != null && available.test(component)) listener.onPickup(component);
     }
 
     private void insertCarried(int groupIndex, int entryPos) {
@@ -624,6 +634,9 @@ public class PlayerToolboxWidget extends AbstractWidget {
             drawToolboxIcon(g, component, x + 6, ey + 1);
             GuiUtil.drawTruncatedText(g, font, component.getName(), x + 24, ey + (ENTRY_HEIGHT - 9) / 2,
                     Math.max(1, w - 26), 0xFFFFFFFF);
+            if (!available.test(component)) {
+                g.fill(x + 1, ey, x + w - 1, ey + ENTRY_HEIGHT, 0x90000000);
+            }
         }
     }
 

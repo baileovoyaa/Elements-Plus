@@ -7,6 +7,7 @@ import com.elementsplus.ModItems;
 import com.elementsplus.ModMenuTypes;
 import com.elementsplus.ModSounds;
 import com.elementsplus.core.circuit.ChipManufacture;
+import com.elementsplus.core.circuit.CircuitBoardCrafting;
 import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.storage.StoredCircuit;
@@ -91,7 +92,13 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
 
             @Override
             public void onTake(Player player, ItemStack itemStack) {
-                if (isManufactureEligible(container.getItem(0), container.getItem(1))) {
+                if (isBoardWritebackEligible(container.getItem(0), container.getItem(1))) {
+                    consumeBoardWriteback();
+                    playTakeSound(player, false);
+                } else if (isBoardManufactureEligible(container.getItem(0), container.getItem(1))) {
+                    consumeBoardManufactureForTake();
+                    playTakeSound(player, true);
+                } else if (isManufactureEligible(container.getItem(0), container.getItem(1))) {
                     // 制造模式：取出前先扣空芯片与原料，再重算输出
                     consumeManufactureForTake();
                     playTakeSound(player, true);
@@ -141,6 +148,53 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
      * 制造分支前提：diagram 槽的电路图带 EQUIVALENT_COMPONENT，输入槽放空芯片或创造模式元件，
      * 且输入物能容纳电路图规模。创造模式元件接受任意规模，但仍受生存模式使用配置限制。
      */
+    private boolean isBoardWritebackEligible(ItemStack template, ItemStack input) {
+        return !template.isEmpty() && template.is(ModItems.CIRCUIT_BOARD)
+                && !input.isEmpty() && input.is(ModItems.CIRCUIT_DIAGRAM)
+                && !CircuitItemData.isCompiled(input)
+                && !input.has(ModDataComponents.EQUIVALENT_COMPONENT)
+                && CircuitItemData.diagram(template) != null;
+    }
+
+    private boolean isBoardManufactureEligible(ItemStack template, ItemStack input) {
+        if (input.isEmpty() || !input.is(ModItems.CIRCUIT_BOARD)
+                || !(template.is(ModItems.CIRCUIT_BOARD) || template.is(ModItems.CIRCUIT_DIAGRAM))) {
+            return false;
+        }
+        CircuitDiagram diagram = CircuitItemData.diagram(template);
+        return diagram != null && diagram.scale == CircuitDiagram.Scale.SMALL;
+    }
+
+    private ItemStack boardWritebackOutput(ItemStack template) {
+        CircuitDiagram board = CircuitItemData.diagram(template);
+        if (board == null) return ItemStack.EMPTY;
+        ItemStack output = new ItemStack(ModItems.CIRCUIT_DIAGRAM);
+        output.set(ModDataComponents.CIRCUIT_DIAGRAM, board.copy());
+        return output;
+    }
+
+    private ItemStack boardManufactureOutput(ItemStack template) {
+        return CircuitBoardCrafting.boardOutput(CircuitItemData.diagram(template));
+    }
+
+    private List<CircuitBoardCrafting.Change> boardChanges(ItemStack template, ItemStack input) {
+        return CircuitBoardCrafting.diff(CircuitItemData.diagram(input), CircuitItemData.diagram(template));
+    }
+
+    private void updateBoardWritebackResult(ItemStack template) {
+        ItemStack expected = boardWritebackOutput(template);
+        this.container.setItem(2, expected);
+        outputGenerated = !expected.isEmpty();
+    }
+
+    private void updateBoardManufactureResult(ItemStack template, ItemStack input) {
+        List<CircuitBoardCrafting.Change> changes = boardChanges(template, input);
+        ItemStack expected = CircuitBoardCrafting.canApplyAdditions(this.playerInventory.player, changes)
+                ? boardManufactureOutput(template) : ItemStack.EMPTY;
+        this.container.setItem(2, expected);
+        outputGenerated = !expected.isEmpty();
+    }
+
     private boolean isManufactureEligible(ItemStack diagram, ItemStack input) {
         if (diagram.isEmpty() || !diagram.is(ModItems.CIRCUIT_DIAGRAM) || !CircuitItemData.isCompiled(diagram)) {
             return false;
@@ -166,6 +220,14 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         try {
             ItemStack diagram = this.container.getItem(0);
             ItemStack input = this.container.getItem(1);
+            if (isBoardWritebackEligible(diagram, input)) {
+                updateBoardWritebackResult(diagram);
+                return;
+            }
+            if (isBoardManufactureEligible(diagram, input)) {
+                updateBoardManufactureResult(diagram, input);
+                return;
+            }
             if (isCopyEligible(diagram, input)) {
                 updateCopyResult(diagram, input);
                 return;
@@ -246,6 +308,34 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
     }
 
     /** 取出制造产物：扣 1 个空芯片/创造模式元件，普通芯片再扣物品栏内所需原料，然后重算输出。 */
+    private void consumeEligibleForTake() {
+        ItemStack template = this.container.getItem(0);
+        ItemStack input = this.container.getItem(1);
+        if (isBoardWritebackEligible(template, input)) {
+            consumeBoardWriteback();
+        } else if (isBoardManufactureEligible(template, input)) {
+            consumeBoardManufactureForTake();
+        } else {
+            consumeManufactureForTake();
+        }
+    }
+
+    private void consumeBoardWriteback() {
+        this.container.removeItem(1, 1);
+        markPlayerInventoryChanged();
+        updateManufactureResult();
+    }
+
+    private void consumeBoardManufactureForTake() {
+        ItemStack template = this.container.getItem(0);
+        ItemStack input = this.container.getItem(1);
+        List<CircuitBoardCrafting.Change> changes = boardChanges(template, input);
+        this.container.removeItem(1, 1);
+        CircuitBoardCrafting.applyWithOverflowRefunds(this.playerInventory.player, changes);
+        markPlayerInventoryChanged();
+        updateManufactureResult();
+    }
+
     private void consumeManufactureForTake() {
         ItemStack input = this.container.getItem(1);
         boolean creativeInput = ChipManufacture.isCreativeComponent(input);
@@ -305,6 +395,11 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         }
     }
 
+    /** 电路板编辑/制造修改玩家物品栏后强制刷新同步。 */
+    public void markPlayerInventoryChangedPublic() {
+        markPlayerInventoryChanged();
+    }
+
     /**
      * 客户端 CheckBox 切换“复制编译状态”时的服务端回写。
      */
@@ -358,7 +453,9 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
      * 直到输入槽为空、原料不足或背包放不下为止。
      */
     private ItemStack quickMoveManufactureOutput(Player player, Slot slot) {
-        if (!isManufactureEligible(this.container.getItem(0), this.container.getItem(1))) {
+        if (!isBoardWritebackEligible(this.container.getItem(0), this.container.getItem(1))
+                && !isBoardManufactureEligible(this.container.getItem(0), this.container.getItem(1))
+                && !isManufactureEligible(this.container.getItem(0), this.container.getItem(1))) {
             // 复制模式：单次移出，交给默认 onTake → updateManufactureResult 消耗模板
             ItemStack copy = slot.getItem().copy();
             ItemStack stack2 = slot.getItem();
@@ -378,9 +475,12 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         }
         ItemStack moved = ItemStack.EMPTY;
         boolean tookHuge = false;
+        boolean diagramWriteback = isBoardWritebackEligible(this.container.getItem(0), this.container.getItem(1));
         int safety = 0;
         while (safety++ < 64) {
-            if (!isManufactureEligible(this.container.getItem(0), this.container.getItem(1))) {
+            if (!isBoardWritebackEligible(this.container.getItem(0), this.container.getItem(1))
+                    && !isBoardManufactureEligible(this.container.getItem(0), this.container.getItem(1))
+                    && !isManufactureEligible(this.container.getItem(0), this.container.getItem(1))) {
                 break;
             }
             ItemStack out = slot.getItem();
@@ -403,12 +503,14 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
             if (slot.getItem().isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             }
-            consumeManufactureForTake();
+            consumeEligibleForTake();
         }
         if (!moved.isEmpty()) {
             // 批量取出只播放一次，避免 Shift 点击时音效叠加。
-            playTakeSound(player, true);
-            awardChipTake(player, tookHuge);
+            playTakeSound(player, !diagramWriteback);
+            if (!diagramWriteback) {
+                awardChipTake(player, tookHuge);
+            }
         }
         return moved;
     }

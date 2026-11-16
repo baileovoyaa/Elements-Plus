@@ -9,6 +9,8 @@ import com.elementsplus.client.config.NumberFormat;
 import com.elementsplus.client.gui.ButtonGroup;
 import com.elementsplus.core.circuit.ChipManufacture;
 import com.elementsplus.core.circuit.BuiltinCircuitComponents;
+import com.elementsplus.core.circuit.CircuitBoardCrafting;
+import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.client.gui.*;
 import com.elementsplus.client.gui.TabButton;
@@ -406,7 +408,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         playerToolboxWidget = new PlayerToolboxWidget(0, 0, 79, componentWidget, this,
                 ElementsPlusClient.getToolbox().copy(),
                 circuitPanel == null ? () -> true : circuitPanel::isReadOnly,
-                menu::getCarried);
+                menu::getCarried, this::componentAvailableForBoard);
         componentWidget.addChild(playerToolboxWidget);
     }
 
@@ -431,7 +433,45 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         commitToolbox();
     }
 
+    private boolean componentAvailableForBoard(CircuitComponent component) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null || minecraft.player.isCreative()
+                || circuitPanel == null || circuitPanel.isReadOnly()
+                || !menu.diagramSlot.getItem().is(ModItems.CIRCUIT_BOARD)
+                || component.getIngredientSupplier() == null) {
+            return true;
+        }
+        List<ItemStack> inventory = menu.getPlayerInventory().items;
+        CircuitComponent.IngredientSupplier supplier = component.getIngredientSupplier();
+        if (supplier instanceof CircuitComponent.ItemIngredientSupplier items) {
+            for (ItemStack stack : items.itemStacks()) {
+                if (stack.isEmpty()) continue;
+                if (ChipManufacture.countOwned(inventory,
+                        new ChipManufacture.ItemRequirement(stack, stack.getCount()))
+                        < stack.getCount()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if (supplier instanceof CircuitComponent.ComponentIngredientSupplier components) {
+            return ChipManufacture.countOwned(inventory,
+                    new ChipManufacture.ComponentRequirement(components.component(), 1)) >= 1;
+        }
+        return true;
+    }
+
     public void onPickup(CircuitComponent component) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (menu.diagramSlot.getItem().is(ModItems.CIRCUIT_BOARD)
+                && minecraft.player != null && !minecraft.player.isCreative()
+                && component.getIngredientSupplier() != null) {
+            if (!componentAvailableForBoard(component)) {
+                return;
+            }
+            ClientPlayNetworking.send(new com.elementsplus.network.BoardPickComponentPayload(component.getId()));
+            return;
+        }
         if (menu.getCarried().isEmpty() && !circuitPanel.isReadOnly()) {
             circuitPanel.setVirtualWire(null);
             circuitPanel.setVirtualComponent(component);
@@ -852,6 +892,14 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             contextMenu = null;
             return true;
         }
+        if (Minecraft.getInstance().options.keyDrop.matches(keyCode, scanCode)
+                && buttonGroup.getSelected() == tabButtonDesign
+                && (speedEditBox == null || !speedEditBox.isFocused())
+                && (attributeEditBox == null || !attributeEditBox.isFocused())
+                && !(getFocused() instanceof EditBox)
+                && circuitPanel != null && circuitPanel.dropHoveredCell()) {
+            return true;
+        }
         if (keyCode == GLFW.GLFW_KEY_DELETE && buttonGroup.getSelected() == tabButtonDesign
                 && (speedEditBox == null || !speedEditBox.isFocused())
                 && (attributeEditBox == null || !attributeEditBox.isFocused())
@@ -944,12 +992,66 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         }
     }
 
+    public void onBoardEditResult(CircuitDiagram diagram) {
+        ItemStack stack = menu.diagramSlot.getItem();
+        if (!stack.is(ModItems.CIRCUIT_BOARD)) {
+            return;
+        }
+        stack.set(ModDataComponents.CIRCUIT_DIAGRAM, diagram);
+        if (circuitPanel != null) {
+            circuitPanel.onExternalDiagramChanged();
+        }
+    }
+
     public void updateManufactureWidget() {
         manufactureWidget.clearChildren();
         manufactureIngredients.clear();
         manufactureRequirements.clear();
         ItemStack diagramStack = menu.diagramSlot.getItem();
         ItemStack inputStack = menu.manufactureInputSlot.getItem();
+        boolean boardWriteback = diagramStack.is(ModItems.CIRCUIT_BOARD)
+                && inputStack.is(ModItems.CIRCUIT_DIAGRAM)
+                && !CircuitItemData.isCompiled(inputStack)
+                && !inputStack.has(ModDataComponents.EQUIVALENT_COMPONENT)
+                && CircuitItemData.diagram(diagramStack) != null;
+        CircuitDiagram boardTemplate = (diagramStack.is(ModItems.CIRCUIT_BOARD)
+                || diagramStack.is(ModItems.CIRCUIT_DIAGRAM)) ? CircuitItemData.diagram(diagramStack) : null;
+        boolean boardManufacture = inputStack.is(ModItems.CIRCUIT_BOARD)
+                && boardTemplate != null && boardTemplate.scale == CircuitDiagram.Scale.SMALL;
+        if (boardWriteback) {
+            manufactureWidget.addChild(new TextSectionWidget(5, 6,
+                    Component.translatable("gui.elements-plus.lithography_machine.board_writeback")));
+            return;
+        }
+        if (boardManufacture) {
+            manufactureWidget.addChild(new TextSectionWidget(5, 6,
+                    Component.translatable("gui.elements-plus.lithography_machine.board_materials")));
+            int x = 5;
+            int y = 22;
+            for (CircuitBoardCrafting.Change change : CircuitBoardCrafting.diff(
+                    CircuitItemData.diagram(inputStack), boardTemplate)) {
+                Object icon;
+                if (change.requirement() instanceof ChipManufacture.ItemRequirement itemReq) {
+                    icon = itemReq.itemStack();
+                } else if (change.requirement() instanceof ChipManufacture.ComponentRequirement componentReq) {
+                    icon = componentReq.component();
+                } else {
+                    continue;
+                }
+                ChatFormatting color = change.delta() > 0 ? ChatFormatting.RED : ChatFormatting.GREEN;
+                Component text = Component.literal((change.delta() > 0 ? "+" : "") + change.delta())
+                        .withStyle(color);
+                manufactureWidget.addChild(new IngredientWidget(x, y, icon, text) {{
+                    setWidth(70);
+                }});
+                x += 70;
+                if (x + 50 > manufactureWidget.getWidth()) {
+                    x = 5;
+                    y += 18;
+                }
+            }
+            return;
+        }
         boolean showCopyCompiled = !diagramStack.isEmpty() && diagramStack.is(ModItems.CIRCUIT_DIAGRAM)
                 && com.elementsplus.core.circuit.CircuitItemData.isCompiled(diagramStack)
                 && !inputStack.isEmpty() && inputStack.is(ModItems.CIRCUIT_DIAGRAM)

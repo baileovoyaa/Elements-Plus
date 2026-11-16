@@ -3,6 +3,7 @@ package com.elementsplus;
 import com.elementsplus.blocks.entity.ExperimentTableBlockEntity;
 import com.elementsplus.blocks.entity.MetalCatalystBlockEntity;
 import com.elementsplus.core.circuit.ChipManufacture;
+import com.elementsplus.core.circuit.CircuitBoardCrafting;
 import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.circuit.storage.CircuitStorage;
@@ -19,6 +20,8 @@ import com.elementsplus.menu.CircuitAlbumMenu;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.AdvancementActionPayload;
+import com.elementsplus.network.BoardEditResultPayload;
+import com.elementsplus.network.BoardPickComponentPayload;
 import com.elementsplus.network.CircuitAlbumActionPayload;
 import com.elementsplus.network.CircuitAlbumDataPayload;
 import com.elementsplus.network.CircuitAlbumRequestPayload;
@@ -221,15 +224,44 @@ public class ElementsPlus implements ModInitializer {
                     }
                 }));
 
+        PayloadTypeRegistry.playS2C().register(BoardEditResultPayload.TYPE, BoardEditResultPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(BoardPickComponentPayload.TYPE, BoardPickComponentPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(BoardPickComponentPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> BoardPickComponentPayload.handle(payload, context)));
         PayloadTypeRegistry.playC2S().register(UpdateCircuitDiagramPayload.TYPE, UpdateCircuitDiagramPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(UpdateCircuitDiagramPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
                     if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
                         ItemStack stack = menu.slots.get(36).getItem();
-                        if (stack.get(ModDataComponents.CIRCUIT_DIAGRAM) != null) {
-                            stack.set(ModDataComponents.CIRCUIT_DIAGRAM, payload.diagram());
-                            menu.onDiagramChanged();
+                        if (stack.get(ModDataComponents.CIRCUIT_DIAGRAM) == null) {
+                            return;
                         }
+                        if (stack.is(ModItems.CIRCUIT_BOARD)) {
+                            CircuitDiagram old = CircuitItemData.diagram(stack);
+                            CircuitDiagram next = payload.diagram();
+                            boolean accepted = next.scale == CircuitDiagram.Scale.SMALL;
+                            if (accepted && !context.player().isCreative()) {
+                                var changes = CircuitBoardCrafting.diff(old, next);
+                                accepted = payload.dropRefunds()
+                                        ? CircuitBoardCrafting.applyDroppingRefunds(context.player(), changes)
+                                        : CircuitBoardCrafting.apply(context.player(), changes);
+                                if (accepted) {
+                                    menu.markPlayerInventoryChangedPublic();
+                                }
+                            }
+                            if (accepted) {
+                                stack.set(ModDataComponents.CIRCUIT_DIAGRAM, next);
+                                menu.onDiagramChanged();
+                            } else {
+                                ServerPlayNetworking.send(context.player(), new BoardEditResultPayload(
+                                        old == null ? CircuitDiagram.EMPTY.copy() : old.copy()));
+                                context.player().displayClientMessage(
+                                        Component.translatable("gui.elements-plus.circuit_board.edit_failed"), true);
+                            }
+                            return;
+                        }
+                        stack.set(ModDataComponents.CIRCUIT_DIAGRAM, payload.diagram());
+                        menu.onDiagramChanged();
                     }
                 }));
 
