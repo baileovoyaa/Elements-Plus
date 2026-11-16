@@ -11,7 +11,7 @@ The advanced version uses a 4-bit opcode. 0000~0111 are the same as the basic ve
 - `0100`: Bitwise NOT (`~A`)
 - `0101`: Bitwise XOR (`A^B`)
 - `0110`: Bitwise logical left shift (`A<<B`) (only the low 3 bits of B are used as the shift amount)
-- `0111`: Bitwise logical right shift (`A>>>B`) (only the low 3 bits of B are used as the shift amount)
+- `0111`: Bitwise logical right shift (`A>>B`) (only the low 3 bits of B are used as the shift amount)
 - `1000`: Multiply (`A*B`)
 - `1001~1111`: Reserved for now; outputs all 0.
 
@@ -19,7 +19,7 @@ The advanced version uses a 4-bit opcode. 0000~0111 are the same as the basic ve
 
 - <color=gold>ALU (Advanced)</color>: Inputs are two operands A (8-bit) and B (8-bit), an optional carry/borrow input CI (1-bit), and an opcode OP (8-bit, only the low 4 bits are valid). Output Y0 (8-bit) is the operation result (the low 8 bits of a product), Y1 is the high 8 bits of a product (all 0 for other operations), and CO (1-bit) is the optional carry/borrow output. Shift operations use only the low 3 bits of B as the shift amount.
 
-The CO convention is the same as the basic version: carry for addition; borrow for subtraction (1 when A<B+CI, meaning the subtraction underflows); 0 otherwise. CI acts as the borrow input for subtraction.
+The CO convention is the same as the basic version: carry for addition; borrow for subtraction (1 when A<B+CI (unsigned), meaning the subtraction underflows); 0 otherwise. CI acts as the borrow input for subtraction.
 
 ```epp-experiments
 elements-plus:alu_advanced
