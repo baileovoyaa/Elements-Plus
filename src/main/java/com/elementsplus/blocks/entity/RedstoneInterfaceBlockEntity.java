@@ -539,6 +539,7 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
     }
 
     private void buildPins() {
+        pins.clear();
         List<PinInfo> found = new ArrayList<>();
         for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
             for (CircuitDiagram.Component component : chunk.components) {
@@ -797,7 +798,10 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
                 refreshCircuit();
             }
             if (tag.contains("Pins", CompoundTag.TAG_LIST)) {
-                loadPins(tag.getList("Pins", CompoundTag.TAG_COMPOUND));
+                // 服务端完整存档优先从芯片重建引脚；只有电路图尚未加载时才使用存档中的缓存。
+                if (!fullSave || pins.isEmpty()) {
+                    loadPins(tag.getList("Pins", CompoundTag.TAG_COMPOUND));
+                }
             }
             if (tag.contains("Assignments", CompoundTag.TAG_LIST)) {
                 loadAssignments(tag.getList("Assignments", CompoundTag.TAG_COMPOUND));
@@ -901,12 +905,20 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
 
     private void loadPins(ListTag list) {
         pins.clear();
+        Set<String> seen = new HashSet<>();
         for (int i = 0; i < list.size(); i++) {
             CompoundTag item = list.getCompound(i);
             try {
-                pins.add(new PinInfo(item.getInt("Index"), item.getString("Label"),
-                        CircuitComponent.PinType.valueOf(item.getString("Type")),
-                        item.getInt("Width"), item.getInt("X"), item.getInt("Y")));
+                String label = item.getString("Label");
+                CircuitComponent.PinType type = CircuitComponent.PinType.valueOf(item.getString("Type"));
+                int width = item.getInt("Width");
+                int x = item.getInt("X");
+                int y = item.getInt("Y");
+                String key = label + "\u0000" + type.name() + "\u0000" + width + "\u0000" + x + "\u0000" + y;
+                if (!seen.add(key)) {
+                    continue;
+                }
+                pins.add(new PinInfo(pins.size(), label, type, width, x, y));
             } catch (IllegalArgumentException ignored) {
                 // Ignore malformed pin data.
             }
