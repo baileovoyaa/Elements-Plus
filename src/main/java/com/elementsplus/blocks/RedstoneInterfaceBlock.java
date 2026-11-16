@@ -1,5 +1,6 @@
 package com.elementsplus.blocks;
 
+import com.elementsplus.ModItems;
 import com.elementsplus.blocks.entity.RedstoneInterfaceBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -72,6 +73,10 @@ public class RedstoneInterfaceBlock extends BaseEntityBlock {
     @Override
     protected @NotNull InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                         Player player, BlockHitResult hitResult) {
+        if (player.getMainHandItem().is(ModItems.WRENCH)) {
+            // 扳手操作在客户端回调中发送，禁止同时打开接口界面。
+            return InteractionResult.FAIL;
+        }
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }

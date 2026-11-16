@@ -36,12 +36,20 @@ import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 
 import org.lwjgl.glfw.GLFW;
 
@@ -69,6 +77,8 @@ public class ElementsPlusClient implements ClientModInitializer {
     public static KeyMapping keyRotateCounterClockwise;
     /** 顺时针旋转元件（默认未绑定）。 */
     public static KeyMapping keyRotateClockwise;
+    /** 扳手辅助操作（默认未绑定）。 */
+    public static KeyMapping keyWrenchAuxiliary;
     /** 旋转元件 180 度（默认未绑定）。 */
     public static KeyMapping keyRotate180;
 
@@ -91,6 +101,9 @@ public class ElementsPlusClient implements ClientModInitializer {
                 GLFW.GLFW_KEY_UNKNOWN, KEY_CATEGORY));
         keyRotate180 = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.elements-plus.rotate_180", InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_UNKNOWN, KEY_CATEGORY));
+        keyWrenchAuxiliary = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.elements-plus.wrench_auxiliary", InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_UNKNOWN, KEY_CATEGORY));
 
         // This entrypoint is suitable for setting up client-specific logic, such as rendering.
@@ -172,8 +185,38 @@ public class ElementsPlusClient implements ClientModInitializer {
                 }));
 
         // 仅主手注射器接管左键：取消原版挥砍/挖掘，保持平举姿态。
+        AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
+            if (world.isClientSide && hand == InteractionHand.MAIN_HAND
+                    && player.getMainHandItem().is(ModItems.WRENCH)
+                    && world.getBlockState(pos).is(ModBlocks.REDSTONE_INTERFACE)) {
+                WrenchInterfaceClient.beginModeSelection(Screen.hasShiftDown());
+                return InteractionResult.FAIL;
+            }
+            return InteractionResult.PASS;
+        });
+
+        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            if (!world.isClientSide || hand != InteractionHand.MAIN_HAND
+                    || !player.getMainHandItem().is(ModItems.WRENCH)
+                    || hitResult.getType() != HitResult.Type.BLOCK
+                    || !world.getBlockState(hitResult.getBlockPos()).is(ModBlocks.REDSTONE_INTERFACE)) {
+                return InteractionResult.PASS;
+            }
+            return WrenchInterfaceClient.handleUse((BlockHitResult) hitResult)
+                    ? InteractionResult.SUCCESS : InteractionResult.PASS;
+        });
+
+        HudRenderCallback.EVENT.register((graphics, tickDelta) -> WrenchInterfaceClient.renderHud(graphics));
+
         ClientPreAttackCallback.EVENT.register((client, player, clickCount) ->
                 player.getMainHandItem().is(ModItems.SYRINGE));
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (keyWrenchAuxiliary != null && keyWrenchAuxiliary.consumeClick()) {
+                WrenchInterfaceClient.handleScroll(Screen.hasShiftDown() ? 1 : -1);
+            }
+            WrenchInterfaceClient.updateAttackState(client.options.keyAttack.isDown());
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             SyringeTargeting.tick(client);
@@ -207,6 +250,7 @@ public class ElementsPlusClient implements ClientModInitializer {
             BuiltinExperimentChapters.clear();
             SENT_ADVANCEMENT_CRITERIA.clear();
             lastSyringeCharging = false;
+            WrenchInterfaceClient.reset();
         });
     }
 

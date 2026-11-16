@@ -34,6 +34,7 @@ import com.elementsplus.network.ExperimentTableStatusPayload;
 import com.elementsplus.network.LithographyTabPayload;
 import com.elementsplus.network.RedstoneInterfaceActionPayload;
 import com.elementsplus.network.ReturnCarriedPayload;
+import com.elementsplus.network.WrenchInterfaceActionPayload;
 import com.elementsplus.network.ServerConfigSyncPayload;
 import com.elementsplus.network.SyringeChargePayload;
 import com.elementsplus.network.ToolboxRequestPayload;
@@ -196,6 +197,9 @@ public class ElementsPlus implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(RedstoneInterfaceActionPayload.TYPE, RedstoneInterfaceActionPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(RedstoneInterfaceActionPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> RedstoneInterfaceActionPayload.handle(payload, context)));
+        PayloadTypeRegistry.playC2S().register(WrenchInterfaceActionPayload.TYPE, WrenchInterfaceActionPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(WrenchInterfaceActionPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> WrenchInterfaceActionPayload.handle(payload, context)));
         PayloadTypeRegistry.playC2S().register(ReturnCarriedPayload.TYPE, ReturnCarriedPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ReturnCarriedPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {

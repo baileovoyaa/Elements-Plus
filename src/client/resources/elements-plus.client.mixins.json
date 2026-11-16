@@ -7,6 +7,7 @@
         "ExampleClientMixin",
         "LocalPlayerMixin",
         "MinecraftMixin",
+        "MouseHandlerMixin",
         "MultiPlayerGameModeMixin",
         "SyringeItemMixin"
     ],

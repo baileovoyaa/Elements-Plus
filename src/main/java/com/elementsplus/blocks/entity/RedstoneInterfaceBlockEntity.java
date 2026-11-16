@@ -46,8 +46,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 红石接口方块实体。负责保存槽位、把芯片电路的输入/输出引脚分配到六个面，
@@ -195,6 +197,11 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         return index == null || index < 0 || index >= pins.size() ? null : pins.get(index);
     }
 
+    @Nullable
+    public PinInfo getPin(int index) {
+        return index < 0 || index >= pins.size() ? null : pins.get(index);
+    }
+
     public int getFaceValue(Direction face) {
         return faceValues.getOrDefault(face, 0);
     }
@@ -254,6 +261,85 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
             faceValues.remove(face);
             setChangedAndSync();
         }
+    }
+
+    public void rotatePins(Direction face, boolean clockwise) {
+        Direction.Axis axis = face.getAxis();
+        Map<Direction, Integer> old = new EnumMap<>(assignments);
+        assignments.entrySet().removeIf(entry -> entry.getKey().getAxis() != axis);
+        for (Direction direction : FACES) {
+            if (direction.getAxis() == axis) {
+                continue;
+            }
+            Integer pin = old.get(direction);
+            if (pin == null) {
+                continue;
+            }
+            Direction target = clockwise
+                    ? direction.getClockWise(axis) : direction.getCounterClockWise(axis);
+            assignments.put(target, pin);
+        }
+        faceValues.clear();
+        setChangedAndSync();
+    }
+
+    public void swapFace(Direction face) {
+        Direction opposite = face.getOpposite();
+        Integer first = assignments.remove(face);
+        Integer second = assignments.remove(opposite);
+        if (second != null) {
+            assignments.put(face, second);
+        }
+        if (first != null) {
+            assignments.put(opposite, first);
+        }
+        faceValues.remove(face);
+        faceValues.remove(opposite);
+        setChangedAndSync();
+    }
+
+    public void mirrorPins() {
+        Map<Direction, Integer> old = new EnumMap<>(assignments);
+        assignments.clear();
+        for (Map.Entry<Direction, Integer> entry : old.entrySet()) {
+            assignments.put(entry.getKey().getOpposite(), entry.getValue());
+        }
+        faceValues.clear();
+        setChangedAndSync();
+    }
+
+    /**
+     * 按面顺序粘贴引脚标签；只要有一个标签在目标芯片的引脚列表中不存在就整体失败。
+     */
+    public boolean pasteAssignments(List<String> labels) {
+        if (labels.size() != FACES.length) {
+            return false;
+        }
+        Map<Direction, Integer> result = new EnumMap<>(Direction.class);
+        Set<Integer> used = new HashSet<>();
+        for (int i = 0; i < FACES.length; i++) {
+            String label = labels.get(i);
+            if (label == null || label.isBlank()) {
+                continue;
+            }
+            int found = -1;
+            for (PinInfo pin : pins) {
+                if (!used.contains(pin.index()) && pin.label().equals(label)) {
+                    found = pin.index();
+                    break;
+                }
+            }
+            if (found < 0) {
+                return false;
+            }
+            used.add(found);
+            result.put(FACES[i], found);
+        }
+        assignments.clear();
+        assignments.putAll(result);
+        faceValues.clear();
+        setChangedAndSync();
+        return true;
     }
 
     public void setRunning(boolean value) {
