@@ -32,16 +32,16 @@ public class ExperimentTableMenu extends AbstractContainerMenu {
         super(ModMenuTypes.EXPERIMENT_TABLE, i);
         this.access = containerLevelAccess;
         this.container = container;
-        extraSlot = this.addSlot(new Slot(container, 0, 90, 26));
+        extraSlot = this.addSlot(new com.elementsplus.slot.DeviceSlot(container, 0, 90, 26));
 
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 9; k++) {
-                this.addSlot(new Slot(inventory, k + j * 9 + 9, 6 + j * 18, 8 + k * 18));
+                this.addSlot(new com.elementsplus.slot.InventorySlot(inventory, k + j * 9 + 9, 6 + j * 18, 8 + k * 18));
             }
         }
 
         for (int j = 0; j < 9; j++) {
-            this.addSlot(new Slot(inventory, j, 6 + 3 * 18 + 3, 8 + j * 18));
+            this.addSlot(new com.elementsplus.slot.InventorySlot(inventory, j, 6 + 3 * 18 + 3, 8 + j * 18));
         }
 
         if (inventory.player != null) {
@@ -49,6 +49,15 @@ public class ExperimentTableMenu extends AbstractContainerMenu {
                 OPEN_EXPERIMENT_TABLES.put(inventory.player.getUUID(), pos.immutable());
                 return pos;
             });
+        }
+    }
+
+    /** 编程标签页隐藏物品栏时禁用对应槽位；实验标签页恢复。 */
+    public void setInventorySlotsActive(boolean active) {
+        for (Slot slot : this.slots) {
+            if (slot instanceof com.elementsplus.slot.InventorySlot inventorySlot) {
+                inventorySlot.setSlotActive(active);
+            }
         }
     }
 
@@ -63,6 +72,14 @@ public class ExperimentTableMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
+        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+            // 使用 execute：evaluate 会把返回值包进 Optional.of，返回 null 会 NPE。
+            this.access.execute((level, pos) -> {
+                if (level.getBlockEntity(pos) instanceof com.elementsplus.blocks.entity.ExperimentTableBlockEntity table) {
+                    table.onViewerClosed(serverPlayer);
+                }
+            });
+        }
         OPEN_EXPERIMENT_TABLES.remove(player.getUUID());
     }
 

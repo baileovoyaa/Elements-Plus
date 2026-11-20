@@ -160,6 +160,10 @@ public final class CustomComponentCompiler {
             reasons.add(Component.translatable("experiment.elements-plus.precheck.not_diagram"));
             return reasons;
         }
+        if (ChipManufacture.containsDisk(diagram)) {
+            reasons.add(Component.translatable("gui.elements-plus.custom_component.error.disk"));
+            return reasons;
+        }
 
         List<PinCandidate> candidates = candidates(diagram);
         Map<String, PinCandidate> candidateByLabel = new HashMap<>();

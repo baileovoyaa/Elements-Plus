@@ -98,6 +98,30 @@ public final class ChipManufacture {
         return chipScale.chunks >= diagramScale.chunks;
     }
 
+    /** 一个电路板最多包含 6 个磁盘元件。 */
+    public static final int MAX_DISK_PER_BOARD = 6;
+
+    /** 统计电路图中的磁盘元件数量。 */
+    public static int countDisks(CircuitDiagram diagram) {
+        if (diagram == null) {
+            return 0;
+        }
+        int count = 0;
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (CircuitDiagram.Component component : chunk.components) {
+                if (component.component == BuiltinCircuitComponents.DISK) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /** 含磁盘元件的电路图不可编译（不能制成芯片）。 */
+    public static boolean containsDisk(CircuitDiagram diagram) {
+        return countDisks(diagram) > 0;
+    }
+
     /**
      * 统计电路图的原料需求：
      * 元件读取 ingredientSupplier（ItemIngredientSupplier→物品、ComponentIngredientSupplier→元件、null→无），

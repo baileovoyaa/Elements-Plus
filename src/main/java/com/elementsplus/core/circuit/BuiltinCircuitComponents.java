@@ -643,6 +643,30 @@ public class BuiltinCircuitComponents {
         setInstanceFactory(RomComponentInstance::new);
     }});
 
+    /** 磁盘元件：占位符，引脚与 256 字节 RAM 相同；内容为客户端临时状态。 */
+    public static final CircuitComponent DISK = register(new CircuitComponent(ElementsPlus.id("disk"), Component.translatable("circuit.elements-plus.component.disk"), Component.translatable("circuit.elements-plus.component.disk.description"), ElementsPlus.id("textures/item/disk.png")) {{
+        setPin(Direction.NORTH, 0, PinType.INPUT, "WE");
+        setPin(Direction.SOUTH, 0, PinType.INPUT, "D", 8);
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+        setInstanceFactory(com.elementsplus.core.circuit.component.DiskComponentInstance::new);
+        // 接口占位符：不消耗磁盘物品。
+        clearIngredientSupplier();
+    }});
+
+    /**
+     * 纸带阅读器电路载体：只读，2 个引脚（地址输入、数据输出）。仅作为接口临时封装使用，通常不会在电路图中出现。
+     */
+    public static final CircuitComponent PAPER_TAPE = register(new CircuitComponent(
+            ElementsPlus.id("paper_tape"),
+            Component.translatable("circuit.elements-plus.component.paper_tape"),
+            Component.translatable("circuit.elements-plus.component.paper_tape.description"),
+            ElementsPlus.id("textures/item/paper_tape.png")) {{
+        setPin(Direction.WEST, 0, PinType.INPUT, "A", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "Y", 8);
+        clearIngredientSupplier();
+    }});
+
     public static CircuitComponent register(CircuitComponent circuitComponent) {
         BY_ID.put(circuitComponent.getId(), circuitComponent);
         return circuitComponent;
@@ -693,5 +717,8 @@ public class BuiltinCircuitComponents {
                     .component(MULTIPLIER)
                     .component(REGISTER)
                     .component(COUNTER_8)
+                    .component(RAM_256)
+                    .component(ROM_256)
+                    .component(DISK)
             );
 }

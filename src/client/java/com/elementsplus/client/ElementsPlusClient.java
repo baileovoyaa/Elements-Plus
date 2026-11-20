@@ -17,6 +17,7 @@ import com.elementsplus.item.SyringeItem;
 import com.elementsplus.network.AdvancementActionPayload;
 import com.elementsplus.network.BoardEditResultPayload;
 import com.elementsplus.network.CircuitAlbumDataPayload;
+import com.elementsplus.network.FileFolderDataPayload;
 import com.elementsplus.network.CircuitStorageSyncPayload;
 import com.elementsplus.core.config.ElementsPlusServerConfig;
 import com.elementsplus.network.ExperimentTableScreenDataPayload;
@@ -143,6 +144,14 @@ public class ElementsPlusClient implements ClientModInitializer {
                         itemStack.has(ModDataComponents.EQUIVALENT_COMPONENT) ? 1.0f : 0.0f
         );
 
+        ItemProperties.register(
+                ModItems.PAPER_TAPE_READER,
+                ResourceLocation.withDefaultNamespace("element-plus.paper_tape_reader_filled"),
+                (itemStack, clientWorld, livingEntity, seed) ->
+                        com.elementsplus.item.PaperTapeReaderItem.getContents(itemStack).isEmpty()
+                                ? 0.0f : 1.0f
+        );
+
         ClientPlayNetworking.registerGlobalReceiver(BoardEditResultPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     if (Minecraft.getInstance().screen instanceof LithographyMachineScreen screen) {
@@ -154,15 +163,73 @@ public class ElementsPlusClient implements ClientModInitializer {
                 context.client().execute(() -> CircuitStorage.get().replaceAll(payload.circuits())));
 
         ClientPlayNetworking.registerGlobalReceiver(ServerConfigSyncPayload.TYPE, (payload, context) ->
-                context.client().execute(() -> ElementsPlusServerConfig.applySynced(
-                        payload.customComponentNestingLimit(), payload.allowInfiniteInFiniteCircuit(),
-                        payload.asyncExperimentTests(), payload.allowSurvivalCreativeComponent())));
+                context.client().execute(() -> {
+                    ElementsPlusServerConfig.applySynced(
+                            payload.customComponentNestingLimit(), payload.allowInfiniteInFiniteCircuit(),
+                            payload.asyncExperimentTests(), payload.allowSurvivalCreativeComponent(),
+                            payload.textFileMaxBytes(), payload.sharedFileMaxBytes(),
+                            payload.memoryMaxBytes(), payload.maxSharedPerPlayer(),
+                            payload.allowCircuitUpload());
+                }));
+
+        ClientPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileSystemDataPayload.TYPE,
+                (payload, context) -> context.client().execute(() -> {
+                    if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
+                        screen.onFileSystemData(payload);
+                    }
+                }));
+
+        ClientPlayNetworking.registerGlobalReceiver(
+                com.elementsplus.network.OpenTextFilePayload.TYPE,
+                (payload, context) -> context.client().execute(() -> {
+                    Minecraft.getInstance().setScreen(new com.elementsplus.client.screen.TextFileScreen(
+                            payload.title(), payload.text()));
+                }));
+
+        ClientPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileContentPayload.TYPE,
+                (payload, context) -> context.client().execute(() -> {
+                    if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
+                        screen.onFileContent(payload);
+                    }
+                }));
+
+        ClientPlayNetworking.registerGlobalReceiver(
+                com.elementsplus.network.FileFolderArchivePayload.TYPE,
+                (payload, context) -> context.client().execute(() -> {
+                    if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
+                        screen.onFileFolderArchive(payload);
+                    }
+                }));
+
+        ClientPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileEditorStatePayload.TYPE,
+                (payload, context) -> context.client().execute(() -> {
+                    if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
+                        screen.onEditorState(payload);
+                    }
+                }));
+
+        ClientPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileActionResultPayload.TYPE,
+                (payload, context) -> context.client().execute(() -> {
+                    if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
+                        screen.onFileActionResult(payload);
+                    }
+                }));
 
         ClientPlayNetworking.registerGlobalReceiver(CircuitAlbumDataPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     if (Minecraft.getInstance().screen instanceof CircuitAlbumScreen screen) {
                         screen.onData(payload.containerId(), payload.capacity(), payload.contents(),
                                 payload.carried(), payload.lockedInventoryIndex());
+                    }
+                }));
+
+        ClientPlayNetworking.registerGlobalReceiver(FileFolderDataPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> {
+                    if (Minecraft.getInstance().screen
+                            instanceof com.elementsplus.client.screen.FileFolderScreen screen) {
+                        screen.onData(payload.containerId(), payload.items(), payload.capacityItems(),
+                                payload.capacityBytes(), payload.carried(),
+                                payload.lockedInventoryIndex());
                     }
                 }));
 

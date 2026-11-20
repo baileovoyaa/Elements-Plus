@@ -564,6 +564,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     }
 
     private void openNumberValueDialog(CircuitDiagram.Component component) {
+        if (component.component == BuiltinCircuitComponents.DISK) {
+            openDiskDialog(component);
+            return;
+        }
         if (CircuitSimulator.isRam(component.component)) {
             openRamDialog(component);
             return;
@@ -600,6 +604,39 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 new MemoryEditorDialog.Callback() {
                     @Override
                     public void onSave(byte[] ignored) {
+                        memoryDialog = null;
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        memoryDialog = null;
+                    }
+                });
+    }
+
+    /** 磁盘元件内容编辑：只有暂停时可以手动修改；内容不写入电路图。 */
+    private void openDiskDialog(CircuitDiagram.Component component) {
+        int[] contents = simulator.getRamContents(component.x, component.y);
+        byte[] data = new byte[contents.length == 0 ? 256 : contents.length];
+        for (int i = 0; i < Math.min(contents.length, data.length); i++) {
+            data[i] = (byte) contents[i];
+        }
+        boolean editable = !isPlaying && !circuitPanel.isReadOnly();
+        memoryDialog = new MemoryEditorDialog(
+                Component.translatable("gui.elements-plus.memory.disk_title"),
+                data, 256,
+                () -> simulator.getRamAddress(component.x, component.y),
+                editable, this.font, this.width, this.height,
+                new MemoryEditorDialog.Callback() {
+                    @Override
+                    public void onSave(byte[] next) {
+                        if (editable) {
+                            int[] values = new int[next.length];
+                            for (int i = 0; i < next.length; i++) {
+                                values[i] = next[i] & 0xFF;
+                            }
+                            simulator.setRamContents(component.x, component.y, values);
+                        }
                         memoryDialog = null;
                     }
 
@@ -1392,6 +1429,16 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                     .build());
             editButton.active = !readOnly;
             return;
+        }
+        if (attrComponent.component == BuiltinCircuitComponents.DISK) {
+            Button editButton = attributeWidget.addChild(Button.builder(
+                    Component.translatable("gui.elements-plus.lithography_machine.disk_edit_content"),
+                    button -> openDiskDialog(attrComponent))
+                    .bounds(4, y, attributeWidget.getWidth() - 8, 20)
+                    .build());
+            editButton.active = !readOnly;
+            // 继续渲染磁盘标签等配置项。
+            y += 20 + 2;
         }
         for (CircuitComponentInstance.Config config : attrComponent.instance.getConfigs()) {
             if (config instanceof CircuitComponentInstance.BooleanConfig booleanConfig) {

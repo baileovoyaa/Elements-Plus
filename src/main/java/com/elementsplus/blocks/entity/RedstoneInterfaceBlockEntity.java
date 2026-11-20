@@ -12,10 +12,13 @@ import com.elementsplus.core.circuit.CircuitSimulator;
 import com.elementsplus.core.circuit.CreativeChipCircuit;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
+import com.elementsplus.core.circuit.component.DiskComponentInstance;
 import com.elementsplus.core.circuit.component.Output8ComponentInstance;
 import com.elementsplus.core.circuit.component.OutputComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.config.ElementsPlusServerConfig;
+import com.elementsplus.core.file.DiskData;
+import com.elementsplus.item.PaperTapeReaderItem;
 import com.elementsplus.menu.RedstoneInterfaceMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -24,6 +27,8 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -46,6 +51,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -70,10 +76,107 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
                           int bitWidth, int x, int y) {
     }
 
+    /** 电路图中一个磁盘元件的坐标；按 (x, y) 排序后依次对应 1~6 号磁盘槽位。 */
+    private record DiskBinding(int x, int y) {
+    }
+
     private NonNullList<ItemStack> items = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
     private final List<PinInfo> pins = new ArrayList<>();
     private final Map<Direction, Integer> assignments = new EnumMap<>(Direction.class);
     private final Map<Direction, Integer> faceValues = new EnumMap<>(Direction.class);
+    /** 当前电路中的磁盘元件（最多 6 个），索引对应磁盘槽位。 */
+    private final List<DiskBinding> diskBindings = new ArrayList<>();
+    private final Map<Long, Integer> diskSlotByIndex = new HashMap<>();
+    private int displayDiskCount;
+    /** 与磁盘元件一一对应的标签（客户端界面显示）。 */
+    private final List<String> displayDiskLabels = new ArrayList<>();
+    private boolean diskDirty;
+
+    /** 把电路中的磁盘元件连接到槽位中的磁盘/纸带阅读器。 */
+    private final CircuitSimulator.DiskAccess diskAccess = new CircuitSimulator.DiskAccess() {
+        /** 电路槽里直接放磁盘/纸带阅读器时，使用物品自身的内容，不占用磁盘槽位。 */
+        private boolean selfContained() {
+            ItemStack carrier = items.get(SLOT_CIRCUIT);
+            return carrier.is(ModItems.DISK) || carrier.is(ModItems.PAPER_TAPE_READER);
+        }
+
+        @Override
+        public boolean isConnected(int x, int y) {
+            if (selfContained()) {
+                return true;
+            }
+            Integer slot = diskSlotAt(x, y);
+            return slot != null && isDiskDevice(items.get(SLOT_DISK_START + slot));
+        }
+
+        @Override
+        public boolean isWritable(int x, int y) {
+            if (selfContained()) {
+                return items.get(SLOT_CIRCUIT).is(ModItems.DISK);
+            }
+            Integer slot = diskSlotAt(x, y);
+            return slot != null && items.get(SLOT_DISK_START + slot).is(ModItems.DISK);
+        }
+
+        @Override
+        public int read(int x, int y, int address) {
+            ItemStack stack;
+            if (selfContained()) {
+                stack = items.get(SLOT_CIRCUIT);
+            } else {
+                Integer slot = diskSlotAt(x, y);
+                if (slot == null) {
+                    return 0;
+                }
+                stack = items.get(SLOT_DISK_START + slot);
+            }
+            byte[] data;
+            if (stack.is(ModItems.DISK)) {
+                data = DiskData.read(stack);
+            } else if (stack.is(ModItems.PAPER_TAPE_READER)) {
+                data = PaperTapeReaderItem.getData(stack);
+            } else {
+                return 0;
+            }
+            return address >= 0 && address < data.length ? data[address] & 0xFF : 0;
+        }
+
+        @Override
+        public void write(int x, int y, int address, int value) {
+            ItemStack stack;
+            if (selfContained()) {
+                stack = items.get(SLOT_CIRCUIT);
+                if (!stack.is(ModItems.DISK)) {
+                    // 纸带阅读器只读。
+                    return;
+                }
+            } else {
+                Integer slot = diskSlotAt(x, y);
+                if (slot == null) {
+                    return;
+                }
+                stack = items.get(SLOT_DISK_START + slot);
+                if (!stack.is(ModItems.DISK)) {
+                    // 纸带阅读器只读：忽略数据输入和 WE。
+                    return;
+                }
+            }
+            byte[] data = DiskData.read(stack);
+            int old = address >= 0 && address < data.length ? data[address] & 0xFF : 0;
+            if (old == (value & 0xFF) && data.length == DiskData.CAPACITY) {
+                return;
+            }
+            byte[] next = new byte[DiskData.CAPACITY];
+            System.arraycopy(data, 0, next, 0, Math.min(data.length, next.length));
+            next[address & (DiskData.CAPACITY - 1)] = (byte) value;
+            DiskData.write(stack, next);
+            if (selfContained()) {
+                // 数据变化不应被当成电路图变化而重建模拟器。
+                lastCircuit = stack.copy();
+            }
+            diskDirty = true;
+        }
+    };
 
     private ItemStack lastCircuit = ItemStack.EMPTY;
     private CircuitDiagram diagram;
@@ -438,6 +541,11 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         double elapsed = (System.nanoTime() - start) / 1_000_000.0;
         lastStepMs = Math.max(0, elapsed);
         collectOutputs();
+        if (diskDirty) {
+            diskDirty = false;
+            // 磁盘内容写回物品后标记方块实体，确保随存档保存。
+            setChanged();
+        }
         if (skipNextPerformanceSample) {
             skipNextPerformanceSample = false;
         } else {
@@ -456,6 +564,11 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
                 pins.clear();
                 assignments.clear();
                 faceValues.clear();
+                diskBindings.clear();
+                diskSlotByIndex.clear();
+                displayDiskLabels.clear();
+                displayDiskCount = 0;
+                diskDirty = false;
                 running = false;
                 hibernating = false;
                 resetPerformance();
@@ -486,6 +599,10 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         if (diagram == null) {
             // 电路存储可能在区块加载之后才可用；不要在此处丢弃已保存的引脚分配。
             simulator = null;
+            diskBindings.clear();
+            diskSlotByIndex.clear();
+            displayDiskLabels.clear();
+            displayDiskCount = 0;
             if (!sameChip) {
                 sync();
             }
@@ -493,9 +610,11 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         }
         diagram = diagram.copy();
         buildPins();
+        buildDiskBindings();
         // 保留已经保存的引脚分配。重新构建模拟器时，分配索引仍然有效。
         assignments.entrySet().removeIf(entry -> entry.getValue() < 0 || entry.getValue() >= pins.size());
         simulator = new CircuitSimulator();
+        simulator.setDiskAccess(diskAccess);
         simulator.setDiagram(diagram);
         if (pendingSimulatorState != null) {
             simulator.loadState(pendingSimulatorState);
@@ -509,6 +628,10 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         if (stack.isEmpty() || stack.is(ModItems.CIRCUIT_DIAGRAM)) {
             // 电路图不是实际电路载体，不能放进电路槽。
             return false;
+        }
+        if (stack.is(ModItems.DISK) || stack.is(ModItems.PAPER_TAPE_READER)) {
+            // 磁盘/纸带阅读器自带内容，作为单组件自包含电路使用。
+            return true;
         }
         if (stack.is(ModItems.CIRCUIT_BOARD)) {
             return CircuitItemData.diagram(stack) != null;
@@ -528,6 +651,12 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
 
     @Nullable
     private static CircuitDiagram resolveDiagram(ItemStack stack) {
+        if (stack.is(ModItems.DISK)) {
+            return CreativeChipCircuit.wrap(BuiltinCircuitComponents.DISK);
+        }
+        if (stack.is(ModItems.PAPER_TAPE_READER)) {
+            return CreativeChipCircuit.wrap(BuiltinCircuitComponents.PAPER_TAPE);
+        }
         CircuitDiagram diagram = CircuitItemData.diagram(stack);
         if (diagram != null) {
             return diagram;
@@ -586,6 +715,68 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
             PinInfo pin = found.get(i);
             pins.add(new PinInfo(i, pin.label(), pin.type(), pin.bitWidth(), pin.x(), pin.y()));
         }
+    }
+
+    /**
+     * 收集电路图中的磁盘元件，按坐标排序后依次对应 1~6 号磁盘槽位。
+     * 电路板最多允许 6 个磁盘元件；更多时只连接前 6 个。
+     */
+    private void buildDiskBindings() {
+        diskBindings.clear();
+        diskSlotByIndex.clear();
+        displayDiskLabels.clear();
+        ItemStack carrier = items.get(SLOT_CIRCUIT);
+        if (carrier.is(ModItems.DISK) || carrier.is(ModItems.PAPER_TAPE_READER)) {
+            // 磁盘/纸带阅读器直接作为自包含电路，不连接磁盘槽位。
+            displayDiskCount = 0;
+            return;
+        }
+        if (diagram == null) {
+            displayDiskCount = 0;
+            return;
+        }
+        List<CircuitDiagram.Component> disks = new ArrayList<>();
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (CircuitDiagram.Component component : chunk.components) {
+                if (component.component == BuiltinCircuitComponents.DISK) {
+                    disks.add(component);
+                }
+            }
+        }
+        disks.sort(Comparator.comparingInt((CircuitDiagram.Component component) -> component.x)
+                .thenComparingInt(component -> component.y));
+        int count = Math.min(6, disks.size());
+        for (int i = 0; i < count; i++) {
+            CircuitDiagram.Component component = disks.get(i);
+            diskBindings.add(new DiskBinding(component.x, component.y));
+            diskSlotByIndex.put(diskKey(component.x, component.y), i);
+            String label = component.instance instanceof DiskComponentInstance disk ? disk.getLabel() : "";
+            displayDiskLabels.add(label);
+        }
+        displayDiskCount = count;
+    }
+
+    @Nullable
+    private Integer diskSlotAt(int x, int y) {
+        return diskSlotByIndex.get(diskKey(x, y));
+    }
+
+    private static long diskKey(int x, int y) {
+        return ((long) x << 32) | (y & 0xFFFFFFFFL);
+    }
+
+    private static boolean isDiskDevice(ItemStack stack) {
+        return stack.is(ModItems.DISK) || stack.is(ModItems.PAPER_TAPE_READER);
+    }
+
+    /** 已连接的磁盘元件数量（客户端界面显示标签）。 */
+    public int getDisplayDiskCount() {
+        return displayDiskCount;
+    }
+
+    /** 各磁盘元件的标签；空串表示未设置，界面回退为“磁盘 N”。 */
+    public List<String> getDisplayDiskLabels() {
+        return List.copyOf(displayDiskLabels);
     }
 
     private void applyInputs() {
@@ -818,6 +1009,15 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
             displayHasBattery = tag.getBoolean("HasBattery");
             displayAverageMs = tag.getDouble("AverageMs");
             displayAverageLimit = tag.getInt("AverageLimit");
+            // 客户端从方块更新包读取；服务端完整存档时 refreshCircuit 会重算。
+            if (!fullSave) {
+                displayDiskCount = tag.getInt("DiskCount");
+                displayDiskLabels.clear();
+                ListTag diskLabels = tag.getList("DiskLabels", Tag.TAG_STRING);
+                for (int i = 0; i < diskLabels.size(); i++) {
+                    displayDiskLabels.add(diskLabels.getString(i));
+                }
+            }
             if (simulator != null && pendingSimulatorState != null) {
                 simulator.loadState(pendingSimulatorState);
                 pendingSimulatorState = null;
@@ -838,6 +1038,8 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         tag.putBoolean("HasBattery", hasBattery());
         tag.putDouble("AverageMs", averageMs);
         tag.putInt("AverageLimit", ElementsPlusServerConfig.interfaceAvgMsptLimit());
+        tag.putInt("DiskCount", displayDiskCount);
+        tag.put("DiskLabels", saveDiskLabels());
         tag.put("Pins", savePins());
         tag.put("Assignments", saveAssignments());
         tag.put("FaceValues", saveFaceValues());
@@ -860,6 +1062,8 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         tag.putBoolean("HasBattery", hasBattery());
         tag.putDouble("AverageMs", averageMs);
         tag.putInt("AverageLimit", ElementsPlusServerConfig.interfaceAvgMsptLimit());
+        tag.putInt("DiskCount", displayDiskCount);
+        tag.put("DiskLabels", saveDiskLabels());
         return tag;
     }
 
@@ -867,6 +1071,15 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /** 磁盘元件的标签列表，索引与磁盘槽位对应。 */
+    private ListTag saveDiskLabels() {
+        ListTag list = new ListTag();
+        for (String label : displayDiskLabels) {
+            list.add(StringTag.valueOf(label == null ? "" : label));
+        }
+        return list;
     }
 
     private ListTag savePins() {

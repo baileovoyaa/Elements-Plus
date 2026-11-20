@@ -79,6 +79,63 @@ public class ModDataComponents {
                     .build()
     );
 
+    /** 文件夹物品中保存的文本文件/打孔文件列表。 */
+    public static final DataComponentType<List<ItemStack>> FILE_FOLDER_CONTENTS = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            ElementsPlus.id("file_folder_contents"),
+            DataComponentType.<List<ItemStack>>builder()
+                    .persistent(ItemStack.CODEC.listOf())
+                    .networkSynchronized(ITEM_STACK_LIST_STREAM_CODEC)
+                    .build()
+    );
+
+    public static final StreamCodec<FriendlyByteBuf, byte[]> BYTE_ARRAY_STREAM_CODEC = StreamCodec.of(
+            (buf, data) -> {
+                buf.writeVarInt(data.length);
+                buf.writeBytes(data);
+            },
+            buf -> {
+                byte[] data = new byte[buf.readVarInt()];
+                buf.readBytes(data);
+                return data;
+            }
+    );
+
+    public static final Codec<byte[]> BYTE_ARRAY_CODEC = Codec.STRING.xmap(
+            text -> java.util.Base64.getDecoder().decode(text),
+            data -> java.util.Base64.getEncoder().encodeToString(data)
+    );
+
+    /** 磁盘物品中的 256 字节数据。 */
+    public static final DataComponentType<byte[]> DISK_DATA = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            ElementsPlus.id("disk_data"),
+            DataComponentType.<byte[]>builder()
+                    .persistent(BYTE_ARRAY_CODEC)
+                    .networkSynchronized(BYTE_ARRAY_STREAM_CODEC)
+                    .build()
+    );
+
+    /** 文本文件 / 打孔文件物品中的文件内容。 */
+    public static final DataComponentType<byte[]> FILE_DATA = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            ElementsPlus.id("file_data"),
+            DataComponentType.<byte[]>builder()
+                    .persistent(BYTE_ARRAY_CODEC)
+                    .networkSynchronized(BYTE_ARRAY_STREAM_CODEC)
+                    .build()
+    );
+
+    /** 纸带阅读器中放入的打孔文件。 */
+    public static final DataComponentType<ItemStack> PAPER_TAPE_CONTENTS = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            ElementsPlus.id("paper_tape_contents"),
+            DataComponentType.<ItemStack>builder()
+                    .persistent(ItemStack.CODEC)
+                    .networkSynchronized(ItemStack.STREAM_CODEC)
+                    .build()
+    );
+
     public static void initialize() {
     }
 }

@@ -5,8 +5,10 @@ import com.elementsplus.client.screen.AdvancedCraftingTableScreen;
 import com.elementsplus.client.screen.CrystallizerScreen;
 import com.elementsplus.client.screen.CircuitAlbumScreen;
 import com.elementsplus.client.screen.ExperimentTableScreen;
+import com.elementsplus.client.screen.FileFolderScreen;
 import com.elementsplus.client.screen.LithographyMachineScreen;
 import com.elementsplus.client.screen.MetalCatalystScreen;
+import com.elementsplus.client.screen.PaperTapeReaderScreen;
 import com.elementsplus.client.screen.PressureMachineScreen;
 import com.elementsplus.client.screen.RedstoneInterfaceScreen;
 import net.fabricmc.api.EnvType;
@@ -24,5 +26,7 @@ public class ModMenuScreens {
         MenuScreens.register(ModMenuTypes.EXPERIMENT_TABLE, ExperimentTableScreen::new);
         MenuScreens.register(ModMenuTypes.REDSTONE_INTERFACE, RedstoneInterfaceScreen::new);
         MenuScreens.register(ModMenuTypes.CIRCUIT_ALBUM, CircuitAlbumScreen::new);
+        MenuScreens.register(ModMenuTypes.FILE_FOLDER, FileFolderScreen::new);
+        MenuScreens.register(ModMenuTypes.PAPER_TAPE_READER, PaperTapeReaderScreen::new);
     }
 }

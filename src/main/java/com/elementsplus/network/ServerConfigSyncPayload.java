@@ -10,7 +10,12 @@ import net.minecraft.resources.ResourceLocation;
 public record ServerConfigSyncPayload(int customComponentNestingLimit,
                                       boolean allowInfiniteInFiniteCircuit,
                                       boolean asyncExperimentTests,
-                                      boolean allowSurvivalCreativeComponent) implements CustomPacketPayload {
+                                      boolean allowSurvivalCreativeComponent,
+                                      int textFileMaxBytes,
+                                      int sharedFileMaxBytes,
+                                      int memoryMaxBytes,
+                                      int maxSharedPerPlayer,
+                                      boolean allowCircuitUpload) implements CustomPacketPayload {
     public static final Type<ServerConfigSyncPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, "server_config_sync"));
     public static final StreamCodec<FriendlyByteBuf, ServerConfigSyncPayload> STREAM_CODEC = StreamCodec.of(
@@ -19,8 +24,15 @@ public record ServerConfigSyncPayload(int customComponentNestingLimit,
                 buf.writeBoolean(payload.allowInfiniteInFiniteCircuit());
                 buf.writeBoolean(payload.asyncExperimentTests());
                 buf.writeBoolean(payload.allowSurvivalCreativeComponent());
+                buf.writeInt(payload.textFileMaxBytes());
+                buf.writeInt(payload.sharedFileMaxBytes());
+                buf.writeInt(payload.memoryMaxBytes());
+                buf.writeInt(payload.maxSharedPerPlayer());
+                buf.writeBoolean(payload.allowCircuitUpload());
             },
-            buf -> new ServerConfigSyncPayload(buf.readInt(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean())
+            buf -> new ServerConfigSyncPayload(buf.readInt(), buf.readBoolean(), buf.readBoolean(),
+                    buf.readBoolean(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
+                    buf.readBoolean())
     );
 
     @Override

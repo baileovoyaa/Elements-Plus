@@ -18,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,7 +106,7 @@ public class RedstoneInterfaceScreen extends AbstractContainerScreen<RedstoneInt
                 x + 30, y + 9, 0xFFA0A0A0, false);
 
         drawPinLists(g, be, x, y, mouseX, mouseY);
-        drawDisks(g, x, y);
+        drawDisks(g, x, y, mouseX, mouseY);
         drawStats(g, x + imageWidth - 8, y + 8);
         if (menu.isHibernating()) {
             g.drawString(font, Component.translatable("gui.elements-plus.redstone_interface.hibernating"),
@@ -218,12 +219,42 @@ public class RedstoneInterfaceScreen extends AbstractContainerScreen<RedstoneInt
         return index >= 0 && index < pins.size() ? pins.get(index) : null;
     }
 
-    private void drawDisks(GuiGraphics g, int x, int y) {
+    private void drawDisks(GuiGraphics g, int x, int y, int mouseX, int mouseY) {
         g.drawString(font, Component.translatable("gui.elements-plus.redstone_interface.disks"),
                 x + 210, y + 40, 0xFF3F3F3F, false);
+        RedstoneInterfaceBlockEntity be = entity();
+        int count = be == null ? 0 : be.getDisplayDiskCount();
+        List<String> labels = be == null ? List.of() : be.getDisplayDiskLabels();
+        int labelX = x + 232;
+        int maxWidth = Math.max(10, imageWidth - 232 - 2);
         for (int i = 0; i < 6; i++) {
-            g.drawString(font, Component.translatable("gui.elements-plus.redstone_interface.disk_label"),
-                    x + 232, y + 56 + i * 18, 0xFF808080, false);
+            int rowY = y + 56 + i * 18;
+            boolean bound = i < count;
+            ItemStack stack = this.menu.slots.get(2 + i).getItem();
+            String custom = i < labels.size() ? labels.get(i) : "";
+            Component label = !bound
+                    ? Component.translatable("gui.elements-plus.redstone_interface.disk_slot.unbound")
+                    : (custom.isEmpty()
+                    ? Component.translatable("gui.elements-plus.redstone_interface.disk_slot", i + 1)
+                    : Component.literal(custom));
+            int color = bound
+                    ? (stack.isEmpty() ? 0xFF606060 : 0xFF2E7D32)
+                    : 0xFFA0A0A0;
+            String text = label.getString();
+            String drawn = font.width(text) > maxWidth
+                    ? font.plainSubstrByWidth(text, Math.max(1, maxWidth - font.width("..."))) + "..."
+                    : text;
+            g.drawString(font, drawn, labelX, rowY, color, false);
+            if (bound && stack.is(com.elementsplus.ModItems.PAPER_TAPE_READER)) {
+                g.drawString(font, Component.translatable(
+                                "gui.elements-plus.redstone_interface.disk_slot.readonly"),
+                        labelX, rowY + 9, 0xFF8A6D00, false);
+            }
+            if (bound && !custom.isEmpty()
+                    && mouseX >= labelX && mouseX < labelX + maxWidth
+                    && mouseY >= rowY && mouseY < rowY + 9) {
+                g.renderTooltip(font, label, mouseX, mouseY);
+            }
         }
     }
 

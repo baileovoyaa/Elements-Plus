@@ -24,6 +24,8 @@ public class ClientConfig {
     public NumberFormat analogNumberFormat = NumberFormat.UNSIGNED;
     /** 是否已经通过帮助页的“关闭”按钮关闭过首次帮助。 */
     public boolean lithographyHelpDismissed = false;
+    /** 文件编辑器的最大文本文件打开限制；超过后不尝试文本解析，直接以 16 进制打开。 */
+    public int maxTextFileOpenBytes = 32 * 1024;
 
     private ClientConfig() {
     }
@@ -41,6 +43,9 @@ public class ClientConfig {
                     INSTANCE.muted = loaded.muted;
                     INSTANCE.inspect = loaded.inspect;
                     INSTANCE.lithographyHelpDismissed = loaded.lithographyHelpDismissed;
+                    if (loaded.maxTextFileOpenBytes > 0) {
+                        INSTANCE.maxTextFileOpenBytes = loaded.maxTextFileOpenBytes;
+                    }
                     if (loaded.digitalNumberFormat != null) {
                         INSTANCE.digitalNumberFormat = loaded.digitalNumberFormat;
                     }

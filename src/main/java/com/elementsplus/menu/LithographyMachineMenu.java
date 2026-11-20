@@ -279,7 +279,8 @@ public class LithographyMachineMenu extends AbstractContainerMenu {
         boolean inputAllowed = !creativeInput
                 || ChipManufacture.canUseCreativeComponent(this.playerInventory.player);
         if (circuit == null || equiv == null || !inputAllowed
-                || !ChipManufacture.canAcceptScale(input, circuit.scale)) {
+                || !ChipManufacture.canAcceptScale(input, circuit.scale)
+                || ChipManufacture.containsDisk(circuit)) {
             outputGenerated = false;
             if (!this.container.getItem(2).isEmpty()) {
                 this.container.setItem(2, ItemStack.EMPTY);

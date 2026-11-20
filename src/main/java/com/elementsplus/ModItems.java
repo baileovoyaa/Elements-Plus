@@ -274,7 +274,21 @@ public class ModItems {
     public static final Item WASTE_BOTTLE = register(new Item(new Item.Properties()), "waste_bottle");
     public static final Item PLASTIC = register(new Item(new Item.Properties()), "plastic");
 
-    public static final Item DISK = register(new Item(new Item.Properties().stacksTo(1)), "disk");
+    // 文件系统相关物品
+    public static final Item DISK = register(new com.elementsplus.item.DiskItem(
+            new Item.Properties().component(ModDataComponents.EQUIVALENT_COMPONENT,
+                    BuiltinCircuitComponents.DISK.getId())), "disk");
+    public static final Item TEXT_FILE = register(
+            new com.elementsplus.item.TextFileItem(new Item.Properties()), "text_file");
+    public static final Item PUNCHED_FILE = register(
+            new com.elementsplus.item.PunchedFileItem(new Item.Properties()), "punched_file");
+    public static final Item FILE_FOLDER = register(new com.elementsplus.item.FolderItem(
+            new Item.Properties().stacksTo(1).component(ModDataComponents.FILE_FOLDER_CONTENTS,
+                    java.util.List.of())), "file_folder");
+    public static final Item PAPER_TAPE_READER = register(
+            new com.elementsplus.item.PaperTapeReaderItem(new Item.Properties()
+                    .component(ModDataComponents.EQUIVALENT_COMPONENT,
+                            BuiltinCircuitComponents.DISK.getId())), "paper_tape_reader");
 
     public static void initialize() {
         // 物品已在静态块中注册

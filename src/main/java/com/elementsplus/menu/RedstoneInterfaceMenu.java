@@ -52,7 +52,12 @@ public class RedstoneInterfaceMenu extends AbstractContainerMenu {
             this.addSlot(new Slot(container, 2 + i, 210, 52 + i * 18) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
-                    return stack.is(ModItems.DISK);
+                    return isDiskDevice(stack);
+                }
+
+                @Override
+                public int getMaxStackSize() {
+                    return 1;
                 }
             });
         }
@@ -68,10 +73,18 @@ public class RedstoneInterfaceMenu extends AbstractContainerMenu {
         this.addDataSlots(data);
     }
 
-    private static boolean isChipCarrier(ItemStack stack) {
-        if (stack.isEmpty() || stack.is(ModItems.CIRCUIT_DIAGRAM)) {
+    /** 磁盘槽位接受磁盘和纸带阅读器（纸带阅读器代替磁盘，只读）。 */
+    private static boolean isDiskDevice(ItemStack stack) {
+        return stack.is(ModItems.DISK) || stack.is(ModItems.PAPER_TAPE_READER);
+    }
+
+    private static boolean isChipCarrier(ItemStack stack) {        if (stack.isEmpty() || stack.is(ModItems.CIRCUIT_DIAGRAM)) {
             // 电路图不是实际电路载体，不能放进电路槽。
             return false;
+        }
+        if (stack.is(ModItems.DISK) || stack.is(ModItems.PAPER_TAPE_READER)) {
+            // 磁盘/纸带阅读器自带内容，作为单组件自包含电路使用。
+            return true;
         }
         if (stack.is(ModItems.CIRCUIT_BOARD)) {
             return CircuitItemData.diagram(stack) != null;
@@ -154,7 +167,7 @@ public class RedstoneInterfaceMenu extends AbstractContainerMenu {
                 if (!this.moveItemStackTo(stack, 0, 1, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (stack.is(ModItems.DISK)) {
+            } else if (stack.is(ModItems.DISK) || stack.is(ModItems.PAPER_TAPE_READER)) {
                 if (!this.moveItemStackTo(stack, 2, 8, false)) {
                     return ItemStack.EMPTY;
                 }

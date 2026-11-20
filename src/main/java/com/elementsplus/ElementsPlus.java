@@ -25,6 +25,9 @@ import com.elementsplus.network.BoardPickComponentPayload;
 import com.elementsplus.network.CircuitAlbumActionPayload;
 import com.elementsplus.network.CircuitAlbumDataPayload;
 import com.elementsplus.network.CircuitAlbumRequestPayload;
+import com.elementsplus.network.FileFolderActionPayload;
+import com.elementsplus.network.FileFolderDataPayload;
+import com.elementsplus.network.FileFolderRequestPayload;
 import com.elementsplus.network.ExperimentTableDataRequestPayload;
 import com.elementsplus.network.CopyCompiledSettingPayload;
 import com.elementsplus.network.CircuitStorageSyncPayload;
@@ -197,6 +200,29 @@ public class ElementsPlus implements ModInitializer {
                     }
                 }));
 
+        PayloadTypeRegistry.playS2C().register(FileFolderDataPayload.TYPE, FileFolderDataPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(FileFolderRequestPayload.TYPE, FileFolderRequestPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(FileFolderActionPayload.TYPE, FileFolderActionPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(FileFolderRequestPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    if (context.player().containerMenu instanceof com.elementsplus.menu.FileFolderMenu menu
+                            && menu.containerId == payload.containerId()) {
+                        menu.sendContents(context.player());
+                    }
+                }));
+        ServerPlayNetworking.registerGlobalReceiver(FileFolderActionPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    if (!(context.player().containerMenu instanceof com.elementsplus.menu.FileFolderMenu menu)
+                            || menu.containerId != payload.containerId()) {
+                        return;
+                    }
+                    switch (payload.action()) {
+                        case INSERT_CARRIED -> menu.insertCarried(context.player());
+                        case TAKE_TO_CURSOR -> menu.takeToCursor(context.player(), payload.index());
+                        case TAKE_TO_INVENTORY -> menu.takeToInventory(context.player(), payload.index());
+                    }
+                }));
+
         PayloadTypeRegistry.playC2S().register(RedstoneInterfaceActionPayload.TYPE, RedstoneInterfaceActionPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(RedstoneInterfaceActionPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> RedstoneInterfaceActionPayload.handle(payload, context)));
@@ -240,6 +266,16 @@ public class ElementsPlus implements ModInitializer {
                             CircuitDiagram old = CircuitItemData.diagram(stack);
                             CircuitDiagram next = payload.diagram();
                             boolean accepted = next.scale == CircuitDiagram.Scale.SMALL;
+                            if (accepted && ChipManufacture.countDisks(next)
+                                    > ChipManufacture.MAX_DISK_PER_BOARD) {
+                                ServerPlayNetworking.send(context.player(), new BoardEditResultPayload(
+                                        old == null ? CircuitDiagram.EMPTY.copy() : old.copy()));
+                                context.player().displayClientMessage(
+                                        Component.translatable(
+                                                "gui.elements-plus.circuit_board.too_many_disks",
+                                                ChipManufacture.MAX_DISK_PER_BOARD), true);
+                                return;
+                            }
                             if (accepted && !context.player().isCreative()) {
                                 var changes = CircuitBoardCrafting.diff(old, next);
                                 accepted = payload.dropRefunds()
@@ -309,6 +345,71 @@ public class ElementsPlus implements ModInitializer {
 
         PayloadTypeRegistry.playC2S().register(ExperimentTableDataRequestPayload.TYPE, ExperimentTableDataRequestPayload.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(ExperimentTableSelectionUpdatePayload.TYPE, ExperimentTableSelectionUpdatePayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(com.elementsplus.network.FileSystemRequestPayload.TYPE, com.elementsplus.network.FileSystemRequestPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(com.elementsplus.network.FileActionPayload.TYPE, com.elementsplus.network.FileActionPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(com.elementsplus.network.FileFolderPastePayload.TYPE, com.elementsplus.network.FileFolderPastePayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(com.elementsplus.network.FileEditorActionPayload.TYPE, com.elementsplus.network.FileEditorActionPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(com.elementsplus.network.FileSystemDataPayload.TYPE, com.elementsplus.network.FileSystemDataPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(com.elementsplus.network.FileContentPayload.TYPE, com.elementsplus.network.FileContentPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(com.elementsplus.network.FileFolderArchivePayload.TYPE, com.elementsplus.network.FileFolderArchivePayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(com.elementsplus.network.FileEditorStatePayload.TYPE, com.elementsplus.network.FileEditorStatePayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(com.elementsplus.network.FileActionResultPayload.TYPE, com.elementsplus.network.FileActionResultPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(com.elementsplus.network.OpenTextFilePayload.TYPE, com.elementsplus.network.OpenTextFilePayload.STREAM_CODEC);
+
+        ServerPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileSystemRequestPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    if (!isOpenTable(player, payload.pos())) {
+                        return;
+                    }
+                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
+                        table.fileSystem().handleRequest(payload, player);
+                    }
+                }));
+        ServerPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileActionPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    if (!isOpenTable(player, payload.pos())) {
+                        return;
+                    }
+                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
+                        table.fileSystem().handleAction(payload, player);
+                    }
+                }));
+        ServerPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileFolderPastePayload.TYPE,
+                (payload, context) -> context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    if (!isOpenTable(player, payload.pos())) {
+                        return;
+                    }
+                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
+                        String error = table.fileSystem().pasteFolder(payload, player);
+                        if (error == null) {
+                            ServerPlayNetworking.send(player,
+                                    com.elementsplus.network.FileActionResultPayload.ok(
+                                            payload.pos(),
+                                            com.elementsplus.core.file.FilePaths.join(
+                                                    payload.targetDir(), payload.folderName())));
+                        } else {
+                            ServerPlayNetworking.send(player,
+                                    com.elementsplus.network.FileActionResultPayload.fail(
+                                            payload.pos(),
+                                            com.elementsplus.core.file.FilePaths.join(
+                                                    payload.targetDir(), payload.folderName()),
+                                            error));
+                        }
+                    }
+                }));
+        ServerPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileEditorActionPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    if (!isOpenTable(player, payload.pos())) {
+                        return;
+                    }
+                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
+                        table.fileSystem().handleEditor(payload, player);
+                    }
+                }));
         PayloadTypeRegistry.playS2C().register(ExperimentTableScreenDataPayload.TYPE, ExperimentTableScreenDataPayload.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ExperimentTableSelectionChangePayload.TYPE, ExperimentTableSelectionChangePayload.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(ExperimentTableControlPayload.TYPE, ExperimentTableControlPayload.STREAM_CODEC);
@@ -393,6 +494,11 @@ public class ElementsPlus implements ModInitializer {
                 }));
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            BlockPos openTable = ExperimentTableMenu.getOpenTable(handler.player.getUUID());
+            if (openTable != null
+                    && handler.player.serverLevel().getBlockEntity(openTable) instanceof ExperimentTableBlockEntity table) {
+                table.onViewerClosed(handler.player);
+            }
             ExperimentTableMenu.closeTable(handler.player.getUUID());
             SyringeChargeManager.remove(handler.player);
             SyringeItem.clearUseState(handler.player);
@@ -1120,9 +1226,15 @@ public class ElementsPlus implements ModInitializer {
         boolean saved;
         if (ElementsPlusServerConfig.CUSTOM_COMPONENT_NESTING_LIMIT.equals(option)
                 || ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)
+                || ElementsPlusServerConfig.FILE_FOLDER_CAPACITY.equals(option)
+                || ElementsPlusServerConfig.FILE_FOLDER_MAX_BYTES.equals(option)
                 || ElementsPlusServerConfig.INTERFACE_SAMPLE_TICKS.equals(option)
                 || ElementsPlusServerConfig.INTERFACE_AVG_MSPT_LIMIT.equals(option)
-                || ElementsPlusServerConfig.INTERFACE_MAX_MSPT_LIMIT.equals(option)) {
+                || ElementsPlusServerConfig.INTERFACE_MAX_MSPT_LIMIT.equals(option)
+                || ElementsPlusServerConfig.TEXT_FILE_MAX_BYTES.equals(option)
+                || ElementsPlusServerConfig.SHARED_FILE_MAX_BYTES.equals(option)
+                || ElementsPlusServerConfig.MEMORY_MAX_BYTES.equals(option)
+                || ElementsPlusServerConfig.MAX_SHARED_PER_PLAYER.equals(option)) {
             int value;
             try {
                 value = Integer.parseInt(raw);
@@ -1133,18 +1245,31 @@ public class ElementsPlus implements ModInitializer {
             }
             if (ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)) {
                 saved = ElementsPlusServerConfig.setCircuitAlbumCapacity(value);
+            } else if (ElementsPlusServerConfig.FILE_FOLDER_CAPACITY.equals(option)) {
+                saved = ElementsPlusServerConfig.setFileFolderCapacity(value);
+            } else if (ElementsPlusServerConfig.FILE_FOLDER_MAX_BYTES.equals(option)) {
+                saved = ElementsPlusServerConfig.setFileFolderMaxBytes(value);
             } else if (ElementsPlusServerConfig.INTERFACE_SAMPLE_TICKS.equals(option)) {
                 saved = ElementsPlusServerConfig.setInterfaceSampleTicks(value);
             } else if (ElementsPlusServerConfig.INTERFACE_AVG_MSPT_LIMIT.equals(option)) {
                 saved = ElementsPlusServerConfig.setInterfaceAvgMsptLimit(value);
             } else if (ElementsPlusServerConfig.INTERFACE_MAX_MSPT_LIMIT.equals(option)) {
                 saved = ElementsPlusServerConfig.setInterfaceMaxMsptLimit(value);
+            } else if (ElementsPlusServerConfig.TEXT_FILE_MAX_BYTES.equals(option)) {
+                saved = ElementsPlusServerConfig.setTextFileMaxBytes(value);
+            } else if (ElementsPlusServerConfig.SHARED_FILE_MAX_BYTES.equals(option)) {
+                saved = ElementsPlusServerConfig.setSharedFileMaxBytes(value);
+            } else if (ElementsPlusServerConfig.MEMORY_MAX_BYTES.equals(option)) {
+                saved = ElementsPlusServerConfig.setMemoryMaxBytes(value);
+            } else if (ElementsPlusServerConfig.MAX_SHARED_PER_PLAYER.equals(option)) {
+                saved = ElementsPlusServerConfig.setMaxSharedPerPlayer(value);
             } else {
                 saved = ElementsPlusServerConfig.setNestingLimit(value);
             }
         } else if (ElementsPlusServerConfig.ALLOW_INFINITE_IN_FINITE_CIRCUIT.equals(option)
                 || ElementsPlusServerConfig.ASYNC_EXPERIMENT_TESTS.equals(option)
-                || ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)) {
+                || ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)
+                || ElementsPlusServerConfig.ALLOW_CIRCUIT_UPLOAD.equals(option)) {
             if (!"true".equalsIgnoreCase(raw) && !"false".equalsIgnoreCase(raw)) {
                 source.getSource().sendFailure(Component.translatable(
                         "command.elements-plus.config.invalid_boolean", option, raw));
@@ -1155,6 +1280,8 @@ public class ElementsPlus implements ModInitializer {
                 saved = ElementsPlusServerConfig.setAsyncExperimentTests(value);
             } else if (ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)) {
                 saved = ElementsPlusServerConfig.setAllowSurvivalCreativeComponent(value);
+            } else if (ElementsPlusServerConfig.ALLOW_CIRCUIT_UPLOAD.equals(option)) {
+                saved = ElementsPlusServerConfig.setAllowCircuitUpload(value);
             } else {
                 saved = ElementsPlusServerConfig.setAllowInfiniteInFiniteCircuit(value);
             }
@@ -1182,12 +1309,21 @@ public class ElementsPlus implements ModInitializer {
         return 1;
     }
 
+    private static boolean isOpenTable(ServerPlayer player, BlockPos pos) {
+        return pos != null && pos.equals(ExperimentTableMenu.getOpenTable(player.getUUID()));
+    }
+
     private static ServerConfigSyncPayload serverConfigPayload() {
         return new ServerConfigSyncPayload(
                 ElementsPlusServerConfig.customComponentNestingLimit(),
                 ElementsPlusServerConfig.allowInfiniteInFiniteCircuit(),
                 ElementsPlusServerConfig.asyncExperimentTests(),
-                ElementsPlusServerConfig.allowSurvivalCreativeComponent());
+                ElementsPlusServerConfig.allowSurvivalCreativeComponent(),
+                ElementsPlusServerConfig.textFileMaxBytes(),
+                ElementsPlusServerConfig.sharedFileMaxBytes(),
+                ElementsPlusServerConfig.memoryMaxBytes(),
+                ElementsPlusServerConfig.maxSharedPerPlayer(),
+                ElementsPlusServerConfig.allowCircuitUpload());
     }
 
     private static CompletableFuture<Suggestions> suggestConfigOptions(CommandContext<CommandSourceStack> source,
@@ -1203,7 +1339,8 @@ public class ElementsPlus implements ModInitializer {
         String option = StringArgumentType.getString(source, "option");
         if (ElementsPlusServerConfig.ALLOW_INFINITE_IN_FINITE_CIRCUIT.equals(option)
                 || ElementsPlusServerConfig.ASYNC_EXPERIMENT_TESTS.equals(option)
-                || ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)) {
+                || ElementsPlusServerConfig.ALLOW_SURVIVAL_CREATIVE_COMPONENT.equals(option)
+                || ElementsPlusServerConfig.ALLOW_CIRCUIT_UPLOAD.equals(option)) {
             builder.suggest("true");
             builder.suggest("false");
         } else if (ElementsPlusServerConfig.CUSTOM_COMPONENT_NESTING_LIMIT.equals(option)) {
@@ -1215,6 +1352,12 @@ public class ElementsPlus implements ModInitializer {
         } else if (ElementsPlusServerConfig.CIRCUIT_ALBUM_CAPACITY.equals(option)) {
             builder.suggest("50");
             builder.suggest("100");
+        } else if (ElementsPlusServerConfig.FILE_FOLDER_CAPACITY.equals(option)) {
+            builder.suggest("50");
+            builder.suggest("100");
+        } else if (ElementsPlusServerConfig.FILE_FOLDER_MAX_BYTES.equals(option)) {
+            builder.suggest("1048576");
+            builder.suggest("524288");
         } else if (ElementsPlusServerConfig.INTERFACE_SAMPLE_TICKS.equals(option)) {
             builder.suggest("100");
             builder.suggest("0");
@@ -1224,6 +1367,16 @@ public class ElementsPlus implements ModInitializer {
         } else if (ElementsPlusServerConfig.INTERFACE_MAX_MSPT_LIMIT.equals(option)) {
             builder.suggest("100");
             builder.suggest("0");
+        } else if (ElementsPlusServerConfig.TEXT_FILE_MAX_BYTES.equals(option)
+                || ElementsPlusServerConfig.SHARED_FILE_MAX_BYTES.equals(option)
+                || ElementsPlusServerConfig.MEMORY_MAX_BYTES.equals(option)) {
+            builder.suggest("32768");
+            builder.suggest("16384");
+            builder.suggest("65535");
+        } else if (ElementsPlusServerConfig.MAX_SHARED_PER_PLAYER.equals(option)) {
+            builder.suggest("4");
+            builder.suggest("1");
+            builder.suggest("8");
         }
         return builder.buildFuture();
     }

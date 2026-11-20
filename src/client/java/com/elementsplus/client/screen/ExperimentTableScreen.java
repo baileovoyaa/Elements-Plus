@@ -7,6 +7,7 @@ import com.elementsplus.client.config.ClientConfig;
 import com.elementsplus.client.config.NumberFormat;
 import com.elementsplus.client.experiment.ExperimentMarkdownParser;
 import com.elementsplus.client.gui.*;
+import com.elementsplus.client.gui.program.ProgrammingPage;
 import com.elementsplus.core.circuit.CircuitItemData;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.core.experiment.*;
@@ -30,6 +31,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 
 import java.util.ArrayList;
@@ -41,7 +43,17 @@ import java.util.Objects;
 import java.util.Set;
 
 public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTableMenu> implements SlotPositionProvider {
+    /** 实验桌的两个标签页。 */
+    public enum Tab {EXPERIMENT, PROGRAMMING}
+
+    public Tab activeTab = Tab.EXPERIMENT;
     public TabButton tabButtonExperiment;
+    public TabButton tabButtonProgramming;
+    public IconButton programmingStatusButton;
+    public ProgrammingPage programmingPage;
+    private boolean programmingStatusOk = true;
+    private List<Component> programmingStatusLines = List.of();
+
     public CollapseButton collapseButtonInventory;
     public CollapseButton collapseButtonTestCases;
     public boolean inventoryActive = true;
@@ -93,6 +105,26 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     protected void renderBg(GuiGraphics guiGraphics, float f, int i, int j) {
         GuiUtil.drawMainPanel(guiGraphics, layoutLeftPos, topPos, layoutLeftPos + layoutImageWidth, topPos + imageHeight, 0xFF404040);
         GuiUtil.drawMainPanel(guiGraphics, layoutLeftPos, topPos + 18, layoutLeftPos + layoutImageWidth, topPos + imageHeight, 0xFFFFFFFF);
+        if (activeTab == Tab.PROGRAMMING) {
+            if (inventoryActive) {
+                GuiUtil.drawSubPanel(guiGraphics, layoutLeftPos + 5, topPos + imageHeight - 188,
+                        layoutLeftPos + 5 + 79, topPos + imageHeight - 5, 0xFFA0A0A0);
+            }
+            if (collapseButtonInventory != null && collapseButtonInventory.active) {
+                for (Slot slot : this.menu.slots) {
+                    Point point = getSlotPosition(slot);
+                    if (point != null) {
+                        GuiUtil.drawSlot(guiGraphics, this.layoutLeftPos + point.x() - 1,
+                                this.topPos + point.y() - 1);
+                    }
+                }
+            }
+            Point extra = getSlotPosition(this.menu.extraSlot);
+            if (extra != null) {
+                GuiUtil.drawSlot(guiGraphics, this.layoutLeftPos + extra.x() - 1, this.topPos + extra.y() - 1);
+            }
+            return;
+        }
         if (inventoryActive) {
             GuiUtil.drawSubPanel(guiGraphics, layoutLeftPos + 5, topPos + imageHeight - 188, layoutLeftPos + 5 + 79, topPos + imageHeight - 5, 0xFFA0A0A0);
         }
@@ -142,9 +174,45 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }
 
         this.titleLabelX = 6;
-        this.addRenderableWidget(tabButtonExperiment = new TabButton(this.layoutLeftPos + this.font.width(this.title) + 10, this.topPos, 50, 22, Component.translatable("gui.elements-plus.experiment_table.tab")));
-        tabButtonExperiment.active = true;
+        int tabX = this.layoutLeftPos + this.font.width(this.title) + 10;
+        this.addRenderableWidget(tabButtonExperiment = new TabButton(tabX, this.topPos, 50, 22,
+                Component.translatable("gui.elements-plus.experiment_table.tab")) {
+            @Override
+            public void onClick(double d, double e) {
+                switchTab(Tab.EXPERIMENT);
+            }
+        });
+        this.addRenderableWidget(tabButtonProgramming = new TabButton(tabX + 50, this.topPos, 50, 22,
+                Component.translatable("gui.elements-plus.experiment_table.tab_programming")) {
+            @Override
+            public void onClick(double d, double e) {
+                switchTab(Tab.PROGRAMMING);
+            }
+        });
+        tabButtonExperiment.active = activeTab == Tab.EXPERIMENT;
+        tabButtonProgramming.active = activeTab == Tab.PROGRAMMING;
 
+        if (activeTab == Tab.PROGRAMMING) {
+            initProgrammingTab();
+        } else {
+            initExperimentTab();
+        }
+    }
+
+    /** 切换标签页；两个标签页各自保留自己的选中状态和状态图标。 */
+    public void switchTab(Tab tab) {
+        if (activeTab == tab) {
+            return;
+        }
+        if (activeTab == Tab.PROGRAMMING && programmingPage != null) {
+            programmingPage.onTabHidden();
+        }
+        activeTab = tab;
+        // 标签按钮的点击发生在控件遍历中，延后到下一帧重建，避免并发修改控件列表。
+        Minecraft.getInstance().execute(this::rebuildWidgets);
+    }
+
+    private void initExperimentTab() {
         this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.layoutLeftPos + 5, inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23, 79, 18, Component.translatable("container.inventory")) {
             @Override
             public void onClick(double d, double e) {
@@ -173,7 +241,18 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.chapterButtons = chapterButtons;
         if (!chapterButtons.isEmpty()) {
             experimentGroup = new ButtonGroup(chapterButtons.toArray(new GroupButton[0]));
-            setSelectedChapter(chapterButtons.get(0).chapter);
+            // 切换标签页会重建控件，保留原来选中的章节。
+            ChapterEntryButton initial = chapterButtons.get(0);
+            if (selectedChapter != null) {
+                for (ChapterEntryButton button : chapterButtons) {
+                    if (button.chapter == selectedChapter) {
+                        initial = button;
+                        break;
+                    }
+                }
+            }
+            experimentGroup.setSelected(initial);
+            setSelectedChapter(initial.chapter);
         }
 
         ClientPlayNetworking.send(new ExperimentTableDataRequestPayload());
@@ -256,9 +335,165 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                 LithographyMachineScreen.numberFormatIcon(false, ClientConfig.get().analogNumberFormat),
                 button -> cycleNumberFormat((IconButton) button, false)));
 
+        menu.setInventorySlotsActive(true);
         updateCurrentExperimentDisplay();
         updateStatusButton();
         updateProgressBar();
+    }
+
+    private void initProgrammingTab() {
+        if (programmingPage == null) {
+            programmingPage = new ProgrammingPage(this);
+        }
+        // 页面整体保持全高，只有左侧根列表为物品栏让出空间。
+        programmingPage.layout(layoutLeftPos, topPos, layoutImageWidth, imageHeight);
+        programmingPage.visible = true;
+        programmingPage.active = true;
+        this.addRenderableWidget(programmingPage);
+
+        // 物品栏按钮在页面之后添加，保证显示在页面背景之上。
+        this.addRenderableWidget(collapseButtonInventory = new CollapseButton(this.layoutLeftPos + 5,
+                inventoryActive ? this.topPos + this.imageHeight - 188 : this.topPos + this.imageHeight - 23,
+                79, 18, Component.translatable("container.inventory")) {
+            @Override
+            public void onClick(double d, double e) {
+                super.onClick(d, e);
+                inventoryActive = active;
+                this.setY(inventoryActive ? topPos + imageHeight - 188 : topPos + imageHeight - 23);
+                menu.setInventorySlotsActive(inventoryActive);
+            }
+        });
+        collapseButtonInventory.active = inventoryActive;
+
+        this.addRenderableWidget(programmingStatusButton = new IconButton(programmingPage.statusIconX(),
+                programmingPage.statusIconY(), 16, 16,
+                ElementsPlus.id("textures/gui/experiment_table/idle.png"), button -> {
+            if (programmingPage != null) {
+                programmingPage.clearStatus();
+            }
+        }));
+        menu.setInventorySlotsActive(inventoryActive);
+        updateProgrammingStatus();
+        if (tablePos == null) {
+            ClientPlayNetworking.send(new ExperimentTableDataRequestPayload());
+        }
+        programmingPage.onOpen();
+    }
+
+    /** 编程页物品栏是否正在展开（只压缩左侧根列表）。 */
+    public boolean isProgrammingInventoryExpanded() {
+        return activeTab == Tab.PROGRAMMING && inventoryActive
+                && collapseButtonInventory != null && collapseButtonInventory.active;
+    }
+
+    /** 展开的物品栏面板顶部（页面坐标系）。 */
+    public int programmingInventoryTop() {
+        return topPos + imageHeight - 188;
+    }
+
+    /** 重绘编程页左下物品栏的面板与槽位背景（页面背景之后调用）。 */
+    public void drawProgrammingInventoryBackground(GuiGraphics guiGraphics) {
+        if (!isProgrammingInventoryExpanded()) {
+            return;
+        }
+        GuiUtil.drawSubPanel(guiGraphics, layoutLeftPos + 5, programmingInventoryTop(),
+                layoutLeftPos + 5 + 79, topPos + imageHeight - 5, 0xFFA0A0A0);
+        for (Slot slot : this.menu.slots) {
+            Point point = getSlotPosition(slot);
+            if (point != null) {
+                GuiUtil.drawSlot(guiGraphics, this.layoutLeftPos + point.x() - 1,
+                        this.topPos + point.y() - 1);
+            }
+        }
+    }
+
+    /** 鼠标是否在编程页的左下物品栏/折叠按钮区域（该区域交给容器界面处理）。 */
+    public boolean isOverProgrammingInventory(double mouseX, double mouseY) {
+        if (activeTab != Tab.PROGRAMMING) {
+            return false;
+        }
+        int x0 = layoutLeftPos + 5;
+        int x1 = x0 + 79;
+        int y0 = inventoryActive ? programmingInventoryTop() : topPos + imageHeight - 23;
+        int y1 = topPos + imageHeight - 5;
+        return mouseX >= x0 && mouseX < x1 && mouseY >= y0 && mouseY < y1;
+    }
+
+    public BlockPos getTablePos() {
+        return tablePos;
+    }
+
+    public ExperimentTableMenu experimentMenu() {
+        return menu;
+    }
+
+    public void onFileSystemData(com.elementsplus.network.FileSystemDataPayload payload) {
+        if (programmingPage != null) {
+            programmingPage.onFileSystemData(payload);
+        }
+    }
+
+    public void onFileContent(com.elementsplus.network.FileContentPayload payload) {
+        if (programmingPage != null) {
+            programmingPage.onFileContent(payload);
+        }
+    }
+
+    public void onFileFolderArchive(com.elementsplus.network.FileFolderArchivePayload payload) {
+        if (programmingPage != null) {
+            programmingPage.onFolderArchive(payload);
+        }
+    }
+
+    public void onEditorState(com.elementsplus.network.FileEditorStatePayload payload) {
+        if (programmingPage != null) {
+            programmingPage.onEditorState(payload);
+        }
+    }
+
+    public void onFileActionResult(com.elementsplus.network.FileActionResultPayload payload) {
+        if (programmingPage != null) {
+            programmingPage.onActionResult(payload);
+        }
+    }
+
+    /** 编程页右上角状态图标：显示最近一次操作的失败原因。 */
+    public void setProgrammingStatus(boolean ok, List<Component> lines) {
+        this.programmingStatusOk = ok;
+        this.programmingStatusLines = lines == null ? List.of() : new ArrayList<>(lines);
+        updateProgrammingStatus();
+    }
+
+    /** 失败闪烁期间控制状态按钮显隐。 */
+    public void setProgrammingStatusBlinkVisible(boolean visible) {
+        if (programmingStatusButton != null) {
+            programmingStatusButton.visible = visible;
+        }
+    }
+
+    private void updateProgrammingStatus() {
+        if (programmingStatusButton == null) {
+            return;
+        }
+        programmingStatusButton.icon = ElementsPlus.id(!programmingStatusOk
+                ? "textures/gui/experiment_table/error.png"
+                : (!programmingStatusLines.isEmpty()
+                ? "textures/gui/experiment_table/success.png"
+                : "textures/gui/experiment_table/idle.png"));
+        programmingStatusButton.visible = true;
+        if (!programmingStatusLines.isEmpty()) {
+            MutableComponent joined = Component.empty();
+            for (int i = 0; i < programmingStatusLines.size(); i++) {
+                if (i > 0) {
+                    // Tooltip 只接受一个 Component，不能用 \n 换行（会显示为字面 LF）。
+                    joined.append(Component.literal("；"));
+                }
+                joined.append(programmingStatusLines.get(i).copy());
+            }
+            programmingStatusButton.setTooltip(Tooltip.create(joined));
+        } else {
+            programmingStatusButton.setTooltip(null);
+        }
     }
 
     private void openCustomComponentDialog() {
@@ -780,6 +1015,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }
         this.tablePos = pos;
         this.worldSeed = worldSeed;
+        if (programmingPage != null) {
+            programmingPage.onOpen();
+        }
         unlockedChapters.clear();
         unlockedChapters.addAll(unlocked);
         forcedChapters.clear();
@@ -884,14 +1122,24 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     @Override
     public Point getSlotPosition(Slot slot) {
         if (slot.container instanceof Inventory && slot.getContainerSlot() >= 0 && slot.getContainerSlot() <= 35) {
-            if (collapseButtonInventory.active) {
+            if (collapseButtonInventory != null && collapseButtonInventory.active) {
                 return slotPosition.getOrDefault(slot.getContainerSlot(), Point.of(slot.x, slot.y));
-            } else {
-                return null;
             }
-        } else {
+            return null;
+        }
+        if (slot == this.menu.extraSlot) {
             return new Point(slot.x, slot.y);
         }
+        return null;
+    }
+
+    @Override
+    protected void slotClicked(Slot slot, int slotId, int mouseButton, ClickType type) {
+        // 编程页收起物品栏时，物品栏槽位不可交互；展开时与实验页一致。
+        if (activeTab == Tab.PROGRAMMING && !inventoryActive && slot != this.menu.extraSlot) {
+            return;
+        }
+        super.slotClicked(slot, slotId, mouseButton, type);
     }
 
     @Override
@@ -900,8 +1148,15 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     private void updateScreenSize() {
-        this.layoutImageWidth = Math.clamp(this.width - 80, 220, 300);
-        this.imageHeight = Math.max(230, this.height - 40);
+        if (activeTab == Tab.PROGRAMMING) {
+            int desired = Math.clamp(this.width - 60, 260, 620);
+            this.layoutImageWidth = Math.min(desired, Math.max(200, this.width - 20));
+        } else {
+            this.layoutImageWidth = Math.clamp(this.width - 80, 220, 300);
+        }
+        // 小窗口下也要保证面板不超出屏幕。
+        this.imageHeight = Math.min(Math.max(230, this.height - 40),
+                Math.max(120, this.height - 10));
         this.topPos = this.height / 2 - this.imageHeight / 2;
         this.layoutLeftPos = this.width / 2 - this.layoutImageWidth / 2;
         // 仅供外部模组（JEI 等）读取；实验桌内部布局使用 layout* 字段。
@@ -990,6 +1245,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (activeTab == Tab.PROGRAMMING && programmingPage != null
+                && programmingPage.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
+            return true;
+        }
         if (customComponentDialog != null) {
             return customComponentDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
         }
@@ -998,6 +1257,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (activeTab == Tab.PROGRAMMING && programmingPage != null
+                && programmingPage.mouseReleased(mouseX, mouseY, button)) {
+            return true;
+        }
         if (customComponentDialog != null) {
             return customComponentDialog.mouseReleased(mouseX, mouseY, button);
         }
@@ -1009,6 +1272,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (activeTab == Tab.PROGRAMMING && programmingPage != null
+                && programmingPage.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) {
+            return true;
+        }
         if (customComponentDialog != null) {
             return customComponentDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
@@ -1020,6 +1287,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (activeTab == Tab.PROGRAMMING && programmingPage != null
+                && programmingPage.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
         if (customComponentDialog != null) {
             return customComponentDialog.keyPressed(keyCode, scanCode, modifiers);
         }
@@ -1031,6 +1302,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
     @Override
     public boolean charTyped(char c, int modifiers) {
+        if (activeTab == Tab.PROGRAMMING && programmingPage != null
+                && programmingPage.charTyped(c, modifiers)) {
+            return true;
+        }
         if (customComponentDialog != null) {
             return customComponentDialog.charTyped(c, modifiers);
         }
@@ -1038,6 +1313,21 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             return sequentialDialog.charTyped(c, modifiers);
         }
         return super.charTyped(c, modifiers);
+    }
+
+    @Override
+    protected void containerTick() {
+        if (activeTab == Tab.PROGRAMMING && programmingPage != null) {
+            programmingPage.tick();
+        }
+    }
+
+    @Override
+    public void onClose() {
+        if (programmingPage != null) {
+            programmingPage.onScreenClosed();
+        }
+        super.onClose();
     }
 
     @Override
@@ -1049,6 +1339,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }
         if (customComponentDialog != null) {
             customComponentDialog.render(guiGraphics, mouseX, mouseY, f);
+        }
+        if (activeTab == Tab.PROGRAMMING && programmingPage != null) {
+            programmingPage.renderDialogs(guiGraphics, mouseX, mouseY, f);
         }
     }
 }

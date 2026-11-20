@@ -11,6 +11,7 @@ import com.elementsplus.core.circuit.component.Output8ComponentInstance;
 import com.elementsplus.core.circuit.component.OutputComponentInstance;
 import com.elementsplus.core.circuit.component.ResistorComponentInstance;
 import com.elementsplus.core.circuit.component.ResonatorComponentInstance;
+import com.elementsplus.core.circuit.component.DiskComponentInstance;
 import com.elementsplus.core.circuit.component.RomComponentInstance;
 import com.elementsplus.core.circuit.component.SawtoothGeneratorComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
@@ -94,7 +95,31 @@ public class CircuitSimulator {
      */
     private static final int MAX_EVAL_PASSES = 16;
 
+    /**
+     * 外部磁盘存储。红石接口的磁盘槽位通过它把磁盘元件连接到真实的磁盘物品
+     * 或纸带阅读器；没有设置时磁盘元件使用设计页中的临时内容。
+     */
+    public interface DiskAccess {
+        /** 该坐标的磁盘元件是否连接了设备；未连接视为元件不存在。 */
+        boolean isConnected(int x, int y);
+
+        /** 连接的是否为可写设备（纸带阅读器只读）。 */
+        boolean isWritable(int x, int y);
+
+        /** 读取 0~255 地址。 */
+        int read(int x, int y, int address);
+
+        /** 写入 0~255 地址；只读或未连接时由实现忽略。 */
+        void write(int x, int y, int address, int value);
+    }
+
     private CircuitDiagram diagram;
+    @org.jetbrains.annotations.Nullable
+    private DiskAccess diskAccess;
+
+    public void setDiskAccess(@org.jetbrains.annotations.Nullable DiskAccess access) {
+        this.diskAccess = access;
+    }
 
     private int totalNodes;
     private int numNets;
@@ -1223,7 +1248,9 @@ public class CircuitSimulator {
         return component == BuiltinCircuitComponents.RAM_4
                 || component == BuiltinCircuitComponents.RAM_16
                 || component == BuiltinCircuitComponents.RAM_64
-                || component == BuiltinCircuitComponents.RAM_256;
+                || component == BuiltinCircuitComponents.RAM_256
+                || component == BuiltinCircuitComponents.DISK
+                || component == BuiltinCircuitComponents.PAPER_TAPE;
     }
 
     public static int ramSize(CircuitComponent component) {
@@ -1231,7 +1258,18 @@ public class CircuitSimulator {
         if (component == BuiltinCircuitComponents.RAM_16) return 16;
         if (component == BuiltinCircuitComponents.RAM_64) return 64;
         if (component == BuiltinCircuitComponents.RAM_256) return 256;
+        if (component == BuiltinCircuitComponents.DISK) return 256;
+        if (component == BuiltinCircuitComponents.PAPER_TAPE) return 256;
         return 0;
+    }
+
+    /** 磁盘元件：内容不随电路图序列化，只作为客户端临时状态。 */
+    public static boolean isDisk(CircuitComponent component) {
+        return component == BuiltinCircuitComponents.DISK;
+    }
+
+    public static boolean isPaperTape(CircuitComponent component) {
+        return component == BuiltinCircuitComponents.PAPER_TAPE;
     }
 
     /**
@@ -1243,6 +1281,28 @@ public class CircuitSimulator {
             return new int[0];
         }
         int size = ramSize(component.component);
+        if ((component.component == BuiltinCircuitComponents.DISK
+                || component.component == BuiltinCircuitComponents.PAPER_TAPE)
+                && diskAccess != null) {
+            int[] contents = new int[size];
+            if (diskAccess.isConnected(x, y)) {
+                for (int i = 0; i < size; i++) {
+                    contents[i] = diskAccess.read(x, y, i) & 0xFF;
+                }
+            }
+            return contents;
+        }
+        if (component.component == BuiltinCircuitComponents.PAPER_TAPE) {
+            return new int[size];
+        }
+        if (component.component == BuiltinCircuitComponents.DISK
+                && component.instance instanceof DiskComponentInstance disk) {
+            int[] contents = new int[size];
+            for (int i = 0; i < size; i++) {
+                contents[i] = disk.getByte(i);
+            }
+            return contents;
+        }
         int[] memory = ramMemory.get(key(x, y));
         if (memory == null || memory.length != size) {
             return new int[size];
@@ -1263,7 +1323,8 @@ public class CircuitSimulator {
         if (node == null || size == 0 || node >= inputPorts.length) {
             return 0;
         }
-        return tupleToInt(inPort(node, 1)) & (size - 1);
+        int port = component.component == BuiltinCircuitComponents.PAPER_TAPE ? 0 : 1;
+        return tupleToInt(inPort(node, port)) & (size - 1);
     }
 
     /** 当前 ROM 地址输入 D 对应的地址；不在 ROM 上时返回 0。 */
@@ -1287,6 +1348,49 @@ public class CircuitSimulator {
             map.put(stateKey, memory);
         }
         return memory;
+    }
+
+    /** 取得（必要时创建）RAM 元件的存储。 */
+    private int[] memoryFor(Component component, int size) {
+        long stateKey = key(component.x, component.y);
+        int[] memory = ramMemory.get(stateKey);
+        if (memory == null || memory.length != size) {
+            memory = new int[size];
+            ramMemory.put(stateKey, memory);
+        }
+        return memory;
+    }
+
+    /** 手动编辑 RAM / 磁盘内容。 */
+    public void setRamContents(int x, int y, int[] values) {
+        CircuitDiagram.Block block = diagram == null ? null : diagram.getBlock(x, y);
+        if (!(block instanceof Component component) || !isRam(component.component) || values == null) {
+            return;
+        }
+        int size = ramSize(component.component);
+        if (component.component == BuiltinCircuitComponents.PAPER_TAPE) {
+            // 纸带只读。
+            return;
+        }
+        if (component.component == BuiltinCircuitComponents.DISK && diskAccess != null) {
+            if (diskAccess.isConnected(x, y) && diskAccess.isWritable(x, y)) {
+                for (int i = 0; i < Math.min(size, values.length); i++) {
+                    diskAccess.write(x, y, i, values[i] & 0xFF);
+                }
+            }
+            return;
+        }
+        if (component.component == BuiltinCircuitComponents.DISK
+                && component.instance instanceof DiskComponentInstance disk) {
+            for (int i = 0; i < Math.min(size, values.length); i++) {
+                disk.setByte(i, values[i]);
+            }
+            return;
+        }
+        int[] memory = memoryFor(component, size);
+        for (int i = 0; i < Math.min(size, values.length); i++) {
+            memory[i] = values[i] & 0xFF;
+        }
     }
 
     private long evalCustom(CustomRuntime runtime, int node) {
@@ -1356,8 +1460,25 @@ public class CircuitSimulator {
         }
         if (isRam(cc)) {
             int size = ramSize(cc);
+            if (cc == BuiltinCircuitComponents.PAPER_TAPE) {
+                // 2 引脚只读器件：WEST 地址 -> EAST 数据。
+                int address = tupleToInt(inPort(node, 0)) & (size - 1);
+                int value = diskAccess != null && diskAccess.isConnected(component.x, component.y)
+                        ? diskAccess.read(component.x, component.y, address) & 0xFF : 0;
+                return intToTuple(value) << outputSlot(cc, Direction.EAST, 0).bitStart();
+            }
             int address = tupleToInt(inPort(node, 1)) & (size - 1);
-            int[] memory = memoryFor(ramMemory, key(component.x, component.y), size);
+            if (cc == BuiltinCircuitComponents.DISK && diskAccess != null) {
+                int value = diskAccess.isConnected(component.x, component.y)
+                        ? diskAccess.read(component.x, component.y, address) & 0xFF : 0;
+                return intToTuple(value) << outputSlot(cc, Direction.EAST, 0).bitStart();
+            }
+            if (cc == BuiltinCircuitComponents.DISK
+                    && component.instance instanceof DiskComponentInstance disk) {
+                return intToTuple(disk.getByte(address))
+                        << outputSlot(cc, Direction.EAST, 0).bitStart();
+            }
+            int[] memory = memoryFor(component, size);
             return intToTuple(memory[address] & 0xFF) << outputSlot(cc, Direction.EAST, 0).bitStart();
         }
         if (cc == BuiltinCircuitComponents.ROM_256) {
@@ -1972,10 +2093,27 @@ public class CircuitSimulator {
             int idx = node - numNets;
             Component component = comps.get(idx);
             int size = ramSize(component.component);
+            if (component.component == BuiltinCircuitComponents.PAPER_TAPE) {
+                // 纸带阅读器没有写入引脚。
+                continue;
+            }
             int address = tupleToInt(inPort(node, 1)) & (size - 1);
             if (inPort(node, 2) != 0) {
-                int[] memory = memoryFor(ramMemory, key(component.x, component.y), size);
-                memory[address] = tupleToInt(inPort(node, 0)) & 0xFF;
+                int value = tupleToInt(inPort(node, 0)) & 0xFF;
+                if (component.component == BuiltinCircuitComponents.DISK && diskAccess != null) {
+                    if (diskAccess.isConnected(component.x, component.y)
+                            && diskAccess.isWritable(component.x, component.y)) {
+                        diskAccess.write(component.x, component.y, address, value);
+                    }
+                    continue;
+                }
+                if (component.component == BuiltinCircuitComponents.DISK
+                        && component.instance instanceof DiskComponentInstance disk) {
+                    disk.setByte(address, value);
+                    continue;
+                }
+                int[] memory = memoryFor(component, size);
+                memory[address] = value;
             }
         }
         for (int node : rippleCounterNodes) {

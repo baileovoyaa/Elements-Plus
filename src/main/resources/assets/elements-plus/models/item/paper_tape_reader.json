@@ -1,0 +1,14 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "elements-plus:item/paper_tape_reader"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "element-plus.paper_tape_reader_filled": 1.0
+      },
+      "model": "elements-plus:item/paper_tape_reader_filled"
+    }
+  ]
+}

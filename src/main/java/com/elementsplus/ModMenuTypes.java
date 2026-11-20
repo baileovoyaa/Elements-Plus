@@ -4,6 +4,7 @@ import com.elementsplus.menu.AdvancedCraftingTableMenu;
 import com.elementsplus.menu.CircuitAlbumMenu;
 import com.elementsplus.menu.CrystallizerMenu;
 import com.elementsplus.menu.ExperimentTableMenu;
+import com.elementsplus.menu.FileFolderMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.menu.MetalCatalystMenu;
 import com.elementsplus.menu.PressureMachineMenu;
@@ -27,6 +28,9 @@ public class ModMenuTypes {
     public static final MenuType<ExperimentTableMenu> EXPERIMENT_TABLE = register("experiment_table", ExperimentTableMenu::new);
     public static final MenuType<RedstoneInterfaceMenu> REDSTONE_INTERFACE = register("redstone_interface", RedstoneInterfaceMenu::new);
     public static final MenuType<CircuitAlbumMenu> CIRCUIT_ALBUM = register("circuit_album", CircuitAlbumMenu::new);
+    public static final MenuType<FileFolderMenu> FILE_FOLDER = register("file_folder", FileFolderMenu::new);
+    public static final MenuType<com.elementsplus.menu.PaperTapeReaderMenu> PAPER_TAPE_READER =
+            register("paper_tape_reader", com.elementsplus.menu.PaperTapeReaderMenu::new);
 
     private static <T extends AbstractContainerMenu> MenuType<T> register(String string, MenuType.MenuSupplier<T> menuSupplier) {
         return Registry.register(BuiltInRegistries.MENU, ResourceLocation.fromNamespaceAndPath(MOD_ID, string), new MenuType<>(menuSupplier, FeatureFlags.VANILLA_SET));

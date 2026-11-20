@@ -29,9 +29,16 @@ public final class ElementsPlusServerConfig {
     public static final String ASYNC_EXPERIMENT_TESTS = "async_experiment_tests";
     public static final String ALLOW_SURVIVAL_CREATIVE_COMPONENT = "allow_survival_creative_component";
     public static final String CIRCUIT_ALBUM_CAPACITY = "circuit_album_capacity";
+    public static final String FILE_FOLDER_CAPACITY = "file_folder_capacity";
+    public static final String FILE_FOLDER_MAX_BYTES = "file_folder_max_bytes";
     public static final String INTERFACE_SAMPLE_TICKS = "interface_sample_ticks";
     public static final String INTERFACE_AVG_MSPT_LIMIT = "interface_avg_mspt_limit";
     public static final String INTERFACE_MAX_MSPT_LIMIT = "interface_max_mspt_limit";
+    public static final String TEXT_FILE_MAX_BYTES = "text_file_max_bytes";
+    public static final String SHARED_FILE_MAX_BYTES = "shared_file_max_bytes";
+    public static final String MEMORY_MAX_BYTES = "memory_max_bytes";
+    public static final String MAX_SHARED_PER_PLAYER = "max_shared_per_player";
+    public static final String ALLOW_CIRCUIT_UPLOAD = "allow_circuit_upload";
 
     public static final List<String> OPTIONS = List.of(
             CUSTOM_COMPONENT_NESTING_LIMIT,
@@ -39,9 +46,16 @@ public final class ElementsPlusServerConfig {
             ASYNC_EXPERIMENT_TESTS,
             ALLOW_SURVIVAL_CREATIVE_COMPONENT,
             CIRCUIT_ALBUM_CAPACITY,
+            FILE_FOLDER_CAPACITY,
+            FILE_FOLDER_MAX_BYTES,
             INTERFACE_SAMPLE_TICKS,
             INTERFACE_AVG_MSPT_LIMIT,
-            INTERFACE_MAX_MSPT_LIMIT
+            INTERFACE_MAX_MSPT_LIMIT,
+            TEXT_FILE_MAX_BYTES,
+            SHARED_FILE_MAX_BYTES,
+            MEMORY_MAX_BYTES,
+            MAX_SHARED_PER_PLAYER,
+            ALLOW_CIRCUIT_UPLOAD
     );
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -50,18 +64,32 @@ public final class ElementsPlusServerConfig {
     private static final boolean DEFAULT_ASYNC_EXPERIMENT_TESTS = false;
     private static final boolean DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT = false;
     private static final int DEFAULT_CIRCUIT_ALBUM_CAPACITY = 50;
+    private static final int DEFAULT_FILE_FOLDER_CAPACITY = 50;
+    private static final int DEFAULT_FILE_FOLDER_MAX_BYTES = 1024 * 1024;
     private static final int DEFAULT_INTERFACE_SAMPLE_TICKS = 100;
     private static final int DEFAULT_INTERFACE_AVG_MSPT_LIMIT = 10;
     private static final int DEFAULT_INTERFACE_MAX_MSPT_LIMIT = 100;
+    private static final int DEFAULT_TEXT_FILE_MAX_BYTES = 32 * 1024;
+    private static final int DEFAULT_SHARED_FILE_MAX_BYTES = 32 * 1024;
+    private static final int DEFAULT_MEMORY_MAX_BYTES = 32 * 1024;
+    private static final int DEFAULT_MAX_SHARED_PER_PLAYER = 4;
+    private static final boolean DEFAULT_ALLOW_CIRCUIT_UPLOAD = false;
 
     private static volatile int customComponentNestingLimit = DEFAULT_NESTING_LIMIT;
     private static volatile boolean allowInfiniteInFiniteCircuit = DEFAULT_ALLOW_INFINITE_IN_FINITE;
     private static volatile boolean asyncExperimentTests = DEFAULT_ASYNC_EXPERIMENT_TESTS;
     private static volatile boolean allowSurvivalCreativeComponent = DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT;
     private static volatile int circuitAlbumCapacity = DEFAULT_CIRCUIT_ALBUM_CAPACITY;
+    private static volatile int fileFolderCapacity = DEFAULT_FILE_FOLDER_CAPACITY;
+    private static volatile int fileFolderMaxBytes = DEFAULT_FILE_FOLDER_MAX_BYTES;
     private static volatile int interfaceSampleTicks = DEFAULT_INTERFACE_SAMPLE_TICKS;
     private static volatile int interfaceAvgMsptLimit = DEFAULT_INTERFACE_AVG_MSPT_LIMIT;
     private static volatile int interfaceMaxMsptLimit = DEFAULT_INTERFACE_MAX_MSPT_LIMIT;
+    private static volatile int textFileMaxBytes = DEFAULT_TEXT_FILE_MAX_BYTES;
+    private static volatile int sharedFileMaxBytes = DEFAULT_SHARED_FILE_MAX_BYTES;
+    private static volatile int memoryMaxBytes = DEFAULT_MEMORY_MAX_BYTES;
+    private static volatile int maxSharedPerPlayer = DEFAULT_MAX_SHARED_PER_PLAYER;
+    private static volatile boolean allowCircuitUpload = DEFAULT_ALLOW_CIRCUIT_UPLOAD;
     private static volatile @Nullable Path configFile;
 
     private ElementsPlusServerConfig() {
@@ -87,6 +115,14 @@ public final class ElementsPlusServerConfig {
         return circuitAlbumCapacity;
     }
 
+    public static int fileFolderCapacity() {
+        return fileFolderCapacity;
+    }
+
+    public static int fileFolderMaxBytes() {
+        return fileFolderMaxBytes;
+    }
+
     public static int interfaceSampleTicks() {
         return interfaceSampleTicks;
     }
@@ -97,6 +133,31 @@ public final class ElementsPlusServerConfig {
 
     public static int interfaceMaxMsptLimit() {
         return interfaceMaxMsptLimit;
+    }
+
+    /** 文本文件物品的最大字节数。 */
+    public static int textFileMaxBytes() {
+        return textFileMaxBytes;
+    }
+
+    /** 单个共享文件的最大字节数。 */
+    public static int sharedFileMaxBytes() {
+        return sharedFileMaxBytes;
+    }
+
+    /** 实验桌内存的总容量（包含文件头）。 */
+    public static int memoryMaxBytes() {
+        return memoryMaxBytes;
+    }
+
+    /** 单玩家同时共享文件数上限。 */
+    public static int maxSharedPerPlayer() {
+        return maxSharedPerPlayer;
+    }
+
+    /** 是否允许通过实验桌上传电路图。 */
+    public static boolean allowCircuitUpload() {
+        return allowCircuitUpload;
     }
 
     public static boolean isOption(String option) {
@@ -110,9 +171,16 @@ public final class ElementsPlusServerConfig {
             case ASYNC_EXPERIMENT_TESTS -> Boolean.toString(asyncExperimentTests);
             case ALLOW_SURVIVAL_CREATIVE_COMPONENT -> Boolean.toString(allowSurvivalCreativeComponent);
             case CIRCUIT_ALBUM_CAPACITY -> Integer.toString(circuitAlbumCapacity);
+            case FILE_FOLDER_CAPACITY -> Integer.toString(fileFolderCapacity);
+            case FILE_FOLDER_MAX_BYTES -> Integer.toString(fileFolderMaxBytes);
             case INTERFACE_SAMPLE_TICKS -> Integer.toString(interfaceSampleTicks);
             case INTERFACE_AVG_MSPT_LIMIT -> Integer.toString(interfaceAvgMsptLimit);
             case INTERFACE_MAX_MSPT_LIMIT -> Integer.toString(interfaceMaxMsptLimit);
+            case TEXT_FILE_MAX_BYTES -> Integer.toString(textFileMaxBytes);
+            case SHARED_FILE_MAX_BYTES -> Integer.toString(sharedFileMaxBytes);
+            case MEMORY_MAX_BYTES -> Integer.toString(memoryMaxBytes);
+            case MAX_SHARED_PER_PLAYER -> Integer.toString(maxSharedPerPlayer);
+            case ALLOW_CIRCUIT_UPLOAD -> Boolean.toString(allowCircuitUpload);
             default -> "";
         };
     }
@@ -183,6 +251,26 @@ public final class ElementsPlusServerConfig {
         return false;
     }
 
+    public static boolean setFileFolderCapacity(int value) {
+        int previous = fileFolderCapacity;
+        fileFolderCapacity = Math.max(0, value);
+        if (save()) {
+            return true;
+        }
+        fileFolderCapacity = previous;
+        return false;
+    }
+
+    public static boolean setFileFolderMaxBytes(int value) {
+        int previous = fileFolderMaxBytes;
+        fileFolderMaxBytes = Math.max(0, value);
+        if (save()) {
+            return true;
+        }
+        fileFolderMaxBytes = previous;
+        return false;
+    }
+
     public static boolean setInterfaceSampleTicks(int value) {
         int previous = interfaceSampleTicks;
         interfaceSampleTicks = Math.max(0, value);
@@ -213,15 +301,75 @@ public final class ElementsPlusServerConfig {
         return false;
     }
 
+    public static boolean setTextFileMaxBytes(int value) {
+        int previous = textFileMaxBytes;
+        textFileMaxBytes = clampFileSize(value);
+        if (save()) {
+            return true;
+        }
+        textFileMaxBytes = previous;
+        return false;
+    }
+
+    public static boolean setSharedFileMaxBytes(int value) {
+        int previous = sharedFileMaxBytes;
+        sharedFileMaxBytes = clampFileSize(value);
+        if (save()) {
+            return true;
+        }
+        sharedFileMaxBytes = previous;
+        return false;
+    }
+
+    public static boolean setMemoryMaxBytes(int value) {
+        int previous = memoryMaxBytes;
+        memoryMaxBytes = clampFileSize(value);
+        if (save()) {
+            return true;
+        }
+        memoryMaxBytes = previous;
+        return false;
+    }
+
+    public static boolean setMaxSharedPerPlayer(int value) {
+        int previous = maxSharedPerPlayer;
+        maxSharedPerPlayer = Math.max(0, value);
+        if (save()) {
+            return true;
+        }
+        maxSharedPerPlayer = previous;
+        return false;
+    }
+
+    public static boolean setAllowCircuitUpload(boolean value) {
+        boolean previous = allowCircuitUpload;
+        allowCircuitUpload = value;
+        if (save()) {
+            return true;
+        }
+        allowCircuitUpload = previous;
+        return false;
+    }
+
+    private static int clampFileSize(int value) {
+        return Math.max(0, Math.min(com.elementsplus.core.file.FileHeader.MAX_DATA_LENGTH, value));
+    }
+
     /**
      * 收到服务端同步的配置时调用。客户端只使用这些值进行预览校验。
      */
     public static void applySynced(int nestingLimit, boolean allowInfiniteInFinite, boolean asyncTests,
-                                   boolean allowSurvivalCreative) {
+                                   boolean allowSurvivalCreative, int textFileLimit, int sharedFileLimit,
+                                   int memoryLimit, int maxShared, boolean circuitUpload) {
         customComponentNestingLimit = nestingLimit;
         allowInfiniteInFiniteCircuit = allowInfiniteInFinite;
         asyncExperimentTests = asyncTests;
         allowSurvivalCreativeComponent = allowSurvivalCreative;
+        textFileMaxBytes = clampFileSize(textFileLimit);
+        sharedFileMaxBytes = clampFileSize(sharedFileLimit);
+        memoryMaxBytes = clampFileSize(memoryLimit);
+        maxSharedPerPlayer = Math.max(0, maxShared);
+        allowCircuitUpload = circuitUpload;
     }
 
     /**
@@ -235,9 +383,16 @@ public final class ElementsPlusServerConfig {
         asyncExperimentTests = DEFAULT_ASYNC_EXPERIMENT_TESTS;
         allowSurvivalCreativeComponent = DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT;
         circuitAlbumCapacity = DEFAULT_CIRCUIT_ALBUM_CAPACITY;
+        fileFolderCapacity = DEFAULT_FILE_FOLDER_CAPACITY;
+        fileFolderMaxBytes = DEFAULT_FILE_FOLDER_MAX_BYTES;
         interfaceSampleTicks = DEFAULT_INTERFACE_SAMPLE_TICKS;
         interfaceAvgMsptLimit = DEFAULT_INTERFACE_AVG_MSPT_LIMIT;
         interfaceMaxMsptLimit = DEFAULT_INTERFACE_MAX_MSPT_LIMIT;
+        textFileMaxBytes = DEFAULT_TEXT_FILE_MAX_BYTES;
+        sharedFileMaxBytes = DEFAULT_SHARED_FILE_MAX_BYTES;
+        memoryMaxBytes = DEFAULT_MEMORY_MAX_BYTES;
+        maxSharedPerPlayer = DEFAULT_MAX_SHARED_PER_PLAYER;
+        allowCircuitUpload = DEFAULT_ALLOW_CIRCUIT_UPLOAD;
 
         if (!Files.exists(configFile)) {
             save();
@@ -266,6 +421,14 @@ public final class ElementsPlusServerConfig {
                     && root.get(CIRCUIT_ALBUM_CAPACITY).isJsonPrimitive()) {
                 circuitAlbumCapacity = Math.max(0, root.get(CIRCUIT_ALBUM_CAPACITY).getAsInt());
             }
+            if (root.has(FILE_FOLDER_CAPACITY)
+                    && root.get(FILE_FOLDER_CAPACITY).isJsonPrimitive()) {
+                fileFolderCapacity = Math.max(0, root.get(FILE_FOLDER_CAPACITY).getAsInt());
+            }
+            if (root.has(FILE_FOLDER_MAX_BYTES)
+                    && root.get(FILE_FOLDER_MAX_BYTES).isJsonPrimitive()) {
+                fileFolderMaxBytes = Math.max(0, root.get(FILE_FOLDER_MAX_BYTES).getAsInt());
+            }
             if (root.has(INTERFACE_SAMPLE_TICKS)
                     && root.get(INTERFACE_SAMPLE_TICKS).isJsonPrimitive()) {
                 interfaceSampleTicks = Math.max(0, root.get(INTERFACE_SAMPLE_TICKS).getAsInt());
@@ -277,6 +440,26 @@ public final class ElementsPlusServerConfig {
             if (root.has(INTERFACE_MAX_MSPT_LIMIT)
                     && root.get(INTERFACE_MAX_MSPT_LIMIT).isJsonPrimitive()) {
                 interfaceMaxMsptLimit = Math.max(0, root.get(INTERFACE_MAX_MSPT_LIMIT).getAsInt());
+            }
+            if (root.has(TEXT_FILE_MAX_BYTES)
+                    && root.get(TEXT_FILE_MAX_BYTES).isJsonPrimitive()) {
+                textFileMaxBytes = clampFileSize(root.get(TEXT_FILE_MAX_BYTES).getAsInt());
+            }
+            if (root.has(SHARED_FILE_MAX_BYTES)
+                    && root.get(SHARED_FILE_MAX_BYTES).isJsonPrimitive()) {
+                sharedFileMaxBytes = clampFileSize(root.get(SHARED_FILE_MAX_BYTES).getAsInt());
+            }
+            if (root.has(MEMORY_MAX_BYTES)
+                    && root.get(MEMORY_MAX_BYTES).isJsonPrimitive()) {
+                memoryMaxBytes = clampFileSize(root.get(MEMORY_MAX_BYTES).getAsInt());
+            }
+            if (root.has(MAX_SHARED_PER_PLAYER)
+                    && root.get(MAX_SHARED_PER_PLAYER).isJsonPrimitive()) {
+                maxSharedPerPlayer = Math.max(0, root.get(MAX_SHARED_PER_PLAYER).getAsInt());
+            }
+            if (root.has(ALLOW_CIRCUIT_UPLOAD)
+                    && root.get(ALLOW_CIRCUIT_UPLOAD).isJsonPrimitive()) {
+                allowCircuitUpload = root.get(ALLOW_CIRCUIT_UPLOAD).getAsBoolean();
             }
         } catch (Exception e) {
             ElementsPlus.LOGGER.warn("Failed to load server config {}", configFile, e);
@@ -298,9 +481,16 @@ public final class ElementsPlusServerConfig {
         root.addProperty(ASYNC_EXPERIMENT_TESTS, asyncExperimentTests);
         root.addProperty(ALLOW_SURVIVAL_CREATIVE_COMPONENT, allowSurvivalCreativeComponent);
         root.addProperty(CIRCUIT_ALBUM_CAPACITY, circuitAlbumCapacity);
+        root.addProperty(FILE_FOLDER_CAPACITY, fileFolderCapacity);
+        root.addProperty(FILE_FOLDER_MAX_BYTES, fileFolderMaxBytes);
         root.addProperty(INTERFACE_SAMPLE_TICKS, interfaceSampleTicks);
         root.addProperty(INTERFACE_AVG_MSPT_LIMIT, interfaceAvgMsptLimit);
         root.addProperty(INTERFACE_MAX_MSPT_LIMIT, interfaceMaxMsptLimit);
+        root.addProperty(TEXT_FILE_MAX_BYTES, textFileMaxBytes);
+        root.addProperty(SHARED_FILE_MAX_BYTES, sharedFileMaxBytes);
+        root.addProperty(MEMORY_MAX_BYTES, memoryMaxBytes);
+        root.addProperty(MAX_SHARED_PER_PLAYER, maxSharedPerPlayer);
+        root.addProperty(ALLOW_CIRCUIT_UPLOAD, allowCircuitUpload);
         try {
             Files.createDirectories(file.getParent());
             Files.writeString(file, GSON.toJson(root) + System.lineSeparator(), StandardCharsets.UTF_8);
@@ -319,8 +509,15 @@ public final class ElementsPlusServerConfig {
         asyncExperimentTests = DEFAULT_ASYNC_EXPERIMENT_TESTS;
         allowSurvivalCreativeComponent = DEFAULT_ALLOW_SURVIVAL_CREATIVE_COMPONENT;
         circuitAlbumCapacity = DEFAULT_CIRCUIT_ALBUM_CAPACITY;
+        fileFolderCapacity = DEFAULT_FILE_FOLDER_CAPACITY;
+        fileFolderMaxBytes = DEFAULT_FILE_FOLDER_MAX_BYTES;
         interfaceSampleTicks = DEFAULT_INTERFACE_SAMPLE_TICKS;
         interfaceAvgMsptLimit = DEFAULT_INTERFACE_AVG_MSPT_LIMIT;
         interfaceMaxMsptLimit = DEFAULT_INTERFACE_MAX_MSPT_LIMIT;
+        textFileMaxBytes = DEFAULT_TEXT_FILE_MAX_BYTES;
+        sharedFileMaxBytes = DEFAULT_SHARED_FILE_MAX_BYTES;
+        memoryMaxBytes = DEFAULT_MEMORY_MAX_BYTES;
+        maxSharedPerPlayer = DEFAULT_MAX_SHARED_PER_PLAYER;
+        allowCircuitUpload = DEFAULT_ALLOW_CIRCUIT_UPLOAD;
     }
 }

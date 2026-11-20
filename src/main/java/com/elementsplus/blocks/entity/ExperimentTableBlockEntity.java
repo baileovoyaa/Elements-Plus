@@ -57,6 +57,7 @@ import java.util.function.Function;
  */
 public class ExperimentTableBlockEntity extends BaseContainerBlockEntity implements ExperimentHost {
     private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
+    private final ExperimentTableFiles fileSystem = new ExperimentTableFiles(this);
     private String selectedChapter = null;
     private String selectedExperiment = null;
 
@@ -76,6 +77,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     private ItemStack startedStack = null;
     private AsyncExperimentRunner asyncExperiment = null;
     private boolean suppressStatusSync = false;
+    /** 上次同步外接设备列表时的槽位物品，用于在物品变化时刷新编程页。 */
+    private ItemStack lastDeviceStack = ItemStack.EMPTY;
 
     public ExperimentTableBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntityTypes.EXPERIMENT_TABLE, blockPos, blockState);
@@ -84,7 +87,17 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     @Override
     public void setRemoved() {
         stopAsyncExperiment();
+        fileSystem.onRemoved();
         super.setRemoved();
+    }
+
+    /** 编程页文件系统（实验桌内存、共享空间、外接设备）。 */
+    public ExperimentTableFiles fileSystem() {
+        return fileSystem;
+    }
+
+    public void onViewerClosed(ServerPlayer player) {
+        fileSystem.onViewerClosed(player);
     }
 
     public String getSelectedChapter() {
@@ -130,6 +143,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         ContainerHelper.loadAllItems(compoundTag, this.items, provider);
         this.selectedChapter = compoundTag.contains("SelectedChapter") ? compoundTag.getString("SelectedChapter") : null;
         this.selectedExperiment = compoundTag.contains("SelectedExperiment") ? compoundTag.getString("SelectedExperiment") : null;
+        this.fileSystem.load(compoundTag.getCompound("FileSystem"));
     }
 
     @Override
@@ -142,6 +156,9 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         if (this.selectedExperiment != null) {
             compoundTag.putString("SelectedExperiment", this.selectedExperiment);
         }
+        CompoundTag fileTag = new CompoundTag();
+        this.fileSystem.save(fileTag);
+        compoundTag.put("FileSystem", fileTag);
     }
 
     @Override
@@ -182,9 +199,17 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
      *  实验流程
      * ============================================================ */
 
-    public void serverTick() {
-        if (this.level == null || this.level.isClientSide) {
+    /** 程序写入外接设备后同步快照，避免把内容更新误判为设备替换。 */
+    public void markDeviceStackSynced(ItemStack stack) {
+        this.lastDeviceStack = stack == null ? ItemStack.EMPTY : stack.copy();
+    }
+
+    public void serverTick() {        if (this.level == null || this.level.isClientSide) {
             return;
+        }
+        if (!ItemStack.matches(this.getItem(0), this.lastDeviceStack)) {
+            this.lastDeviceStack = this.getItem(0).copy();
+            this.fileSystem.onExternalDeviceChanged();
         }
         if (status == ExperimentStatus.IDLE) {
             stopAsyncExperiment();
