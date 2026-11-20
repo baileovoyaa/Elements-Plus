@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>同步文本框</title>
+<style>
+  :root {
+    --ink: #17121d;
+    --muted: #7c7285;
+    --line: #e9e3ee;
+    --paper: #fffdfd;
+    --bg: #f4f1f7;
+    --accent: #ff2bd6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 500px at 100% -10%, #ffe8fb 0, transparent 55%),
+      radial-gradient(700px 450px at -10% 100%, #e9f6ff 0, transparent 50%),
+      var(--bg);
+    font: 15px/1.5 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    width: min(960px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 22px 2px 6px;
+  }
+  .brand { font-size: 20px; font-weight: 750; letter-spacing: -.3px; }
+  .brand i { color: var(--accent); font-style: normal; }
+  #status { color: var(--muted); font-size: 13px; }
+  #people { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; justify-content: flex-end; }
+  .person {
+    display: inline-flex; align-items: center; gap: 5px;
+    max-width: 150px; padding: 3px 9px; border: 1px solid var(--line);
+    border-radius: 999px; background: rgba(255,255,255,.72);
+    color: #554b5e; font-size: 12px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .person b { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+  .person.me { border-color: #e7b9df; background: #fff3fc; color: #a21b88; font-weight: 600; }
+  main {
+    position: relative;
+    width: min(960px, calc(100% - 32px));
+    margin: 12px auto 0;
+    border-radius: 15px;
+    background: var(--paper);
+    box-shadow: 0 18px 60px rgba(46, 24, 58, .10), 0 0 0 1px rgba(80, 45, 95, .08);
+  }
+  #mirror, #editor {
+    margin: 0;
+    padding: 24px 28px 34px;
+    font: 16px/1.75 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    letter-spacing: 0;
+    tab-size: 4;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  #mirror {
+    position: absolute; inset: 0; z-index: 0;
+    color: transparent; pointer-events: none; user-select: none;
+    border-radius: inherit;
+  }
+  #highlights {
+    position: absolute; inset: 0; z-index: 1;
+    pointer-events: none; border-radius: inherit; overflow: hidden;
+  }
+  #overlay {
+    position: absolute; inset: 0; z-index: 3;
+    pointer-events: none; overflow: visible;
+  }
+  #editor {
+    position: relative; z-index: 2;
+    display: block;
+    width: 100%; min-height: 62vh; height: 62vh;
+    resize: none; overflow: hidden;
+    border: 0; border-radius: inherit; outline: 0;
+    background: transparent; color: var(--ink);
+    caret-color: #1d1522;
+  }
+  #editor::placeholder { color: #b6adbe; }
+  .sel { position: absolute; border-radius: 3px; }
+  .caret {
+    position: absolute; width: 2px; pointer-events: none; z-index: 2;
+    background: var(--c); border-radius: 2px;
+  }
+  .caret .flag {
+    position: absolute; left: 0; bottom: calc(100% + 1px);
+    padding: 2px 7px 3px; max-width: 190px;
+    border-radius: 4px 6px 6px 0;
+    background: var(--c); color: #fff;
+    font: 600 11px/1.45 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transform: translateY(2px);
+    transition: opacity .12s ease, transform .12s ease;
+    pointer-events: none; box-shadow: 0 3px 10px rgba(30, 10, 35, .16);
+  }
+  .caret.show .flag, .caret.hover .flag { opacity: 1; transform: translateY(0); }
+  .caret.hover { z-index: 10; }
+  footer {
+    width: min(960px, calc(100% - 32px));
+    margin: 10px auto 30px;
+    color: #94899e; font-size: 12px;
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  @media (max-width: 600px) {
+    header, main, footer { width: calc(100% - 20px); }
+    #mirror, #editor { padding: 18px 16px 28px; font-size: 15px; }
+    #people { margin-left: 0; justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">同步<i>文本框</i></div>
+  <span id="status">连接中…</span>
+  <div id="people"></div>
+</header>
+
+<main>
+  <div id="mirror" aria-hidden="true">​</div>
+  <div id="highlights" aria-hidden="true"></div>
+  <textarea id="editor" spellcheck="false" autocomplete="off" wrap="soft"
+            placeholder="在这里一起输入……"></textarea>
+  <div id="overlay" aria-hidden="true"></div>
+</main>
+
+<footer>
+  <span>所有打开这个页面的人都会实时看到同一段文字</span>
+  <span>光标悬停可查看对方名字</span>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- 身份 ----------
+  const uid = sessionStorage.getItem("sync-uid") ||
+    (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now());
+  sessionStorage.setItem("sync-uid", uid);
+  let savedName = "";
+  try { savedName = localStorage.getItem("sync-name") || ""; } catch (e) {}
+  let name = prompt("请输入用户名", savedName);
+  if (name === null) name = savedName;
+  name = (name || "访客").trim().slice(0, 16) || "访客";
+  try { localStorage.setItem("sync-name", name); } catch (e) {}
+
+  const editor = document.getElementById("editor");
+  const mirror = document.getElementById("mirror");
+  const highlights = document.getElementById("highlights");
+  const overlay = document.getElementById("overlay");
+  const statusEl = document.getElementById("status");
+  const peopleEl = document.getElementById("people");
+  const ZW = "\u200b";
+
+  // ---------- 极简序列 CRDT ----------
+  // 每个字符有永久 id；插入时指定“父字符”，光标保存字符 id 而不是下标。
+  const nodes = new Map();       // id -> {id, p, ch, del}
+  const children = new Map();    // parent id -> Set(child id)
+  let visibleCache = null, offsetCache = null, textCache = "";
+  let clock = 0, seq = 0;
+
+  const invalidate = () => { visibleCache = offsetCache = null; };
+
+  function rebuild() {
+    if (visibleCache) return;
+    const vis = [], offsets = new Map([["", 0]]);
+    let off = 0;
+    // 用显式栈做先序遍历，避免长文本形成深插入链后递归爆栈。
+    const stack = [...(children.get("") || [])].sort();
+    while (stack.length) {
+      const id = stack.pop();
+      const n = nodes.get(id);
+      if (!n) continue;
+      if (!n.del) { vis.push(n); off++; }
+      offsets.set(id, off);
+      const kids = children.get(id);
+      if (kids) {
+        const sorted = [...kids].sort().reverse();
+        for (let i = sorted.length - 1; i >= 0; i--) stack.push(sorted[i]);
+      }
+    }
+    visibleCache = vis;
+    offsetCache = offsets;
+    textCache = vis.map(n => n.ch).join("");
+  }
+  const visible = () => (rebuild(), visibleCache);
+  const docText = () => (rebuild(), textCache);
+  function offsetAt(anchor) {
+    rebuild();
+    return offsetCache.has(anchor) ? offsetCache.get(anchor) : 0;
+  }
+  function anchorAt(offset) {
+    const v = visible();
+    if (offset <= 0) return "";
+    if (offset >= v.length) return v.length ? v[v.length - 1].id : "";
+    return v[offset - 1].id;
+  }
+  function rebuildChildren() {
+    children.clear();
+    for (const n of nodes.values()) {
+      if (!children.has(n.p)) children.set(n.p, new Set());
+      children.get(n.p).add(n.id);
+    }
+    invalidate();
+  }
+  function rememberClock(id) {
+    const t = parseInt(id.slice(0, 15), 10);
+    if (t > clock) clock = t;
+  }
+  function addNode(id, parent, ch, del) {
+    if (nodes.has(id)) {
+      if (del) nodes.get(id).del = true;
+      return false;
+    }
+    nodes.set(id, { id, p: parent, ch, del: !!del });
+    if (!children.has(parent)) children.set(parent, new Set());
+    children.get(parent).add(id);
+    rememberClock(id);
+    invalidate();
+    return true;
+  }
+  function applyOp(op) {
+    let changed = false;
+    for (const id of op.d || []) {
+      const n = nodes.get(id);
+      if (n && !n.del) { n.del = true; changed = true; }
+    }
+    const ins = op.i;
+    if (ins) {
+      let parent = ins.parent || "";
+      for (const item of ins.nodes || []) {
+        const [id, ch] = item;
+        if (nodes.has(id)) { parent = id; continue; }
+        if (parent && !nodes.has(parent)) parent = "";
+        changed = addNode(id, parent, ch, false) || changed;
+        parent = id;
+      }
+    }
+    if (changed) invalidate();
+    return changed;
+  }
+  function localOp(del, ins, parent) {
+    const op = { d: del };
+    if (ins) {
+      const list = [];
+      let p = parent;
+      for (let i = 0; i < ins.length; i++) {
+        const stamp = Math.max(Date.now(), clock + 1);
+        clock = stamp;
+        seq++;
+        const id = String(stamp).padStart(15, "0") + ":" +
+                   String(seq).padStart(5, "0") + ":" + uid;
+        list.push([id, ins[i]]);
+        p = id;
+      }
+      op.i = { parent, nodes: list };
+      applyOp(op);
+    } else {
+      applyOp(op);
+    }
+    return op;
+  }
+
+  // ---------- 本地选择 / 文本 ----------
+  let composing = false;
+  let pendingRemote = [];
+  let initialized = false;
+  let connected = false;
+
+  function resizeEditor() {
+    editor.style.height = "auto";
+    editor.style.height = editor.scrollHeight + "px";
+    editor.scrollTop = 0;
+  }
+  function refreshMirror() {
+    mirror.textContent = docText() + ZW;
+    resizeEditor();
+  }
+  function selectionAnchors() {
+    const a = Math.min(editor.selectionStart, editor.selectionEnd);
+    const b = Math.max(editor.selectionStart, editor.selectionEnd);
+    const back = editor.selectionDirection === "backward";
+    return { s: anchorAt(a), e: anchorAt(b), h: anchorAt(back ? a : b), back };
+  }
+  function restoreSelection(sel) {
+    if (!sel) return;
+    const a = offsetAt(sel.s), b = offsetAt(sel.e);
+    try {
+      editor.setSelectionRange(sel.back ? b : a, sel.back ? a : b,
+                               sel.back ? "backward" : "forward");
+    } catch (e) {}
+  }
+  function setText(sel) {
+    editor.value = docText();
+    refreshMirror();
+    restoreSelection(sel);
+    drawSoon();
+  }
+
+  function syncInput() {
+    if (composing) return;
+    const oldText = docText();
+    const newText = editor.value;
+    if (oldText === newText) return;
+
+    let head = 0;
+    while (head < oldText.length && head < newText.length &&
+           oldText[head] === newText[head]) head++;
+    let tail = 0;
+    while (tail < oldText.length - head && tail < newText.length - head &&
+           oldText[oldText.length - 1 - tail] === newText[newText.length - 1 - tail]) tail++;
+
+    const oldVisible = visible();
+    const delCount = oldText.length - head - tail;
+    const deleted = oldVisible.slice(head, head + delCount).map(n => n.id);
+    const inserted = newText.slice(head, newText.length - tail);
+    const parent = head > 0 ? oldVisible[head - 1].id : "";
+    const op = localOp(deleted, inserted, parent);
+    refreshMirror();
+    drawSoon();
+    send({ type: "op", op });
+    scheduleCursor();
+  }
+
+  function flushRemote() {
+    if (composing || !pendingRemote.length) return;
+    const queue = pendingRemote.splice(0);
+    const sel = selectionAnchors();
+    let changed = false;
+    for (const msg of queue) {
+      changed = applyOp(msg.op) || changed;
+      if (msg.by !== uid) markActive(msg.by);
+    }
+    if (changed) setText(sel);
+    drawSoon();
+  }
+
+  // ---------- 发送队列 ----------
+  const outbox = [];
+  let sending = false;
+  async function pump() {
+    if (sending) return;
+    sending = true;
+    while (outbox.length) {
+      const msg = outbox.shift();
+      try {
+        const r = await fetch("/op", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...msg, uid }),
+          cache: "no-store"
+        });
+        if (!r.ok) {
+          if (r.status === 403) {
+            outbox.unshift(msg);
+            await new Promise(res => setTimeout(res, 500));
+            continue;
+          }
+          throw new Error("HTTP " + r.status);
+        }
+      } catch (e) {
+        outbox.unshift(msg);
+        await new Promise(res => setTimeout(res, 700));
+      }
+    }
+    sending = false;
+  }
+  function send(msg) {
+    if (msg.type === "cursor") {
+      for (let i = outbox.length - 1; i >= 0; i--) {
+        if (outbox[i].type === "cursor") outbox.splice(i, 1);
+      }
+    }
+    outbox.push(msg);
+    pump();
+  }
+
+  let cursorTimer = 0, lastCursorKey = "";
+  function pushCursor(force) {
+    if (composing) return;
+    if (document.activeElement !== editor && !force) return;
+    const sel = selectionAnchors();
+    const key = sel.s + "|" + sel.e + "|" + sel.h;
+    if (!force && key === lastCursorKey) return;
+    lastCursorKey = key;
+    send({ type: "cursor", s: sel.s, e: sel.e, h: sel.h });
+  }
+  function scheduleCursor(force) {
+    clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => pushCursor(!!force), 45);
+  }
+
+  // ---------- 远程用户 / 旗帜 ----------
+  const users = new Map();
+  const FLAG_MS = 2000;
+  function markActive(id) {
+    const u = users.get(id);
+    if (!u || id === uid) return;
+    u.until = Date.now() + FLAG_MS;
+    clearTimeout(u.timer);
+    u.timer = setTimeout(() => { u.until = 0; drawSoon(); }, FLAG_MS + 25);
+    drawSoon();
+  }
+  function upsertUser(info, active) {
+    let u = users.get(info.uid);
+    if (!u) u = { uid: info.uid, until: 0 };
+    Object.assign(u, {
+      name: info.name || u.name || "访客",
+      color: info.color || u.color || "#ff2bd6",
+      cursor: info.cursor || u.cursor || { s: "", e: "", h: "" }
+    });
+    users.set(info.uid, u);
+    if (active) markActive(info.uid);
+    updatePeople();
+  }
+  function updatePeople() {
+    peopleEl.replaceChildren();
+    for (const u of users.values()) {
+      const el = document.createElement("span");
+      el.className = "person" + (u.uid === uid ? " me" : "");
+      el.title = u.name + (u.uid === uid ? "（我）" : "");
+      const dot = document.createElement("b");
+      dot.style.background = u.color;
+      el.append(dot, document.createTextNode(u.name + (u.uid === uid ? "（我）" : "")));
+      peopleEl.append(el);
+    }
+    statusEl.textContent = connected ? `${users.size} 人在线` : "重连中…";
+  }
+
+  // ---------- 绘制其他人的光标 ----------
+  let drawFrame = 0, hoverUid = null, pointerPos = null;
+  function drawSoon() {
+    if (drawFrame) return;
+    drawFrame = requestAnimationFrame(() => { drawFrame = 0; draw(); });
+  }
+  function rangeRects(a, b) {
+    const node = mirror.firstChild;
+    if (!node) return [];
+    const range = document.createRange();
+    range.setStart(node, Math.max(0, Math.min(a, node.length)));
+    range.setEnd(node, Math.max(0, Math.min(b, node.length)));
+    return [...range.getClientRects()];
+  }
+  function caretRect(off) {
+    const node = mirror.firstChild;
+    if (!node) return null;
+    const range = document.createRange();
+    const n = Math.max(0, Math.min(off, node.length));
+    range.setStart(node, n);
+    range.collapse(true);
+    const rects = range.getClientRects();
+    let rect = rects[0] || range.getBoundingClientRect();
+    if (rect && rect.height >= 1 && (rect.left || rect.top)) return rect;
+
+    // 空行上的折叠 Range 没有布局矩形，插入零宽标记来测量。
+    const marker = document.createElement("span");
+    marker.textContent = ZW;
+    range.insertNode(marker);
+    rect = marker.getBoundingClientRect();
+    marker.remove();
+    mirror.normalize();
+    return rect;
+  }
+  function rgba(hex, alpha) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+  }
+  function draw() {
+    const base = mirror.getBoundingClientRect();
+    const lineH = parseFloat(getComputedStyle(editor).lineHeight) || 28;
+    highlights.replaceChildren();
+    overlay.replaceChildren();
+    const now = Date.now();
+
+    for (const u of users.values()) {
+      if (u.uid === uid || !u.cursor) continue;
+      const c = u.cursor;
+      const a = offsetAt(c.s || "");
+      const b = offsetAt(c.e || "");
+      if (b > a) {
+        for (const r of rangeRects(a, b)) {
+          if (r.width < 1 || r.height < 1) continue;
+          const el = document.createElement("div");
+          el.className = "sel";
+          el.style.cssText = `left:${r.left - base.left}px;top:${r.top - base.top}px;` +
+            `width:${r.width}px;height:${r.height}px;background:${rgba(u.color, .28)}`;
+          highlights.append(el);
+        }
+      }
+      const h = offsetAt(c.h !== undefined ? c.h : c.e || "");
+      const r = caretRect(h);
+      if (!r) continue;
+      const caret = document.createElement("div");
+      caret.className = "caret" + (u.until > now ? " show" : "") +
+        (u.uid === hoverUid ? " hover" : "");
+      caret.dataset.uid = u.uid;
+      caret.style.left = (r.left - base.left) + "px";
+      caret.style.top = (r.top - base.top) + "px";
+      caret.style.height = Math.max(r.height || 0, lineH) + "px";
+      caret.style.setProperty("--c", u.color);
+      const flag = document.createElement("span");
+      flag.className = "flag";
+      flag.textContent = u.name;
+      caret.append(flag);
+      overlay.append(caret);
+    }
+    if (pointerPos) updateHover(pointerPos.x, pointerPos.y);
+  }
+
+  // 光标本身不接收鼠标事件，避免挡住文本框点击；用鼠标位置做悬停检测。
+  function updateHover(x, y) {
+    let hit = null;
+    for (const c of overlay.children) {
+      const r = c.getBoundingClientRect();
+      if (x >= r.left - 6 && x <= r.right + 6 &&
+          y >= r.top - 4 && y <= r.bottom + 4) {
+        hit = c;
+        break;
+      }
+    }
+    const next = hit ? hit.dataset.uid : null;
+    if (next !== hoverUid) {
+      hoverUid = next;
+      for (const c of overlay.children) {
+        c.classList.toggle("hover", c.dataset.uid === hoverUid);
+      }
+    }
+  }
+  const mainEl = document.querySelector("main");
+  mainEl.addEventListener("pointermove", e => {
+    pointerPos = { x: e.clientX, y: e.clientY };
+    updateHover(pointerPos.x, pointerPos.y);
+  });
+  mainEl.addEventListener("pointerleave", () => {
+    pointerPos = null;
+    hoverUid = null;
+    for (const c of overlay.children) c.classList.remove("hover");
+  });
+
+  // ---------- 事件流 ----------
+  function connect() {
+    const es = new EventSource("/events?uid=" + encodeURIComponent(uid) +
+                               "&name=" + encodeURIComponent(name));
+    es.onopen = () => { connected = true; updatePeople(); };
+    es.onerror = () => { connected = false; updatePeople(); };
+    es.onmessage = ev => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (msg.type === "init") {
+        connected = true;
+        const old = initialized ? selectionAnchors() : null;
+        for (const item of msg.nodes || []) {
+          const [id, parent, ch, del] = item;
+          if (nodes.has(id)) {
+            if (del) nodes.get(id).del = true;
+          } else {
+            nodes.set(id, { id, p: parent, ch, del: !!del });
+            rememberClock(id);
+          }
+        }
+        rebuildChildren();
+        users.clear();
+        for (const u of msg.users || []) upsertUser(u, false);
+        if (!initialized) {
+          initialized = true;
+          editor.value = docText();
+          refreshMirror();
+          editor.focus();
+          editor.setSelectionRange(editor.value.length, editor.value.length);
+          drawSoon();
+          setTimeout(() => scheduleCursor(true), 150);
+        } else {
+          setText(old);
+        }
+        updatePeople();
+        flushRemote();
+      } else if (msg.type === "join") {
+        upsertUser(msg.user, true);
+        drawSoon();
+      } else if (msg.type === "leave") {
+        const u = users.get(msg.uid);
+        if (u) clearTimeout(u.timer);
+        users.delete(msg.uid);
+        updatePeople();
+        drawSoon();
+      } else if (msg.type === "cursor") {
+        if (msg.uid === uid) return;
+        const u = users.get(msg.uid);
+        if (!u) return;
+        u.cursor = { s: msg.s, e: msg.e, h: msg.h };
+        markActive(msg.uid);
+      } else if (msg.type === "op") {
+        if (msg.by !== uid) markActive(msg.by);
+        if (composing) pendingRemote.push(msg);
+        else {
+          const sel = selectionAnchors();
+          if (applyOp(msg.op)) setText(sel);
+          drawSoon();
+        }
+      }
+    };
+  }
+
+  // ---------- 输入事件 ----------
+  editor.addEventListener("compositionstart", () => {
+    clearTimeout(cursorTimer);
+    pushCursor(true);       // 先把光标固定在组合输入开始处
+    composing = true;       // 组合期间不再上报随组合文本变化的位置
+  });
+  editor.addEventListener("compositionend", () => {
+    composing = false;
+    syncInput();
+    flushRemote();
+    scheduleCursor(true);
+  });
+  editor.addEventListener("input", e => {
+    if (composing || e.isComposing) return;
+    syncInput();
+    scheduleCursor();
+  });
+  editor.addEventListener("focus", () => scheduleCursor(true));
+  editor.addEventListener("blur", () => { /* 有意保留远程光标位置 */ });
+  editor.addEventListener("keyup", () => scheduleCursor());
+  editor.addEventListener("mouseup", () => scheduleCursor());
+  document.addEventListener("selectionchange", () => {
+    if (document.activeElement === editor) scheduleCursor();
+  });
+  window.addEventListener("resize", () => { refreshMirror(); drawSoon(); });
+
+  refreshMirror();
+  updatePeople();
+  connect();
+})();
+</script>
+</body>
+</html>

@@ -22,7 +22,7 @@ author: me
 ### 电路
 
 - [参考算法描述](../dev/reference/电路/参考算法描述.md)
-  - [参考HTML实现](../dev/reference/电路/电路（时序）（优化版）.html)
+  - [参考HTML实现](reference/电路/电路（时序）（优化版）.html)
 
 ### 实验
 
@@ -32,6 +32,10 @@ author: me
 ### 计算机架构
 
 - [8 位指令集](../dev/reference/8位指令集.md)
+
+### 文件系统
+
+- [协作编辑器](reference/文件系统/协作编辑器)
 
 ## 路线图
 
