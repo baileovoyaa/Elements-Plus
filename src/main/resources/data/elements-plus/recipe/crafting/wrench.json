@@ -1,12 +1,19 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "I",
-    "I"
+    "N N",
+    " S ",
+    " I "
   ],
   "key": {
     "I": {
       "item": "minecraft:iron_ingot"
+    },
+    "S": {
+      "item": "elements-plus:silver_ingot"
+    },
+    "N": {
+      "item": "minecraft:iron_nugget"
     }
   },
   "result": {
