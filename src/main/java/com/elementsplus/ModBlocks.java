@@ -264,6 +264,7 @@ public class ModBlocks {
             new RedstoneInterfaceBlock(BlockBehaviour.Properties.of()
                     .strength(2.0f)
                     .sound(SoundType.STONE)
+                    .isRedstoneConductor(Blocks::never)  // 不能是红石导体：会导致信号跨越传播
             ),
             "redstone_interface"
     );

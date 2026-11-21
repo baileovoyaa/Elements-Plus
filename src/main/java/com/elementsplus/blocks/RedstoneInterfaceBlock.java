@@ -6,6 +6,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
@@ -68,6 +69,13 @@ public class RedstoneInterfaceBlock extends BaseEntityBlock {
                 entity.serverTick();
             }
         };
+    }
+
+    @Override
+    protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+        if (level.getBlockEntity(pos) instanceof RedstoneInterfaceBlockEntity entity) {
+            entity.propagateNeighborUpdates();
+        }
     }
 
     @Override

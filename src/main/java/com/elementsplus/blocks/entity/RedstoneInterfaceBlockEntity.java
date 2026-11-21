@@ -43,6 +43,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
@@ -970,7 +971,27 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             if (!level.isClientSide) {
                 level.updateNeighborsAt(worldPosition, getBlockState().getBlock());
+                // 红石灯等导体被接口直接充能后，灯自身的 setBlock 使用 flag=2，
+                // 不会通知它的邻居；这里补一次二段更新，让紧邻灯的元件也能响应。
+                for (Direction direction : Direction.values()) {
+                    level.updateNeighborsAt(worldPosition.relative(direction),
+                            getBlockState().getBlock());
+                }
+                // 红石灯熄灭会延迟 4 tick，等它真正改变状态后再补一次邻居更新。
+                level.scheduleTick(worldPosition, getBlockState().getBlock(), 5);
             }
+        }
+    }
+
+    /** 供方块计划刻调用：把二段红石更新推迟到直接邻居的状态稳定之后。 */
+    public void propagateNeighborUpdates() {
+        if (level == null || level.isClientSide) {
+            return;
+        }
+        Block available = getBlockState().getBlock();
+        level.updateNeighborsAt(worldPosition, available);
+        for (Direction direction : Direction.values()) {
+            level.updateNeighborsAt(worldPosition.relative(direction), available);
         }
     }
 
