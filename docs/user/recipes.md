@@ -1,6 +1,9 @@
 ---
 title: "配方一览"
 category: "用户文档"
+author:
+  - "baileovo"
+  - "myworldzycpc"
 ---
 
 # 配方一览

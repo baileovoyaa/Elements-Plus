@@ -18,7 +18,7 @@
 }
 .custom-page-title {
   font-size: 3rem; /* 远大于默认 h1 的尺寸 */
-  flex: 1 1 12em;           /* 关键：12em 是换行阈值 */
+  flex: 1 1 8em;           /* 关键：8em 是换行阈值 */
   min-width: 0;             /* 允许收缩，防止长单词撑破 */
   overflow-wrap: anywhere;  /* 长标题可断行，可选 */
 }
