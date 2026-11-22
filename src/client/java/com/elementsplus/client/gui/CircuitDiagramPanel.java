@@ -159,12 +159,12 @@ public class CircuitDiagramPanel extends AbstractWidget {
     private long lastInputClickTime = 0;
     private CircuitDiagram.Component lastInputClicked;
 
-    private Consumer<CircuitDiagram.Component> onNumberDoubleClick = component -> {
+    private Consumer<CircuitDiagram.Component> onDoubleClick = component -> {
     };
 
     /** 双击可输入数值的元件（8位输入、常量、掩码等）时的回调（由宿主 Screen 弹对话框）。 */
-    public void setOnNumberDoubleClick(Consumer<CircuitDiagram.Component> consumer) {
-        this.onNumberDoubleClick = consumer;
+    public void setOnDoubleClick(Consumer<CircuitDiagram.Component> consumer) {
+        this.onDoubleClick = consumer;
     }
 
     private Consumer<CircuitDiagram.Component> onPickComponent = component -> {
@@ -664,6 +664,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     || component.component == BuiltinCircuitComponents.CONST_8
                     || component.component == BuiltinCircuitComponents.MASK_8
                     || component.component == BuiltinCircuitComponents.CONST_ANALOG_8
+                    || component.component == BuiltinCircuitComponents.MCU_8_BASIC
                     || CircuitSimulator.isRam(component.component)
                     || component.component == BuiltinCircuitComponents.ROM_256) {
                 long now = Util.getMillis();
@@ -671,7 +672,7 @@ public class CircuitDiagramPanel extends AbstractWidget {
                     if (component.component == BuiltinCircuitComponents.INPUT) {
                         toggleInputSignal(component);
                     } else {
-                        onNumberDoubleClick.accept(component);
+                        onDoubleClick.accept(component);
                     }
                     lastInputClicked = null;
                     lastInputClickTime = 0;

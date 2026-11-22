@@ -241,7 +241,7 @@ public class ElementsPlusClient implements ClientModInitializer {
                     if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
                         screen.onServerData(payload.pos(), payload.selectedChapter(), payload.selectedExperiment(),
                                 payload.unlockedChapters(), payload.forcedChapters(),
-                                payload.completedExperiments(), payload.worldSeed());
+                                payload.completedExperiments(), payload.experimentScores(), payload.worldSeed());
                     }
                 }));
 
@@ -255,7 +255,7 @@ public class ElementsPlusClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(ExperimentTableStatusPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     if (Minecraft.getInstance().screen instanceof ExperimentTableScreen screen) {
-                        screen.onStatusUpdate(payload.pos(), payload.status(), payload.paused(), payload.experimentName(), payload.progress(), payload.testResults(), payload.testTicks(), payload.tooltipLines(), payload.failureInfo(), payload.currentTestIndex(), payload.sequentialFailure());
+                        screen.onStatusUpdate(payload.pos(), payload.status(), payload.paused(), payload.experimentName(), payload.progress(), payload.testResults(), payload.testTicks(), payload.tooltipLines(), payload.failureInfo(), payload.currentTestIndex(), payload.sequentialFailure(), payload.finalScore());
                     }
                 }));
 

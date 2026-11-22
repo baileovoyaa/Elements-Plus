@@ -18,6 +18,7 @@ import com.elementsplus.core.circuit.CircuitComponent;
 import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
+import com.elementsplus.core.circuit.component.Mcu8BasicComponentInstance;
 import com.elementsplus.core.circuit.component.RomComponentInstance;
 import com.elementsplus.core.circuit.diagram.CircuitDiagram;
 import com.elementsplus.menu.LithographyMachineMenu;
@@ -35,6 +36,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -79,6 +81,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     private ContextMenu contextMenu;
     private ToolboxDialog toolboxDialog;
     private MemoryEditorDialog memoryDialog;
+    private McuStatusDialog mcuDialog;
     private LithographyHelpDialog helpDialog;
 
     public Map<Integer, Point> slotPosition;
@@ -145,6 +148,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         boolean helpWasOpen = this.helpDialog != null;
         this.contextMenu = null;
         this.toolboxDialog = null;
+        this.mcuDialog = null;
         this.helpDialog = null;
         updateScreenSize();
         super.init();
@@ -180,7 +184,7 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
                 leftPos + 10 + 80, topPos + 49,
                 Math.max(1, imageWidth - 180), Math.max(1, imageHeight - 55)));
         circuitPanel.setSimulator(simulator);
-        circuitPanel.setOnNumberDoubleClick(this::openNumberValueDialog);
+        circuitPanel.setOnDoubleClick(this::openNumberValueDialog);
         circuitPanel.setOnPickComponent(component -> this.onPickup(component.component));
         circuitPanel.setOnPickWire(this::onPickWire);
 
@@ -564,6 +568,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     }
 
     private void openNumberValueDialog(CircuitDiagram.Component component) {
+        if (component.component == BuiltinCircuitComponents.MCU_8_BASIC) {
+            openMcuDialog(component);
+            return;
+        }
         if (component.component == BuiltinCircuitComponents.DISK) {
             openDiskDialog(component);
             return;
@@ -588,6 +596,57 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         } else {
             openBusValueDialog(component);
         }
+    }
+
+    /** 双击 MCU 打开只读状态窗口；数据直接来自当前客户端模拟器。 */
+    private void openMcuDialog(CircuitDiagram.Component component) {
+        if (mcuDialog != null || component == null
+                || component.component != BuiltinCircuitComponents.MCU_8_BASIC) {
+            return;
+        }
+        if (!(simulator.getComponentInstance(component.x, component.y)
+                instanceof Mcu8BasicComponentInstance)) {
+            CircuitDiagram current = circuitPanel.getDisplayDiagram();
+            if (current == null) {
+                return;
+            }
+            simulator.setDiagram(current);
+        }
+        if (!(simulator.getComponentInstance(component.x, component.y)
+                instanceof Mcu8BasicComponentInstance)) {
+            return;
+        }
+        mcuDialog = new McuStatusDialog(() -> buildMcuSnapshot(component), this.font,
+                this.width, this.height, () -> mcuDialog = null);
+    }
+
+    private McuStatusDialog.Snapshot buildMcuSnapshot(CircuitDiagram.Component component) {
+        if (!(simulator.getComponentInstance(component.x, component.y)
+                instanceof Mcu8BasicComponentInstance mcu)) {
+            return null;
+        }
+        int vi = laneInt(simulator.getPinLanes(component, Direction.WEST, 1));
+        int di = laneInt(simulator.getPinLanes(component, Direction.SOUTH, 1));
+        int ro = laneInt(simulator.getPinLanes(component, Direction.EAST, 1));
+        int ins = laneInt(simulator.getPinLanes(component, Direction.NORTH, 1));
+        int ri = laneInt(simulator.getPinLanes(component, Direction.WEST, 0));
+        int vo = laneInt(simulator.getPinLanes(component, Direction.EAST, 0));
+        int doValue = laneInt(simulator.getPinLanes(component, Direction.SOUTH, 0));
+        return new McuStatusDialog.Snapshot(mcu.getMemorySnapshot(),
+                mcu.getPc(), mcu.getTr(), mcu.getR0(), mcu.getR1(),
+                vi, di, ro, ins, ri, vo, doValue);
+    }
+
+    private static int laneInt(int[] lanes) {
+        int value = 0;
+        if (lanes != null) {
+            for (int i = 0; i < lanes.length; i++) {
+                if (lanes[i] != 0) {
+                    value |= 1 << i;
+                }
+            }
+        }
+        return value;
     }
 
     private void openRamDialog(CircuitDiagram.Component component) {
@@ -833,6 +892,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             helpDialog.mouseClicked(mouseX, mouseY, button);
             return true;
         }
+        if (mcuDialog != null) {
+            mcuDialog.mouseClicked(mouseX, mouseY, button);
+            return true;
+        }
         if (memoryDialog != null) {
             memoryDialog.mouseClicked(mouseX, mouseY, button);
             return true;
@@ -863,6 +926,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             helpDialog.mouseReleased(mouseX, mouseY, button);
             return true;
         }
+        if (mcuDialog != null) {
+            mcuDialog.mouseReleased(mouseX, mouseY, button);
+            return true;
+        }
         if (memoryDialog != null) {
             memoryDialog.mouseReleased(mouseX, mouseY, button);
             return true;
@@ -882,6 +949,10 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             helpDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
             return true;
         }
+        if (mcuDialog != null) {
+            mcuDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+            return true;
+        }
         if (memoryDialog != null) {
             memoryDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
             return true;
@@ -896,6 +967,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (helpDialog != null) {
             return helpDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        }
+        if (mcuDialog != null) {
+            return mcuDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
         if (memoryDialog != null) {
             return memoryDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
@@ -914,6 +988,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (helpDialog != null) {
             return helpDialog.keyPressed(keyCode, scanCode, modifiers);
+        }
+        if (mcuDialog != null) {
+            return mcuDialog.keyPressed(keyCode, scanCode, modifiers);
         }
         if (memoryDialog != null) {
             return memoryDialog.keyPressed(keyCode, scanCode, modifiers);
@@ -1004,6 +1081,9 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     public boolean charTyped(char c, int modifiers) {
         if (helpDialog != null) {
             return helpDialog.charTyped(c, modifiers);
+        }
+        if (mcuDialog != null) {
+            return mcuDialog.charTyped(c, modifiers);
         }
         if (memoryDialog != null) {
             return memoryDialog.charTyped(c, modifiers);
@@ -1599,7 +1679,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
             circuitPanel.setPreviewStack(carried);
             this.menu.setCarried(ItemStack.EMPTY);
         }
-        boolean modal = toolboxDialog != null || memoryDialog != null || helpDialog != null;
+        boolean modal = toolboxDialog != null || memoryDialog != null || helpDialog != null
+                || mcuDialog != null;
         super.render(guiGraphics, modal ? -1 : mouseX, modal ? -1 : mouseY, delta);
         if (hideCarried) {
             this.menu.setCarried(carried);
@@ -1628,7 +1709,11 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
         if (helpDialog != null) {
             helpDialog.render(guiGraphics, mouseX, mouseY, delta);
         }
-        if (memoryDialog == null && toolboxDialog == null && helpDialog == null) {
+        if (mcuDialog != null) {
+            mcuDialog.render(guiGraphics, mouseX, mouseY, delta);
+        }
+        if (memoryDialog == null && toolboxDialog == null && helpDialog == null
+                && mcuDialog == null) {
             this.renderTooltip(guiGraphics, mouseX, mouseY);
         }
     }
@@ -1636,7 +1721,8 @@ public class LithographyMachineScreen extends AbstractContainerScreen<Lithograph
     @Override
     protected void renderTooltip(GuiGraphics guiGraphics, int i, int j) {
         super.renderTooltip(guiGraphics, i, j);
-        if (inspect && toolboxDialog == null && helpDialog == null && contextMenu == null
+        if (inspect && toolboxDialog == null && helpDialog == null && mcuDialog == null
+                && contextMenu == null
                 && buttonGroup != null && buttonGroup.getSelected() == tabButtonDesign
                 && circuitPanel != null && circuitPanel.contains(i, j)) {
             List<Component> inspectLines = circuitPanel.buildInspectTooltip(i, j);

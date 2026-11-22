@@ -7,10 +7,16 @@ import java.util.List;
  * failedTick 是失败 tick 的 0 基下标；它前面的行都已经通过。
  */
 public record SequentialFailureInfo(int testIndex, int totalTicks, int failedTick, List<Row> rows,
-                                    ArchitectureFailureInfo architecture) {
+                                    ArchitectureFailureInfo architecture,
+                                    ProgrammingFailureInfo programming) {
 
     public SequentialFailureInfo(int testIndex, int totalTicks, int failedTick, List<Row> rows) {
-        this(testIndex, totalTicks, failedTick, rows, null);
+        this(testIndex, totalTicks, failedTick, rows, null, null);
+    }
+
+    public SequentialFailureInfo(int testIndex, int totalTicks, int failedTick, List<Row> rows,
+                                 ArchitectureFailureInfo architecture) {
+        this(testIndex, totalTicks, failedTick, rows, architecture, null);
     }
 
     public record Row(int tick,

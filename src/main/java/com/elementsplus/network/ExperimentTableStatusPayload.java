@@ -4,6 +4,7 @@ import com.elementsplus.ElementsPlus;
 import com.elementsplus.blocks.entity.ExperimentStatus;
 import com.elementsplus.core.experiment.ArchitectureFailureInfo;
 import com.elementsplus.core.experiment.ExperimentFailureInfo;
+import com.elementsplus.core.experiment.ProgrammingFailureInfo;
 import com.elementsplus.core.experiment.SequentialFailureInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -26,7 +27,8 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                                            List<String> tooltipLines,
                                            @Nullable ExperimentFailureInfo failureInfo,
                                            int currentTestIndex,
-                                           @Nullable SequentialFailureInfo sequentialFailure) implements CustomPacketPayload {
+                                           @Nullable SequentialFailureInfo sequentialFailure,
+                                           int finalScore) implements CustomPacketPayload {
 
     public static final Type<ExperimentTableStatusPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, "experiment_table_status"));
     public static final StreamCodec<FriendlyByteBuf, ExperimentTableStatusPayload> STREAM_CODEC = StreamCodec.of(
@@ -42,6 +44,7 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                 writeFailureInfo(buf, payload.failureInfo());
                 buf.writeInt(payload.currentTestIndex());
                 writeSequentialFailure(buf, payload.sequentialFailure());
+                buf.writeInt(payload.finalScore());
             },
             buf -> new ExperimentTableStatusPayload(
                     buf.readBlockPos(),
@@ -54,14 +57,16 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                     buf.readCollection(ArrayList::new, FriendlyByteBuf::readUtf),
                     readFailureInfo(buf),
                     buf.readInt(),
-                    readSequentialFailure(buf)
+                    readSequentialFailure(buf),
+                    buf.readInt()
             )
     );
 
     public ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status, boolean paused,
                                         @Nullable String experimentName, float progress,
                                         List<Integer> testResults, List<String> tooltipLines) {
-        this(pos, status, paused, experimentName, progress, testResults, List.of(), tooltipLines, null, -1, null);
+        this(pos, status, paused, experimentName, progress, testResults, List.of(), tooltipLines,
+                null, -1, null, -1);
     }
 
     private static void writeSequentialFailure(FriendlyByteBuf buf, @Nullable SequentialFailureInfo info) {
@@ -78,6 +83,16 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
             writePins(b, row.expected());
             writePins(b, row.actual());
         });
+        ProgrammingFailureInfo programming = info.programming();
+        buf.writeBoolean(programming != null);
+        if (programming != null) {
+            buf.writeVarInt(programming.testIndex());
+            writeByteArray(buf, programming.input());
+            buf.writeVarInt(programming.inputRead());
+            writeByteArray(buf, programming.expectedOutput());
+            writeByteArray(buf, programming.actualOutput());
+            buf.writeVarInt(programming.wrongIndex());
+        }
         ArchitectureFailureInfo architecture = info.architecture();
         buf.writeBoolean(architecture != null);
         if (architecture != null) {
@@ -117,6 +132,17 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                         readPins(b),
                         readPins(b),
                         readPins(b)));
+        ProgrammingFailureInfo programming = null;
+        if (buf.readBoolean()) {
+            int failureTestIndex = buf.readVarInt();
+            byte[] input = readByteArray(buf);
+            int inputRead = buf.readVarInt();
+            byte[] expected = readByteArray(buf);
+            byte[] actual = readByteArray(buf);
+            int wrong = buf.readVarInt();
+            programming = new ProgrammingFailureInfo(failureTestIndex, input, inputRead,
+                    expected, actual, wrong);
+        }
         ArchitectureFailureInfo architecture = null;
         if (buf.readBoolean()) {
             byte[] program = new byte[buf.readVarInt()];
@@ -140,7 +166,19 @@ public record ExperimentTableStatusPayload(BlockPos pos, ExperimentStatus status
                             b.readVarInt()));
             architecture = new ArchitectureFailureInfo(program, architectureRows, copyWholeProgram);
         }
-        return new SequentialFailureInfo(testIndex, totalTicks, failedTick, rows, architecture);
+        return new SequentialFailureInfo(testIndex, totalTicks, failedTick, rows, architecture, programming);
+    }
+
+    private static void writeByteArray(FriendlyByteBuf buf, byte[] data) {
+        byte[] safe = data == null ? new byte[0] : data;
+        buf.writeVarInt(safe.length);
+        buf.writeBytes(safe);
+    }
+
+    private static byte[] readByteArray(FriendlyByteBuf buf) {
+        byte[] data = new byte[buf.readVarInt()];
+        buf.readBytes(data);
+        return data;
     }
 
     private static void writeFailureInfo(FriendlyByteBuf buf, @Nullable ExperimentFailureInfo info) {

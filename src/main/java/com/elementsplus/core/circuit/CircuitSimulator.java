@@ -3,10 +3,12 @@ package com.elementsplus.core.circuit;
 import com.elementsplus.core.circuit.CircuitComponent.PinType;
 import com.elementsplus.core.circuit.component.BitExtract8ComponentInstance;
 import com.elementsplus.core.circuit.component.CapacitorComponentInstance;
+import com.elementsplus.core.circuit.component.CircuitComponentInstance;
 import com.elementsplus.core.circuit.component.Const8ComponentInstance;
 import com.elementsplus.core.circuit.component.ConstAnalog8ComponentInstance;
 import com.elementsplus.core.circuit.component.Input8ComponentInstance;
 import com.elementsplus.core.circuit.component.InputComponentInstance;
+import com.elementsplus.core.circuit.component.Mcu8BasicComponentInstance;
 import com.elementsplus.core.circuit.component.Output8ComponentInstance;
 import com.elementsplus.core.circuit.component.OutputComponentInstance;
 import com.elementsplus.core.circuit.component.ResistorComponentInstance;
@@ -173,6 +175,7 @@ public class CircuitSimulator {
     private final List<Integer> counterNodes = new ArrayList<>();
     private final Map<Long, Integer> sawtoothPhase = new HashMap<>();
     private final List<Integer> sawtoothNodes = new ArrayList<>();
+    private final List<Integer> mcuNodes = new ArrayList<>();
     private final Map<Long, CustomRuntime> customRuntimes = new HashMap<>();
 
     private static final class CustomRuntime {
@@ -209,6 +212,19 @@ public class CircuitSimulator {
         tag.put("counter_q", saveIntMap(counterQ));
         tag.put("sawtooth_phase", saveIntMap(sawtoothPhase));
         tag.put("ram", saveRam());
+        ListTag mcuStates = new ListTag();
+        for (Component component : comps) {
+            if (component.component == BuiltinCircuitComponents.MCU_8_BASIC
+                    && component.instance instanceof Mcu8BasicComponentInstance mcu) {
+                CompoundTag item = new CompoundTag();
+                item.putLong("k", key(component.x, component.y));
+                CompoundTag state = new CompoundTag();
+                mcu.saveState(state);
+                item.put("state", state);
+                mcuStates.add(item);
+            }
+        }
+        tag.put("mcu", mcuStates);
         ListTag custom = new ListTag();
         for (Map.Entry<Long, CustomRuntime> entry : customRuntimes.entrySet()) {
             CustomRuntime runtime = entry.getValue();
@@ -246,6 +262,19 @@ public class CircuitSimulator {
         sawtoothPhase.clear();
         sawtoothPhase.putAll(loadIntMap(tag.getList("sawtooth_phase", CompoundTag.TAG_COMPOUND)));
         loadRam(tag.getList("ram", CompoundTag.TAG_COMPOUND));
+        ListTag mcuStates = tag.getList("mcu", CompoundTag.TAG_COMPOUND);
+        for (int i = 0; i < mcuStates.size(); i++) {
+            CompoundTag item = mcuStates.getCompound(i);
+            long stateKey = item.getLong("k");
+            for (Component component : comps) {
+                if (component.component == BuiltinCircuitComponents.MCU_8_BASIC
+                        && key(component.x, component.y) == stateKey
+                        && component.instance instanceof Mcu8BasicComponentInstance mcu) {
+                    mcu.loadState(item.getCompound("state"));
+                    break;
+                }
+            }
+        }
         ListTag custom = tag.getList("custom", CompoundTag.TAG_COMPOUND);
         for (int i = 0; i < custom.size(); i++) {
             CompoundTag item = custom.getCompound(i);
@@ -328,6 +357,11 @@ public class CircuitSimulator {
         counterQ.clear();
         sawtoothPhase.clear();
         ramMemory.clear();
+        for (Component component : comps) {
+            if (component.instance instanceof Mcu8BasicComponentInstance mcu) {
+                mcu.reset();
+            }
+        }
         for (CustomRuntime runtime : customRuntimes.values()) {
             runtime.simulator.reset();
         }
@@ -428,6 +462,12 @@ public class CircuitSimulator {
         return v == null ? 0 : v;
     }
 
+    /** 返回指定单元格上的元件实例；没有元件时返回 null。 */
+    public CircuitComponentInstance getComponentInstance(int x, int y) {
+        Component component = compAt(x, y);
+        return component == null ? null : component.instance;
+    }
+
     /**
      * 8 位总线元件（INPUT_8 / OUTPUT_8）当前值：将 8 个 4 位通道打包的
      * 32 位值解码为 0~255 的整数（通道非 0 即该位为 1）。
@@ -519,6 +559,7 @@ public class CircuitSimulator {
         rippleCounterNodes.clear();
         counterNodes.clear();
         sawtoothNodes.clear();
+        mcuNodes.clear();
         ramNodes.clear();
         // 与电容状态一致：重建依赖图（如输入值变化触发）时保留触发器和寄存器状态，
         // 只有显式 reset() 才清空时序状态。
@@ -634,6 +675,11 @@ public class CircuitSimulator {
             } else if (cc == BuiltinCircuitComponents.SAWTOOTH_GENERATOR) {
                 nodeKind[numNets + i] = NodeKind.SEQ;
                 sawtoothNodes.add(numNets + i);
+            } else if (cc == BuiltinCircuitComponents.MCU_8_BASIC) {
+                // 单片机在时钟沿执行指令，PC/寄存器作为时序状态输出。
+                nodeKind[numNets + i] = NodeKind.SEQ;
+                mcuNodes.add(numNets + i);
+                hasDeferredInputs = true;
             } else if (isRam(cc)) {
                 // RAM 的 Y 读取是组合逻辑，但写入需要保持状态；不建立输入边，
                 // 由多遍求值保证读取时地址已经稳定。
@@ -1458,6 +1504,26 @@ public class CircuitSimulator {
         if (runtime != null && runtime.component == component.component) {
             return evalCustom(runtime, node);
         }
+        if (cc == BuiltinCircuitComponents.MCU_8_BASIC
+                && component.instance instanceof Mcu8BasicComponentInstance mcu) {
+            int ins = tupleToInt(inPort(node, 3));
+            boolean vi = inPort(node, 0) != 0;
+            boolean ro = inPort(node, 2) != 0;
+            long value = 0L;
+            value |= (long) (mcu.readsInput(ins, vi, ro) ? 15 : 0)
+                    << outputSlot(cc, Direction.WEST, 0).bitStart();
+            int pcStart = outputSlot(cc, Direction.NORTH, 0).bitStart();
+            long pcTuple = intToTuple(mcu.getPc());
+            value |= pcTuple << pcStart;
+            if (pcStart + 32 > 64) {
+                evalHighBits |= (pcTuple >>> (64 - pcStart)) & 0xFFFFFFFFL;
+            }
+            value |= (long) (mcu.isVo() ? 15 : 0)
+                    << outputSlot(cc, Direction.EAST, 0).bitStart();
+            value |= intToTuple(mcu.getDoValue())
+                    << outputSlot(cc, Direction.SOUTH, 0).bitStart();
+            return value;
+        }
         if (isRam(cc)) {
             int size = ramSize(cc);
             if (cc == BuiltinCircuitComponents.PAPER_TAPE) {
@@ -2124,6 +2190,16 @@ public class CircuitSimulator {
         }
         for (int node : sawtoothNodes) {
             updateSawtooth(comps.get(node - numNets), node);
+        }
+        for (int node : mcuNodes) {
+            Component component = comps.get(node - numNets);
+            if (component.instance instanceof Mcu8BasicComponentInstance mcu) {
+                int vi = inPort(node, 0) != 0 ? 1 : 0;
+                int di = tupleToInt(inPort(node, 1));
+                int ro = inPort(node, 2) != 0 ? 1 : 0;
+                int ins = tupleToInt(inPort(node, 3));
+                mcu.step(ins, vi != 0, di, ro != 0);
+            }
         }
         for (CustomRuntime runtime : customRuntimes.values()) {
             if (runtime.stateful) {

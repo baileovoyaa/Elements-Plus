@@ -77,6 +77,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     private final Set<String> unlockedChapters = new HashSet<>();
     private final Set<String> forcedChapters = new HashSet<>();
     private final Set<String> completedExperiments = new HashSet<>();
+    private final Map<String, Integer> experimentScores = new HashMap<>();
     private final List<Integer> currentTestTicks = new ArrayList<>();
     private List<ChapterEntryButton> chapterButtons = new ArrayList<>();
 
@@ -88,7 +89,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     private ExperimentFailureInfo failureInfo = null;
     private SequentialFailureInfo sequentialFailure = null;
     private int currentTestIndex = -1;
+    private int currentFinalScore = -1;
     private SequentialTestDataDialog sequentialDialog = null;
+    private ProgrammingTestDataDialog programmingDialog = null;
     private CustomComponentConfigDialog customComponentDialog = null;
     private String resultsExperimentName = null;
     private final List<TestCaseWidget> testCaseWidgets = new ArrayList<>();
@@ -158,6 +161,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }
         updateScreenSize();
         sequentialDialog = null;
+        programmingDialog = null;
         customComponentDialog = null;
         super.init();
 
@@ -316,14 +320,25 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
 
         // 实验状态
         this.addRenderableWidget(statusButton = new IconButton(layoutLeftPos + layoutImageWidth - 22, topPos + 26, 16, 16, ElementsPlus.id("textures/gui/experiment_table/idle.png"), (button) -> {
-            if (status == ExperimentStatus.ERROR && sequentialFailure != null) {
-                SequentialTestDataDialog dialog = new SequentialTestDataDialog(sequentialFailure, font, width, height,
-                        () -> {
-                            sequentialDialog = null;
-                            restoreLayoutBounds();
-                        });
-                sequentialDialog = dialog;
-                applyModalBounds(dialog.getWindowX(), dialog.getWindowWidth());
+            if ((status == ExperimentStatus.ERROR || status == ExperimentStatus.SUCCESS)
+                    && sequentialFailure != null) {
+                if (sequentialFailure.programming() != null) {
+                    ProgrammingTestDataDialog dialog = new ProgrammingTestDataDialog(
+                            sequentialFailure.programming(), font, width, height, () -> {
+                        programmingDialog = null;
+                        restoreLayoutBounds();
+                    });
+                    programmingDialog = dialog;
+                    applyModalBounds(dialog.getWindowX(), dialog.getWindowWidth());
+                } else {
+                    SequentialTestDataDialog dialog = new SequentialTestDataDialog(sequentialFailure, font, width, height,
+                            () -> {
+                                sequentialDialog = null;
+                                restoreLayoutBounds();
+                            });
+                    sequentialDialog = dialog;
+                    applyModalBounds(dialog.getWindowX(), dialog.getWindowWidth());
+                }
             }
         }));
 
@@ -586,11 +601,11 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         progressBar.setWidth(layoutImageWidth - currentExperimentWidget.getWidth() - 162);
         testCasePanelWidget.clearChildren();
         testCaseWidgets.clear();
-        if (selectedExperiment instanceof CircuitExperiment circuitExperiment) {
+        if (selectedExperiment != null) {
             int x = 0;
             int y = 0;
             int i = 1;
-            for (TestCase testCase : circuitExperiment.testCases) {
+            for (TestCase testCase : selectedExperiment.getTestCases()) {
                 TestCaseWidget testCaseWidget = new TestCaseWidget(x, y, 50, 50);
                 testCaseWidget.color = 0xFF808080;
                 testCaseWidget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_waiting");
@@ -622,7 +637,11 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     private void setCurrentExperiment(BaseExperiment experiment, boolean announce) {
+        BaseExperiment previous = selectedExperiment;
         selectedExperiment = experiment;
+        if (previous != experiment && status != ExperimentStatus.BUSY) {
+            currentFinalScore = -1;
+        }
         if (announce && tablePos != null && experiment != null) {
             ClientPlayNetworking.send(new ExperimentTableSelectionUpdatePayload(tablePos, null, experiment.getName()));
         }
@@ -632,7 +651,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     public void onStatusUpdate(BlockPos pos, ExperimentStatus status, boolean paused, String experimentName, float progress,
                                List<Integer> testResults, List<Integer> testTicks, List<String> tooltipJson,
                                ExperimentFailureInfo failureInfo, int currentTestIndex,
-                               SequentialFailureInfo sequentialFailure) {
+                               SequentialFailureInfo sequentialFailure, int finalScore) {
         if (tablePos == null || !pos.equals(tablePos)) {
             return;
         }
@@ -646,17 +665,41 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         this.currentTestTicks.addAll(testTicks);
         this.failureInfo = failureInfo;
         this.currentTestIndex = currentTestIndex;
-        if (this.sequentialFailure != sequentialFailure && this.sequentialDialog != null) {
+        this.currentFinalScore = finalScore;
+        ProgrammingFailureInfo oldProgramming = this.sequentialFailure == null
+                ? null : this.sequentialFailure.programming();
+        if ((this.sequentialFailure != sequentialFailure) && this.sequentialDialog != null) {
             this.sequentialDialog = null;
             restoreLayoutBounds();
         }
         this.sequentialFailure = sequentialFailure;
-        if ((status != ExperimentStatus.ERROR || sequentialFailure == null) && this.sequentialDialog != null) {
+        if ((status != ExperimentStatus.ERROR && status != ExperimentStatus.SUCCESS
+                || sequentialFailure == null) && this.sequentialDialog != null) {
             this.sequentialDialog = null;
             restoreLayoutBounds();
         }
+        ProgrammingFailureInfo newProgramming = sequentialFailure == null
+                ? null : sequentialFailure.programming();
+        if ((oldProgramming != newProgramming
+                || status != ExperimentStatus.ERROR && status != ExperimentStatus.SUCCESS
+                || newProgramming == null) && this.programmingDialog != null) {
+            this.programmingDialog = null;
+            restoreLayoutBounds();
+        }
         this.statusTooltipLines.clear();
-        if (failureInfo != null) {
+        if (sequentialFailure != null && sequentialFailure.programming() != null) {
+            ProgrammingFailureInfo programming = sequentialFailure.programming();
+            statusTooltipLines.add(Component.translatable(
+                    "experiment.elements-plus.programming.wrong_byte", programming.wrongIndex() + 1));
+            statusTooltipLines.add(Component.translatable(
+                    "experiment.elements-plus.testfail.expected",
+                    hexAt(programming.expectedOutput(), programming.wrongIndex())));
+            statusTooltipLines.add(Component.translatable(
+                    "experiment.elements-plus.testfail.actual",
+                    hexAt(programming.actualOutput(), programming.wrongIndex())));
+            statusTooltipLines.add(Component.translatable(
+                    "experiment.elements-plus.testfail.click_for_data"));
+        } else if (failureInfo != null) {
             statusTooltipLines.addAll(buildFailureTooltipLines(failureInfo));
         } else {
             for (String json : tooltipJson) {
@@ -721,6 +764,13 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         return lines;
     }
 
+    private static String hexAt(byte[] data, int index) {
+        if (data == null || index < 0 || index >= data.length) {
+            return "--";
+        }
+        return String.format("%02X", data[index] & 0xFF);
+    }
+
     private static Component formatPins(List<ExperimentFailureInfo.Pin> pins) {
         if (pins == null) {
             return Component.empty();
@@ -757,13 +807,21 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             case ERROR -> ElementsPlus.id("textures/gui/experiment_table/error.png");
             case IDLE -> ElementsPlus.id("textures/gui/experiment_table/idle.png");
         };
-        if (status == ExperimentStatus.ERROR && !statusTooltipLines.isEmpty()) {
+        if ((status == ExperimentStatus.ERROR || status == ExperimentStatus.SUCCESS)
+                && (!statusTooltipLines.isEmpty() || currentFinalScore >= 0)) {
             MutableComponent lines = Component.literal("");
             for (int i = 0; i < statusTooltipLines.size(); i++) {
                 if (i > 0) {
                     lines.append("\n");
                 }
                 lines.append(statusTooltipLines.get(i).copy());
+            }
+            if (currentFinalScore >= 0) {
+                if (!statusTooltipLines.isEmpty()) {
+                    lines.append("\n");
+                }
+                lines.append(Component.translatable("gui.elements-plus.experiment_table.score",
+                        currentFinalScore));
             }
             statusButton.setTooltip(Tooltip.create(lines));
         } else {
@@ -786,7 +844,8 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                     ? currentTestTicks.get(widget.testIndex) : -1;
             boolean sequential = widget.testCase instanceof CircuitExperiment.SequentialTestCase;
             boolean architecture = widget.testCase instanceof CircuitExperiment.ArchitectureTestCase;
-            boolean timed = sequential || architecture;
+            boolean programming = widget.testCase instanceof ProgrammingExperiment.Case;
+            boolean timed = sequential || architecture || programming;
             boolean interactive = widget.testCase instanceof CircuitExperiment.InteractiveTestCase;
             widget.bottomText = null;
             if (status == ExperimentStatus.BUSY && (timed || interactive)
@@ -800,6 +859,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                     if (ticks >= 0) {
                         widget.bottomText = Component.translatable("gui.elements-plus.experiment_table.test_ticks", ticks);
                     }
+                } else if (programming) {
+                    if (ticks >= 0) {
+                        widget.bottomText = Component.translatable("gui.elements-plus.experiment_table.test_ticks", ticks);
+                    }
                 } else if (architecture) {
                     widget.bottomText = Component.translatable("gui.elements-plus.experiment_table.test_ticks",
                             ((CircuitExperiment.ArchitectureTestCase) widget.testCase).getTickCount());
@@ -810,10 +873,16 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
             } else if (result == 2) {
                 widget.color = 0xFF8000FF;
                 widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_tle");
+            } else if (result == 3) {
+                widget.color = 0xFF00008B;
+                widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_re");
             } else if (result == 0) {
                 widget.color = 0xFFA00000;
                 widget.centerText = Component.translatable("gui.elements-plus.experiment_table.test_wrong");
-                if (timed && sequentialFailure != null && sequentialFailure.testIndex() == widget.testIndex) {
+                if (programming && ticks >= 0) {
+                    widget.bottomText = Component.translatable(
+                            "gui.elements-plus.experiment_table.test_ticks", ticks);
+                } else if (timed && sequentialFailure != null && sequentialFailure.testIndex() == widget.testIndex) {
                     int totalTicks = architecture
                             ? ((CircuitExperiment.ArchitectureTestCase) widget.testCase).getTickCount()
                             : ((CircuitExperiment.SequentialTestCase) widget.testCase).getTickCount();
@@ -981,7 +1050,18 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
                         guiGraphics.drawString(font, displayName, 5 + this.getX() + 16 + 2,
                                 this.getY() + this.getHeight() / 2 - font.lineHeight / 2,
                                 0xFFFFFFFF, false);
-                        if (hasCompletedExperiment(experiment)) {
+                        boolean completed = hasCompletedExperiment(experiment);
+                        Integer score = experiment.getName() == null ? null
+                                : experimentScores.get(experiment.getName());
+                        if (score != null && experiment.usesScoreSystem()) {
+                            Component scoreText = Component.nullToEmpty(String.valueOf(score));
+                            int scoreRight = this.getX() + this.getWidth() - (completed ? 24 : 4);
+                            guiGraphics.drawString(font, scoreText,
+                                    scoreRight - font.width(scoreText),
+                                    this.getY() + this.getHeight() / 2 - font.lineHeight / 2,
+                                    completed ? 0xFF00A000 : 0xFFA00000, false);
+                        }
+                        if (completed) {
                             guiGraphics.blit(ElementsPlus.id("textures/gui/experiment_table/success.png"),
                                     5 + this.getX() + this.getWidth() - 24,
                                     this.getY() + this.getHeight() / 2 - 8,
@@ -1009,7 +1089,8 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     }
 
     public void onServerData(BlockPos pos, String selectedName, String selectedExperimentName,
-                             Set<String> unlocked, Set<String> forced, Set<String> completed, long worldSeed) {
+                             Set<String> unlocked, Set<String> forced, Set<String> completed,
+                             Map<String, Integer> scores, long worldSeed) {
         if (tablePos != null && !pos.equals(tablePos)) {
             return;
         }
@@ -1024,6 +1105,10 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         forcedChapters.addAll(forced);
         completedExperiments.clear();
         completedExperiments.addAll(completed);
+        experimentScores.clear();
+        if (scores != null) {
+            experimentScores.putAll(scores);
+        }
         if (selectedChapter != null) {
             setSelectedChapter(selectedChapter);
         }
@@ -1237,6 +1322,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         if (customComponentDialog != null) {
             return customComponentDialog.mouseClicked(mouseX, mouseY, button);
         }
+        if (programmingDialog != null) {
+            return programmingDialog.mouseClicked(mouseX, mouseY, button);
+        }
         if (sequentialDialog != null) {
             return sequentialDialog.mouseClicked(mouseX, mouseY, button);
         }
@@ -1252,6 +1340,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         if (customComponentDialog != null) {
             return customComponentDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
         }
+        if (programmingDialog != null || sequentialDialog != null) {
+            return true;
+        }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
@@ -1264,7 +1355,7 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         if (customComponentDialog != null) {
             return customComponentDialog.mouseReleased(mouseX, mouseY, button);
         }
-        if (sequentialDialog != null) {
+        if (programmingDialog != null || sequentialDialog != null) {
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
@@ -1278,6 +1369,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }
         if (customComponentDialog != null) {
             return customComponentDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        }
+        if (programmingDialog != null) {
+            return programmingDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
         if (sequentialDialog != null) {
             return sequentialDialog.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
@@ -1294,6 +1388,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         if (customComponentDialog != null) {
             return customComponentDialog.keyPressed(keyCode, scanCode, modifiers);
         }
+        if (programmingDialog != null) {
+            return programmingDialog.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (sequentialDialog != null) {
             return sequentialDialog.keyPressed(keyCode, scanCode, modifiers);
         }
@@ -1308,6 +1405,9 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
         }
         if (customComponentDialog != null) {
             return customComponentDialog.charTyped(c, modifiers);
+        }
+        if (programmingDialog != null) {
+            return programmingDialog.charTyped(c, modifiers);
         }
         if (sequentialDialog != null) {
             return sequentialDialog.charTyped(c, modifiers);
@@ -1333,7 +1433,17 @@ public class ExperimentTableScreen extends AbstractContainerScreen<ExperimentTab
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float f) {
         super.render(guiGraphics, mouseX, mouseY, f);
+        if (activeTab == Tab.EXPERIMENT && statusButton != null && currentFinalScore >= 0) {
+            Component score = Component.nullToEmpty(String.valueOf(currentFinalScore));
+            guiGraphics.drawCenteredString(font, score,
+                    statusButton.getX() + 8,
+                    statusButton.getY() + 4,
+                    status == ExperimentStatus.ERROR ? 0xFFFF5555 : 0xFF55FF55);
+        }
         this.renderTooltip(guiGraphics, mouseX, mouseY);
+        if (programmingDialog != null) {
+            programmingDialog.render(guiGraphics, mouseX, mouseY, f);
+        }
         if (sequentialDialog != null) {
             sequentialDialog.render(guiGraphics, mouseX, mouseY, f);
         }

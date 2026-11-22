@@ -1,0 +1,13 @@
+{
+  "dependencies": [
+    "elements-plus:architecture_jump"
+  ],
+  "markdown": "elements-plus:texts/experiment_chapter/assembly.md",
+  "special_text": [],
+  "experiments": [
+    "elements-plus:mcu_8_basic",
+    "elements-plus:asm_echo",
+    "elements-plus:asm_add_byte"
+  ],
+  "optional": []
+}

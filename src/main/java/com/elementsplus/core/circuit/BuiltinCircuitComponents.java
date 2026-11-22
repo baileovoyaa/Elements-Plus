@@ -667,6 +667,19 @@ public class BuiltinCircuitComponents {
         clearIngredientSupplier();
     }});
 
+    // 单片机
+    public static final CircuitComponent MCU_8_BASIC = register(new CircuitComponent(ElementsPlus.id("mcu_8_basic"), Component.translatable("circuit.elements-plus.component.mcu_8_basic"), Component.translatable("circuit.elements-plus.component.mcu_8_basic.description"), ElementsPlus.id("textures/circuit/mcu_8_basic.png"), 2, 2) {{
+        setPin(Direction.WEST, 0, PinType.OUTPUT, "RI", 1);
+        setPin(Direction.WEST, 1, PinType.INPUT, "VI", 1);
+        setPin(Direction.NORTH, 0, PinType.OUTPUT, "PC", 8);
+        setPin(Direction.NORTH, 1, PinType.INPUT, "INS", 8);
+        setPin(Direction.EAST, 0, PinType.OUTPUT, "VO", 1);
+        setPin(Direction.EAST, 1, PinType.INPUT, "RO", 1);
+        setPin(Direction.SOUTH, 0, PinType.OUTPUT, "DO", 8);
+        setPin(Direction.SOUTH, 1, PinType.INPUT, "DI", 8);
+        setInstanceFactory(com.elementsplus.core.circuit.component.Mcu8BasicComponentInstance::new);
+    }});
+
     public static CircuitComponent register(CircuitComponent circuitComponent) {
         BY_ID.put(circuitComponent.getId(), circuitComponent);
         return circuitComponent;
@@ -720,5 +733,6 @@ public class BuiltinCircuitComponents {
                     .component(RAM_256)
                     .component(ROM_256)
                     .component(DISK)
+                    .component(MCU_8_BASIC)
             );
 }

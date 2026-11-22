@@ -55,6 +55,7 @@ import com.elementsplus.recipe.MetalCatalystRecipe;
 import com.elementsplus.recipe.ScaleUpgradeRecipe;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -443,7 +444,9 @@ public class ElementsPlus implements ModInitializer {
                         unlocked.add(chapter.name);
                     }
                     long worldSeed = player.serverLevel().getSeed();
-                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos, table.getSelectedChapter(), table.getSelectedExperiment(), unlocked, forced, completed, worldSeed));
+                    ServerPlayNetworking.send(player, new ExperimentTableScreenDataPayload(pos,
+                            table.getSelectedChapter(), table.getSelectedExperiment(), unlocked, forced,
+                            completed, PlayerExperimentsAttachment.getScores(player), worldSeed));
                     ServerPlayNetworking.send(player, table.buildStatusPayload());
                 }));
 
@@ -648,6 +651,28 @@ public class ElementsPlus implements ModInitializer {
                     .then(Commands.literal("list")
                             .then(Commands.argument("player", EntityArgument.player())
                                     .executes(ElementsPlus::listExperiments)))
+                    .then(Commands.literal("score")
+                            .then(Commands.literal("get")
+                                    .then(Commands.argument("players", EntityArgument.players())
+                                            .then(Commands.argument("experiment", StringArgumentType.word())
+                                                    .suggests(ElementsPlus::suggestExperiments)
+                                                    .executes(ElementsPlus::getExperimentScore))))
+                            .then(Commands.literal("set")
+                                    .then(Commands.argument("players", EntityArgument.players())
+                                            .then(Commands.argument("experiment", StringArgumentType.word())
+                                                    .suggests(ElementsPlus::suggestExperiments)
+                                                    .executes(ctx -> setExperimentScore(ctx, 0))
+                                                    .then(Commands.argument("score",
+                                                                    IntegerArgumentType.integer(0, 100))
+                                                            .executes(ElementsPlus::setExperimentScore)))))
+                            .then(Commands.literal("reset")
+                                    .then(Commands.argument("players", EntityArgument.players())
+                                            .then(Commands.argument("experiment", StringArgumentType.word())
+                                                    .suggests(ElementsPlus::suggestExperiments)
+                                                    .executes(ElementsPlus::resetExperimentScore))))
+                            .then(Commands.literal("list")
+                                    .then(Commands.argument("player", EntityArgument.player())
+                                            .executes(ElementsPlus::listExperimentScores))))
                     .then(chapterCommand);
 
             var circuitCommand = Commands.literal("circuit")
@@ -743,6 +768,89 @@ public class ElementsPlus implements ModInitializer {
                 grant ? "command.elements-plus.experiments.granted" : "command.elements-plus.experiments.revoked",
                 targets.size(), ids.size()), true);
         return 1;
+    }
+
+    private static int getExperimentScore(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {
+        Collection<ServerPlayer> targets = EntityArgument.getPlayers(source, "players");
+        BaseExperiment experiment = requireExperiment(StringArgumentType.getString(source, "experiment"));
+        for (ServerPlayer player : targets) {
+            int score = PlayerExperimentsAttachment.getScore(player, experiment.getName());
+            Component value = score < 0
+                    ? Component.translatable("command.elements-plus.experiments.score.unset")
+                    : Component.literal(String.valueOf(score));
+            source.getSource().sendSuccess(() -> Component.translatable(
+                    "command.elements-plus.experiments.score.get",
+                    player.getName(), experiment.getDisplayName(), value), false);
+        }
+        return targets.size();
+    }
+
+    private static int setExperimentScore(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {
+        return setExperimentScore(source, IntegerArgumentType.getInteger(source, "score"));
+    }
+
+    private static int setExperimentScore(CommandContext<CommandSourceStack> source, int score)
+            throws CommandSyntaxException {
+        Collection<ServerPlayer> targets = EntityArgument.getPlayers(source, "players");
+        BaseExperiment experiment = requireExperiment(StringArgumentType.getString(source, "experiment"));
+        for (ServerPlayer player : targets) {
+            PlayerExperimentsAttachment.setScore(player, experiment.getName(), score);
+        }
+        source.getSource().sendSuccess(() -> Component.translatable(
+                "command.elements-plus.experiments.score.set",
+                targets.size(), experiment.getDisplayName(), score), true);
+        return targets.size();
+    }
+
+    private static int resetExperimentScore(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {
+        Collection<ServerPlayer> targets = EntityArgument.getPlayers(source, "players");
+        BaseExperiment experiment = requireExperiment(StringArgumentType.getString(source, "experiment"));
+        for (ServerPlayer player : targets) {
+            PlayerExperimentsAttachment.resetScore(player, experiment.getName());
+        }
+        source.getSource().sendSuccess(() -> Component.translatable(
+                "command.elements-plus.experiments.score.reset",
+                targets.size(), experiment.getDisplayName()), true);
+        return targets.size();
+    }
+
+    private static int listExperimentScores(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {
+        ServerPlayer player = EntityArgument.getPlayer(source, "player");
+        Map<String, Integer> scores = PlayerExperimentsAttachment.getScores(player);
+        if (scores.isEmpty()) {
+            source.getSource().sendSuccess(() -> Component.translatable(
+                    "command.elements-plus.experiments.score.list_empty", player.getName()), false);
+            return 0;
+        }
+        MutableComponent lines = Component.empty();
+        boolean first = true;
+        for (Map.Entry<String, Integer> entry : scores.entrySet()) {
+            if (!first) lines.append(Component.literal("\n"));
+            BaseExperiment experiment = BuiltinExperiments.byId(entry.getKey());
+            Component name = experiment == null ? Component.literal(entry.getKey())
+                    : experiment.getDisplayName();
+            lines.append(Component.literal("- ")).append(name)
+                    .append(Component.literal(": " + entry.getValue()));
+            first = false;
+        }
+        source.getSource().sendSuccess(() -> Component.translatable(
+                "command.elements-plus.experiments.score.list", player.getName(), lines), false);
+        return scores.size();
+    }
+
+    private static BaseExperiment requireExperiment(String raw) throws CommandSyntaxException {
+        BaseExperiment experiment = BuiltinExperiments.byId(raw);
+        if (experiment == null && raw != null && raw.indexOf(':') >= 0) {
+            ResourceLocation id = ResourceLocation.tryParse(raw);
+            if (id != null) {
+                experiment = BuiltinExperiments.byId(id.getPath());
+            }
+        }
+        if (experiment == null) {
+            throw new SimpleCommandExceptionType(Component.translatable(
+                    "command.elements-plus.experiments.unknown", raw)).create();
+        }
+        return experiment;
     }
 
     private static int listExperiments(CommandContext<CommandSourceStack> source) throws CommandSyntaxException {

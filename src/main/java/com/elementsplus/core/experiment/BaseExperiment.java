@@ -26,6 +26,8 @@ public abstract class BaseExperiment {
          * 由宿主在 tick 之间保存。
          */
         public Object experimentState;
+        /** 外接设备内容发生变化；由同步/异步宿主设置，实验线程读取后应中断。 */
+        public volatile boolean externalDeviceChanged;
         /** 异步运行时使用的世界种子快照，避免后台线程访问方块实体。 */
         public long worldSeed;
         public boolean hasWorldSeed;
@@ -137,6 +139,47 @@ public abstract class BaseExperiment {
      */
     public int getTestCaseCount() {
         return 0;
+    }
+
+    /** 测例列表，供实验列表中的测例方块显示。 */
+    public List<TestCase> getTestCases() {
+        return List.of();
+    }
+
+    /**
+     * 该实验能否在后台线程运行。读取外接设备的编程实验需要每个服务器 tick
+     * 检查设备内容，因此保持同步执行。
+     */
+    public boolean canRunAsync() {
+        return true;
+    }
+
+    /**
+     * 是否使用“通过部分测例”的得分系统。默认必须全部测例通过。
+     */
+    public boolean usesScoreSystem() {
+        return false;
+    }
+
+    /**
+     * 使用得分系统时，通过实验所需的最低分数。
+     */
+    public int requiredScore() {
+        return 100;
+    }
+
+    /**
+     * 根据各测例结果计算 0~100 分；默认按通过测例比例计算。
+     */
+    public int calculateScore(List<Integer> testResults) {
+        if (testResults == null || testResults.isEmpty()) {
+            return 0;
+        }
+        int passed = 0;
+        for (int result : testResults) {
+            if (result == 1) passed++;
+        }
+        return Math.round(100f * passed / testResults.size());
     }
 
     private String name;

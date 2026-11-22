@@ -15,8 +15,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -24,11 +26,22 @@ public final class PlayerExperimentsAttachment {
     public static final Codec<Set<String>> CODEC =
             Codec.STRING.listOf().xmap(PlayerExperimentsAttachment::linkedSet, ArrayList::new);
 
+    public static final Codec<Map<String, Integer>> SCORE_CODEC =
+            Codec.unboundedMap(Codec.STRING, Codec.INT)
+                    .xmap(LinkedHashMap::new, map -> map);
+
     public static final AttachmentType<Set<String>> COMPLETED_EXPERIMENTS =
             AttachmentRegistry.<Set<String>>builder()
                     .persistent(CODEC)
                     .copyOnDeath()
                     .buildAndRegister(ElementsPlus.id("completed_experiments"));
+
+    /** 实验得分：实验 id -> 0~100 分，和完成标记独立存储。 */
+    public static final AttachmentType<Map<String, Integer>> EXPERIMENT_SCORES =
+            AttachmentRegistry.<Map<String, Integer>>builder()
+                    .persistent(SCORE_CODEC)
+                    .copyOnDeath()
+                    .buildAndRegister(ElementsPlus.id("experiment_scores"));
 
     /** 玩家被强制解锁的章节名称；这些章节不受依赖关系限制。 */
     public static final AttachmentType<Set<String>> FORCED_CHAPTER_UNLOCKS =
@@ -45,6 +58,7 @@ public final class PlayerExperimentsAttachment {
     public static void ensureLoaded(Player player) {
         get(player);
         getForced(player);
+        getScores(player);
     }
 
     public static Set<String> get(Player player) {
@@ -81,6 +95,49 @@ public final class PlayerExperimentsAttachment {
         return fresh;
     }
 
+    public static Map<String, Integer> getScores(Player player) {
+        Map<String, Integer> scores = player.getAttached(EXPERIMENT_SCORES);
+        if (scores != null) {
+            return scores;
+        }
+        Map<String, Integer> restored = loadScoresFromSavedData(player);
+        if (restored != null) {
+            player.setAttached(EXPERIMENT_SCORES, restored);
+            return restored;
+        }
+        Map<String, Integer> fresh = new LinkedHashMap<>();
+        player.setAttached(EXPERIMENT_SCORES, fresh);
+        return fresh;
+    }
+
+    public static int getScore(Player player, String experiment) {
+        Integer score = getScores(player).get(experiment);
+        return score == null ? -1 : score;
+    }
+
+    /** 只在新分数更高时覆盖；返回是否发生变化。 */
+    public static boolean recordScore(Player player, String experiment, int score) {
+        if (experiment == null || score < 0) {
+            return false;
+        }
+        Map<String, Integer> scores = getScores(player);
+        Integer current = scores.get(experiment);
+        if (current != null && current >= score) {
+            return false;
+        }
+        scores.put(experiment, Math.min(100, score));
+        return true;
+    }
+
+    /** 命令用：直接设置分数。 */
+    public static void setScore(Player player, String experiment, int score) {
+        getScores(player).put(experiment, Math.max(0, Math.min(100, score)));
+    }
+
+    public static boolean resetScore(Player player, String experiment) {
+        return getScores(player).remove(experiment) != null;
+    }
+
     /** Reads a persistent attachment out of the player's saved data (playerdata/{uuid}.dat). */
     private static Set<String> loadFromSavedData(Player player, AttachmentType<Set<String>> attachment) {
         if (!(player instanceof ServerPlayer serverPlayer)) {
@@ -110,6 +167,35 @@ public final class PlayerExperimentsAttachment {
 
         RegistryOps<Tag> registryOps = RegistryOps.create(NbtOps.INSTANCE, server.registryAccess());
         DataResult<Set<String>> result = CODEC.parse(registryOps, attachments.get(key));
+        return result.result().orElse(null);
+    }
+
+    private static Map<String, Integer> loadScoresFromSavedData(Player player) {
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return null;
+        }
+        MinecraftServer server = serverPlayer.server;
+        if (server == null) {
+            return null;
+        }
+        Optional<CompoundTag> saved;
+        try {
+            saved = server.getPlayerList().load(serverPlayer);
+        } catch (Exception e) {
+            ElementsPlus.LOGGER.error("[experiments] failed to read saved scores for "
+                    + player.getName().getString(), e);
+            return null;
+        }
+        if (saved.isEmpty()) {
+            return null;
+        }
+        CompoundTag attachments = saved.get().getCompound(AttachmentTarget.NBT_ATTACHMENT_KEY);
+        String key = EXPERIMENT_SCORES.identifier().toString();
+        if (!attachments.contains(key)) {
+            return null;
+        }
+        RegistryOps<Tag> registryOps = RegistryOps.create(NbtOps.INSTANCE, server.registryAccess());
+        DataResult<Map<String, Integer>> result = SCORE_CODEC.parse(registryOps, attachments.get(key));
         return result.result().orElse(null);
     }
 }

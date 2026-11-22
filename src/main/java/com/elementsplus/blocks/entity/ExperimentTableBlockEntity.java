@@ -15,6 +15,7 @@ import com.elementsplus.core.experiment.BuiltinExperiments;
 import com.elementsplus.core.experiment.ExperimentChapter;
 import com.elementsplus.core.experiment.ExperimentFailureInfo;
 import com.elementsplus.core.experiment.ExperimentHost;
+import com.elementsplus.core.experiment.ProgrammingExperiment;
 import com.elementsplus.core.experiment.SequentialFailureInfo;
 import com.elementsplus.menu.ExperimentTableMenu;
 import com.elementsplus.network.CircuitStorageSyncPayload;
@@ -44,6 +45,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -68,6 +70,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     private int testIndex = 0;
     private int time = 0;
     private float progress = 0f;
+    private int finalScore = -1;
     private final List<Integer> testResults = new ArrayList<>();
     private final List<Integer> testTicks = new ArrayList<>();
     private final List<Component> tooltipLines = new ArrayList<>();
@@ -75,6 +78,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
     private SequentialFailureInfo sequentialFailure = null;
     private Object experimentState = null;
     private ItemStack startedStack = null;
+    private byte[] startedExternalProgram = null;
+    private boolean externalDeviceChangedPending = false;
     private AsyncExperimentRunner asyncExperiment = null;
     private boolean suppressStatusSync = false;
     /** 上次同步外接设备列表时的槽位物品，用于在物品变化时刷新编程页。 */
@@ -215,7 +220,23 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             stopAsyncExperiment();
             return;
         }
-        if (startedStack != null && this.getItem(0) != startedStack) {
+        boolean programmingDeviceChanged = false;
+        if (status == ExperimentStatus.BUSY && activeExperiment instanceof ProgrammingExperiment) {
+            ItemStack currentDevice = this.getItem(0);
+            byte[] currentProgram = ProgrammingExperiment.readProgramBytes(currentDevice);
+            if (currentDevice != startedStack || !Arrays.equals(currentProgram, startedExternalProgram)) {
+                programmingDeviceChanged = true;
+                // 让当前测例以 RE 结束；更新快照避免每个 tick 重复中断。
+                startedStack = currentDevice;
+                startedExternalProgram = currentProgram == null ? null : currentProgram.clone();
+                if (asyncExperiment != null) {
+                    asyncExperiment.markExternalDeviceChanged();
+                } else {
+                    externalDeviceChangedPending = true;
+                }
+            }
+        }
+        if (!programmingDeviceChanged && startedStack != null && this.getItem(0) != startedStack) {
             // 换物品后旧实验状态不再有效。
             stopAsyncExperiment();
             resetExperimentState();
@@ -245,14 +266,18 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         if (asyncExperiment != null || activeExperiment == null) {
             return;
         }
-        if (activeExperiment.getTestCaseCount() <= 0) {
-            // 没有测例的实验保持原有同步行为，避免进入 BUSY 后无法推进。
+        if (activeExperiment.getTestCaseCount() <= 0 || !activeExperiment.canRunAsync()) {
+            // 没有测例或需要读取外接设备的实验保持同步推进，避免后台线程看不到设备变化。
             stepExperiment();
             return;
         }
         long worldSeed = this.level instanceof ServerLevel serverLevel ? serverLevel.getSeed() : 0L;
         asyncExperiment = new AsyncExperimentRunner(activeExperiment, this.getItem(0), testIndex,
                 experimentState, time, initiator, worldSeed);
+        if (externalDeviceChangedPending) {
+            asyncExperiment.markExternalDeviceChanged();
+            externalDeviceChangedPending = false;
+        }
         asyncExperiment.setPaused(paused);
     }
 
@@ -269,7 +294,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         try {
             updates = run.drain(this);
             done = run.isDone();
-            if (done && run.isFailed() && this.getItem(0) == startedStack) {
+            if (done && run.isFailed() && this.getItem(0) == startedStack
+                    && !(activeExperiment instanceof ProgrammingExperiment)) {
                 ItemStack failedStack = run.itemStack();
                 if (failedStack != null && failedStack != startedStack) {
                     this.getItems().set(0, failedStack);
@@ -318,6 +344,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         context.testIndex = testIndex;
         context.playerUuid = initiator;
         context.experimentState = experimentState;
+        context.externalDeviceChanged = externalDeviceChangedPending;
+        externalDeviceChangedPending = false;
         boolean ok = experiment.tick(context);
         this.testIndex = context.testIndex;
         this.experimentState = context.experimentState;
@@ -357,6 +385,10 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         context.playerUuid = player.getUUID();
         List<Component> reasons = experiment.preCheckReasons(context);
         startedStack = this.getItem(0);
+        byte[] externalProgram = experiment instanceof ProgrammingExperiment
+                ? ProgrammingExperiment.readProgramBytes(startedStack) : null;
+        startedExternalProgram = externalProgram == null ? null : externalProgram.clone();
+        externalDeviceChangedPending = false;
         if (reasons.isEmpty()) {
             status = ExperimentStatus.BUSY;
             paused = false;
@@ -365,6 +397,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             testIndex = 0;
             time = 0;
             progress = 0f;
+            finalScore = -1;
             testResults.clear();
             testTicks.clear();
             int count = experiment.getTestCaseCount();
@@ -384,6 +417,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             testIndex = 0;
             time = 0;
             progress = 0f;
+            finalScore = -1;
             testResults.clear();
             testTicks.clear();
             tooltipLines.clear();
@@ -405,10 +439,15 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         stopAsyncExperiment();
         ItemStack stack = this.getItem(0);
         startedStack = stack;
+        startedExternalProgram = null;
+        externalDeviceChangedPending = false;
         CircuitDiagram diagram = stack.get(com.elementsplus.ModDataComponents.CIRCUIT_DIAGRAM);
         if (diagram == null || CircuitItemData.isCompiled(stack)
                 || stack.has(com.elementsplus.ModDataComponents.EQUIVALENT_COMPONENT)) {
             status = ExperimentStatus.ERROR;
+            finalScore = -1;
+            failureInfo = null;
+            sequentialFailure = null;
             setErrorLines(List.of(Component.translatable("experiment.elements-plus.precheck.not_diagram")));
             syncStatus();
             return;
@@ -418,6 +457,9 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         if (!reasons.isEmpty()) {
             status = ExperimentStatus.ERROR;
             initiator = player.getUUID();
+            finalScore = -1;
+            failureInfo = null;
+            sequentialFailure = null;
             setErrorLines(reasons);
             syncStatus();
             return;
@@ -432,6 +474,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         status = ExperimentStatus.SUCCESS;
         paused = false;
         progress = 1f;
+        finalScore = -1;
         testResults.clear();
         testTicks.clear();
         failureInfo = null;
@@ -492,6 +535,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         testIndex = 0;
         time = 0;
         progress = 0f;
+        finalScore = -1;
         testResults.clear();
         testTicks.clear();
         tooltipLines.clear();
@@ -499,6 +543,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         sequentialFailure = null;
         experimentState = null;
         startedStack = null;
+        startedExternalProgram = null;
+        externalDeviceChangedPending = false;
         this.setChanged();
     }
 
@@ -508,10 +554,28 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             return;
         }
         paused = false;
+        if (activeExperiment != null && activeExperiment.usesScoreSystem()) {
+            finalScore = activeExperiment.calculateScore(testResults);
+            if (initiator != null && this.level.getServer() != null) {
+                ServerPlayer init = this.level.getServer().getPlayerList().getPlayer(initiator);
+                if (init != null) {
+                    PlayerExperimentsAttachment.recordScore(init, activeExperiment.getName(), finalScore);
+                }
+            }
+        }
+        boolean hadFailures = false;
+        for (int result : testResults) {
+            if (result == 0 || result == 2 || result == 3) {
+                hadFailures = true;
+                break;
+            }
+        }
         if (success) {
             status = ExperimentStatus.SUCCESS;
-            failureInfo = null;
-            sequentialFailure = null;
+            if (!hadFailures) {
+                failureInfo = null;
+                sequentialFailure = null;
+            }
             experimentState = null;
             level.playSound(null, getBlockPos(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
             progress = 1f;
@@ -546,6 +610,9 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
             status = ExperimentStatus.ERROR;
             level.playSound(null, getBlockPos(), SoundEvents.NOTE_BLOCK_HARP.value(), SoundSource.PLAYERS, 1.0F, 0.5F);
         }
+        if (activeExperiment != null && activeExperiment.usesScoreSystem()) {
+            sendScreenDataToOpenViewers();
+        }
         this.setChanged();
         syncStatus();
     }
@@ -556,8 +623,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         if (lines != null) {
             tooltipLines.addAll(lines);
         }
-        failureInfo = null;
-        sequentialFailure = null;
+        // 保留已有失败数据，避免后续测例的 TLE/提示覆盖第一个 WA 的详细数据。
         this.setChanged();
     }
 
@@ -642,7 +708,8 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
                 tooltipJson,
                 failureInfo,
                 status == ExperimentStatus.BUSY ? testIndex : -1,
-                sequentialFailure
+                sequentialFailure,
+                finalScore
         );
     }
 
@@ -667,7 +734,7 @@ public class ExperimentTableBlockEntity extends BaseContainerBlockEntity impleme
         }
         long worldSeed = this.level instanceof ServerLevel serverLevel ? serverLevel.getSeed() : 0L;
         return new ExperimentTableScreenDataPayload(worldPosition, selectedChapter, selectedExperiment,
-                unlocked, forced, completed, worldSeed);
+                unlocked, forced, completed, PlayerExperimentsAttachment.getScores(player), worldSeed);
     }
 
     public void syncStatus() {

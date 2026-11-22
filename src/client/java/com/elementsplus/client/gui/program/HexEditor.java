@@ -461,8 +461,11 @@ public final class HexEditor {
     }
 
     private static String toHex(byte[] data, int start, int end) {
-        StringBuilder builder = new StringBuilder(Math.max(0, end - start) * 2);
+        StringBuilder builder = new StringBuilder(Math.max(0, end - start) * 3);
         for (int index = Math.max(0, start); index < Math.min(end, data.length); index++) {
+            if (!builder.isEmpty()) {
+                builder.append(' ');
+            }
             builder.append(String.format(Locale.ROOT, "%02X", data[index] & 0xFF));
         }
         return builder.toString();

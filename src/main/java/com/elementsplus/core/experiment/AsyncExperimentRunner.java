@@ -22,6 +22,7 @@ import java.util.function.Function;
 public final class AsyncExperimentRunner implements AutoCloseable {
     private final BaseExperiment experiment;
     private final ItemStack itemStack;
+    private final BaseExperiment.Context context;
     private final ConcurrentLinkedQueue<Consumer<ExperimentHost>> events = new ConcurrentLinkedQueue<>();
     private final Object pauseLock = new Object();
     private final Thread thread;
@@ -40,7 +41,7 @@ public final class AsyncExperimentRunner implements AutoCloseable {
         this.itemStack = itemStack.copy();
         this.testIndex = testIndex;
 
-        BaseExperiment.Context context = new BaseExperiment.Context(new AsyncHost(), null, this.itemStack);
+        this.context = new BaseExperiment.Context(new AsyncHost(), null, this.itemStack);
         context.testIndex = testIndex;
         context.experimentState = experimentState;
         context.time = time;
@@ -146,6 +147,11 @@ public final class AsyncExperimentRunner implements AutoCloseable {
             count++;
         }
         return count;
+    }
+
+    /** 由服务器线程通知后台实验：外接设备内容已改变。 */
+    public void markExternalDeviceChanged() {
+        context.externalDeviceChanged = true;
     }
 
     public void setPaused(boolean value) {

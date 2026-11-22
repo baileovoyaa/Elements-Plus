@@ -30,6 +30,7 @@
     "elements-plus:architecture_immediate",
     "elements-plus:architecture_memory",
     "elements-plus:architecture_compute",
-    "elements-plus:architecture_jump"
+    "elements-plus:architecture_jump",
+    "elements-plus:assembly"
   ]
 }

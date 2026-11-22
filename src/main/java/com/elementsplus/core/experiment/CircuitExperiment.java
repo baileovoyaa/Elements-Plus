@@ -550,6 +550,11 @@ public class CircuitExperiment extends BaseExperiment {
     }
 
     @Override
+    public List<TestCase> getTestCases() {
+        return testCases;
+    }
+
+    @Override
     public boolean tick(Context context) {
         int index = context.testIndex;
         if (index < 0 || index >= testCases.size()) {
@@ -1059,6 +1064,11 @@ public class CircuitExperiment extends BaseExperiment {
         ItemStack stack = context.getItemStack();
         CircuitDiagram diagram = null;
         if (stack != null && !stack.isEmpty()) {
+            if (!stack.is(com.elementsplus.ModItems.CIRCUIT_DIAGRAM)) {
+                // 磁盘、纸带阅读器等物品虽然带等效元件，但不是可实验的电路图。
+                reasons.add(Component.translatable("experiment.elements-plus.precheck.not_diagram"));
+                return reasons;
+            }
             if (CircuitItemData.isCompiled(stack) || stack.has(ModDataComponents.EQUIVALENT_COMPONENT)) {
                 reasons.add(Component.translatable("experiment.elements-plus.precheck.has_equivalent"));
                 return reasons;

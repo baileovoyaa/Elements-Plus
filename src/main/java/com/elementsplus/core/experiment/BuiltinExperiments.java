@@ -1734,6 +1734,21 @@ public class BuiltinExperiments {
             ElementsPlus.id("textures/experiments/architecture_jump.png"),
             new CircuitExperiment(ArchitectureJumpTests.build(), null));
 
+    /** 汇编章节：8 位基础单片机；成功后把电路编译为该元件。 */
+    public static final CircuitExperiment MCU_8_BASIC = register("mcu_8_basic",
+            BuiltinCircuitComponents.MCU_8_BASIC.getIcon(),
+            new CircuitExperiment(Mcu8BasicTests.build(), BuiltinCircuitComponents.MCU_8_BASIC));
+
+    /** 汇编章节：回显；程序来自磁盘/打孔文件，不需要电路。 */
+    public static final ProgrammingExperiment ASM_ECHO = register("asm_echo",
+            ElementsPlus.id("textures/experiments/asm.png"),
+            ProgrammingExperiment.echo());
+
+    /** 汇编章节：单字节 A+B；按通过率计分，60% 通过。 */
+    public static final ProgrammingExperiment ASM_ADD_BYTE = register("asm_add_byte",
+            ElementsPlus.id("textures/experiments/asm.png"),
+            ProgrammingExperiment.addByte());
+
     public static <T extends BaseExperiment> T register(String name, ResourceLocation icon, T experiment) {
         experiment.setName(name);
         experiment.setIcon(icon);

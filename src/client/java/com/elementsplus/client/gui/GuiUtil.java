@@ -311,4 +311,10 @@ public class GuiUtil {
             graphics.drawString(font, lines.get(0), x, y, color, shadow);
         }
     }
+
+    public static void renderButton(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean hovered, int color, Component text) {
+        guiGraphics.fill(x, y, x + width, y + height, hovered ? 0xFFFFFFFF : 0xFF000000);
+        drawSubPanel(guiGraphics, x + 1, y + 1, x + width - 1, y + height - 1, color, SubPanelType.CONVEX);
+        guiGraphics.drawCenteredString(Minecraft.getInstance().font, text, x + width / 2, y + (height - Minecraft.getInstance().font.lineHeight) / 2 + 1, 0xFFFFFFFF);
+    }
 }

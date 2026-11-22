@@ -40,7 +40,7 @@ public interface ExperimentHost {
     void reportTestResult(int index, boolean pass);
 
     /**
-     * 报告测例状态：1 通过、0 失败、2 TLE（仍属于失败）。
+     * 报告测例状态：1 通过、0 失败、2 TLE、3 运行时错误（RE，均属于失败）。
      */
     default void reportTestResultState(int index, int result) {
         reportTestResult(index, result == 1);
