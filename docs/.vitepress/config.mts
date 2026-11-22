@@ -61,7 +61,8 @@ const userSidebar: DefaultTheme.SidebarItem[] = [
                     {text: '计算机架构-立即数', link: '/user/experiment-chapters/architecture-immediate'},
                     {text: '计算机架构-连接内存', link: '/user/experiment-chapters/architecture-memory'},
                     {text: '计算机架构-运算', link: '/user/experiment-chapters/architecture-compute'},
-                    {text: '计算机架构-跳转', link: '/user/experiment-chapters/architecture-jump'}
+                    {text: '计算机架构-跳转', link: '/user/experiment-chapters/architecture-jump'},
+                    {text: '汇编', link: '/user/experiment-chapters/assembly'}
                 ]
             },
             {text: '自定义实验章节', link: '/user/custom-experiment-chapters'}

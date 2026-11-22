@@ -43,5 +43,12 @@ category: "用户文档"
 - [计算机架构-连接内存](architecture-memory.md)
 - [计算机架构-运算](architecture-compute.md)
 - [计算机架构-跳转](architecture-jump.md)
+- [汇编](assembly.md)
+- 汇编-分支
+- 汇编-循环
+- 汇编-简易算法
+- 汇编-交互
+- 汇编-走迷宫
+- 8位高级架构
 - 计算机架构-调用返回和栈
-- 汇编
+- 16位架构
