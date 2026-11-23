@@ -1333,8 +1333,8 @@ body.modal-open { overflow: hidden; }
     ALU_NAMES.forEach((name, index) => { ALU_DEFS[name] = 0x20 + index; });
 
     const JUMP_DEFS = {
-        JMP: 0xC0, JZ: 0xC1, JN: 0xC2, JP: 0xC3, JEQ: 0xC4, 'JLT.U': 0xC5, 'JGT.U': 0xC6,
-        JNZ: 0xC9, JNN: 0xCA, JNP: 0xCB, JNE: 0xCC, 'JGE.U': 0xCD, 'JLE.U': 0xCE,
+        JMP: 0xC0, JZ: 0xC1, JN: 0xC2, JP: 0xC3, JEQ: 0xC4, 'JLTU': 0xC5, 'JGTU': 0xC6,
+        JNZ: 0xC9, JNN: 0xCA, JNP: 0xCB, JNE: 0xCC, 'JGEU': 0xCD, 'JLEU': 0xCE,
         JVI: 0xD0, JVO: 0xD1, JNVI: 0xD8, JNVO: 0xD9,
         JLT: 0xE4, JGT: 0xE5, JGE: 0xE6, JLE: 0xE7
     };
@@ -1353,9 +1353,9 @@ body.modal-open { overflow: hidden; }
     OP_DEFS.LDL = { kind: 'ldl' };
     OP_DEFS.LDH = { kind: 'ldh' };
     OP_DEFS.LDI = { kind: 'ldi' };
-    OP_DEFS.SETTARGET = { kind: 'settarget' };
+    OP_DEFS.SETTR = { kind: 'settarget' };
 
-    const MNEMONIC_ALIASES = { JLTU: 'JLT.U', JGTU: 'JGT.U', JGEU: 'JGE.U', JLEU: 'JLE.U' };
+    const MNEMONIC_ALIASES = { JLTU: 'JLTU', JGTU: 'JGTU', JGEU: 'JGEU', JLEU: 'JLEU' };
 
     function normalizeMnemonic(raw) {
         const upper = String(raw).toUpperCase();
@@ -1402,7 +1402,7 @@ body.modal-open { overflow: hidden; }
             return { text: ALU_NAMES[instruction - 0x20], reserved: false };
         }
         if (instruction >= 0xE0 && instruction <= 0xE2) {
-            return { text: 'SETTARGET R' + (instruction & 0x3), reserved: false };
+            return { text: 'SETTR R' + (instruction & 0x3), reserved: false };
         }
         const jump = JUMP_BYTE_TO_NAME[instruction];
         if (jump) return { text: jump, reserved: false };
@@ -1515,7 +1515,7 @@ body.modal-open { overflow: hidden; }
                     const target = parseTargetOperand(operands[0], lineIndex);
                     if (target) item = { line: lineIndex, size: 4, kind: 'jmpImm', target: target };
                 } else if (operands.length) {
-                    addError(lineIndex, mnemonic + ' 不接受操作数；条件跳转的目标要先用 SETTARGET 设置 TR');
+                    addError(lineIndex, mnemonic + ' 不接受操作数；条件跳转的目标要先用 SETTR 设置 TR');
                 } else {
                     item = { line: lineIndex, size: 1, kind: 'raw', op: definition.op };
                 }
@@ -1557,11 +1557,11 @@ body.modal-open { overflow: hidden; }
                 }
             } else if (definition.kind === 'settarget') {
                 if (operands.length !== 1) {
-                    addError(lineIndex, 'SETTARGET 需要一个目标，例如 SETTARGET R0 或 SETTARGET #label');
+                    addError(lineIndex, 'SETTR 需要一个目标，例如 SETTR R0 或 SETTR #label');
                 } else {
                     const register = parseRegister(operands[0]);
                     if (register !== null) {
-                        if (register === 3) addError(lineIndex, 'SETTARGET R3 是保留编码，请使用 R0/R1/R2');
+                        if (register === 3) addError(lineIndex, 'SETTR R3 是保留编码，请使用 R0/R1/R2');
                         else item = { line: lineIndex, size: 1, kind: 'settargetReg', register: register };
                     } else {
                         const target = parseTargetOperand(operands[0], lineIndex);
@@ -1954,7 +1954,7 @@ body.modal-open { overflow: hidden; }
         '; 回显程序：读到什么就输出什么',
         '; 在下方输入框按回车提交字节流；程序通过 VI/DI 与 VO/DO 握手收发',
         'start:',
-        '    SETTARGET #wait_vi      ; 伪指令：把 TR 指向 wait_vi',
+        '    SETTR #wait_vi      ; 伪指令：把 TR 指向 wait_vi',
         'wait_vi:',
         '    JNVI                    ; 输入缓冲为空时忙等（VI=0）',
         '    MOV R3, R3              ; DI -> DO（IO 直通，不占用 R0）',
@@ -1968,13 +1968,13 @@ body.modal-open { overflow: hidden; }
         '    LDI R1, #0x80',
         '',
         '    ; 等第一个输入',
-        '    SETTARGET #wait1',
+        '    SETTR #wait1',
         'wait1:',
         '    JNVI',
         '    MOV R2, R3              ; [0x80] <- DI',
         '',
         '    ; 等第二个输入',
-        '    SETTARGET #wait2',
+        '    SETTR #wait2',
         'wait2:',
         '    JNVI',
         '    MOV R0, R3              ; R0 <- DI',
@@ -1982,7 +1982,7 @@ body.modal-open { overflow: hidden; }
         '    MOV R2, R0              ; [0x80] <- sum',
         '',
         '    ; 等输出空闲',
-        '    SETTARGET #waitout',
+        '    SETTR #waitout',
         'waitout:',
         '    JVO',
         '    MOV R3, R2              ; DO <- sum',
@@ -1998,7 +1998,7 @@ body.modal-open { overflow: hidden; }
         ];
         Array.from(text).forEach((character, index) => {
             const label = 'out' + index;
-            lines.push('    SETTARGET #' + label);
+            lines.push('    SETTR #' + label);
             lines.push(label + ':');
             lines.push('    JVO                     ; 等上一个输出被读走');
             lines.push('    LDI R0, #0x' + hex2(character.charCodeAt(0) & 0xFF));

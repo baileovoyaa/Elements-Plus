@@ -36,7 +36,7 @@ final class Mcu8BasicTests {
         p.ldi(1, 0x34);
         p.raw(0x08);                 // undefined -> NOP
         p.mov(2, 1);                 // mem[0x34] = 0x34
-        p.setTarget(2);              // SETTARGET R2 reads mem[R1]
+        p.setTarget(2);              // SETTR R2 reads mem[R1]
         p.mov(0, 1);                 // R0 = 0x34
         p.raw(0x20);                 // ADD
         p.raw(0x21);                 // SUB
@@ -52,7 +52,7 @@ final class Mcu8BasicTests {
         p.mov(1, 0);                 // R1 = 0x65
         p.mov(3, 0);                 // write DO
         p.mov(3, 3);                 // VI=0: no read
-        p.raw(0xE3);                 // reserved SETTARGET R3
+        p.raw(0xE3);                 // reserved SETTR R3
         p.raw(0x7F);                 // reserved LDL R3
         p.nop();
         ArchitectureTestSupport.ScheduleBuilder s = new ArchitectureTestSupport.ScheduleBuilder();

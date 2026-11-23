@@ -14,7 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 8 位指令集汇编器。实现标签解析、{@code LDI}/{@code SETTARGET #imm}/{@code JMP #label}
+ * 8 位指令集汇编器。实现标签解析、{@code LDI}/{@code SETTR #imm}/{@code JMP #label}
  * 伪指令展开以及保留编码检查。
  *
  * <p>程序最长 256 字节；汇编失败时返回错误行号，供编辑器高亮。</p>
@@ -29,7 +29,7 @@ public final class ProgramAssembler {
     private static final Map<String, Integer> ALU = new HashMap<>();
     private static final Map<String, Integer> JUMPS = new HashMap<>();
     private static final Map<String, String> ALIASES = Map.of(
-            "JLTU", "JLT.U", "JGTU", "JGT.U", "JGEU", "JGE.U", "JLEU", "JLE.U"
+            "JLTU", "JLTU", "JGTU", "JGTU", "JGEU", "JGEU", "JLEU", "JLEU"
     );
 
     static {
@@ -41,14 +41,14 @@ public final class ProgramAssembler {
         JUMPS.put("JN", 0xC2);
         JUMPS.put("JP", 0xC3);
         JUMPS.put("JEQ", 0xC4);
-        JUMPS.put("JLT.U", 0xC5);
-        JUMPS.put("JGT.U", 0xC6);
+        JUMPS.put("JLTU", 0xC5);
+        JUMPS.put("JGTU", 0xC6);
         JUMPS.put("JNZ", 0xC9);
         JUMPS.put("JNN", 0xCA);
         JUMPS.put("JNP", 0xCB);
         JUMPS.put("JNE", 0xCC);
-        JUMPS.put("JGE.U", 0xCD);
-        JUMPS.put("JLE.U", 0xCE);
+        JUMPS.put("JGEU", 0xCD);
+        JUMPS.put("JLEU", 0xCE);
         JUMPS.put("JVI", 0xD0);
         JUMPS.put("JVO", 0xD1);
         JUMPS.put("JNVI", 0xD8);
@@ -84,7 +84,7 @@ public final class ProgramAssembler {
     }
 
     private enum Kind {
-        RAW, JUMP, MOV, LDL, LDH, LDI, SETTARGET, JMP_IMM
+        RAW, JUMP, MOV, LDL, LDH, LDI, SETTR, JMP_IMM
     }
 
     private record OpDef(Kind kind, int op) {
@@ -105,7 +105,7 @@ public final class ProgramAssembler {
             case "LDL" -> new OpDef(Kind.LDL, 0);
             case "LDH" -> new OpDef(Kind.LDH, 0);
             case "LDI" -> new OpDef(Kind.LDI, 0);
-            case "SETTARGET" -> new OpDef(Kind.SETTARGET, 0);
+            case "SETTR" -> new OpDef(Kind.SETTR, 0);
             default -> null;
         };
     }
@@ -249,7 +249,7 @@ public final class ProgramAssembler {
                     buffer[position++] = (byte) (0x40 | (item.register << 4) | (item.value & 0x0F));
                     buffer[position++] = (byte) (0x80 | (item.register << 4) | ((item.value >> 4) & 0x0F));
                 }
-                case SETTARGET -> {
+                case SETTR -> {
                     if (item.target != null) {
                         Integer value = resolveTarget(item.target, item.line, labels, reporter);
                         if (value != null) {
@@ -371,7 +371,7 @@ public final class ProgramAssembler {
                 }
                 return Item.ldi(line, register, value.intValue());
             }
-            case SETTARGET -> {
+            case SETTR -> {
                 if (operands.size() != 1) {
                     reporter.add(line, "gui.elements-plus.file.asm.error.settarget_operands");
                     return null;
@@ -477,13 +477,13 @@ public final class ProgramAssembler {
         }
 
         static Item settargetReg(int line, int register) {
-            Item item = new Item(line, 1, Kind.SETTARGET, 0);
+            Item item = new Item(line, 1, Kind.SETTR, 0);
             item.register = register;
             return item;
         }
 
         static Item settargetImm(int line, String target) {
-            Item item = new Item(line, 3, Kind.SETTARGET, 0);
+            Item item = new Item(line, 3, Kind.SETTR, 0);
             item.register = 0;
             item.target = target;
             return item;
@@ -539,7 +539,7 @@ public final class ProgramAssembler {
             return ALU_NAMES[ins - 0x20];
         }
         if (ins >= 0xE0 && ins <= 0xE2) {
-            return "SETTARGET R" + (ins & 0x3);
+            return "SETTR R" + (ins & 0x3);
         }
         for (Map.Entry<String, Integer> entry : JUMPS.entrySet()) {
             if (entry.getValue() == ins) {
@@ -557,7 +557,7 @@ public final class ProgramAssembler {
         result.add("NOP");
         result.addAll(ALU.keySet());
         result.addAll(JUMPS.keySet());
-        result.addAll(List.of("MOV", "LDL", "LDH", "LDI", "SETTARGET"));
+        result.addAll(List.of("MOV", "LDL", "LDH", "LDI", "SETTR"));
         return result;
     }
 }

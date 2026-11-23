@@ -27,11 +27,11 @@ tags: ["实验章节"]
 | 伪指令 | 展开 | 说明 |
 | --- | --- | --- |
 | `LDI Rd, #imm8` | `LDL Rd, #lo`；`LDH Rd, #hi` | `Rd` 只能是 `R0`/`R1`；`lo` 为 `imm8` 的低 4 位，`hi` 为高 4 位 |
-| `SETTARGET #imm8` | `LDI R0, #imm8`；`SETTARGET R0` | 会覆盖 `R0` |
-| `JMP #label` | `SETTARGET #label`；`JMP` | 会覆盖 `R0` |
+| `SETTR #imm8` | `LDI R0, #imm8`；`SETTR R0` | 会覆盖 `R0` |
+| `JMP #label` | `SETTR #label`；`JMP` | 会覆盖 `R0` |
 
-- 不含条件跳转 `Jcc #label`，因为设置目标会覆盖 `R0`，而条件通常也依赖 `R0`。需要带标签的条件跳转时，先用 `SETTARGET` 设好目标，再计算/装入 `R0`，最后执行 `Jcc`。
-- 如果不想覆盖 `R0`，也可以手动把目标装进 `R1`，再用 `SETTARGET R1`；但要自行保存 `R1` 原来的地址。
+- 不含条件跳转 `Jcc #label`，因为设置目标会覆盖 `R0`，而条件通常也依赖 `R0`。需要带标签的条件跳转时，先用 `SETTR` 设好目标，再计算/装入 `R0`，最后执行 `Jcc`。
+- 如果不想覆盖 `R0`，也可以手动把目标装进 `R1`，再用 `SETTR R1`；但要自行保存 `R1` 原来的地址。
 
 ---
 
@@ -89,7 +89,7 @@ start:
 MOV R3, R3
 LDL R0, #0x0
 LDH R0, #0x0
-SETTARGET R0
+SETTR R0
 JMP
 ```
 

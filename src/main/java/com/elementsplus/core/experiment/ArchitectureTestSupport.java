@@ -37,14 +37,14 @@ final class ArchitectureTestSupport {
     static final int JN = 0xC2;
     static final int JP = 0xC3;
     static final int JEQ = 0xC4;
-    static final int JLT_U = 0xC5;
-    static final int JGT_U = 0xC6;
+    static final int JLTU = 0xC5;
+    static final int JGTU = 0xC6;
     static final int JNZ = 0xC9;
     static final int JNN = 0xCA;
     static final int JNP = 0xCB;
     static final int JNE = 0xCC;
-    static final int JGE_U = 0xCD;
-    static final int JLE_U = 0xCE;
+    static final int JGEU = 0xCD;
+    static final int JLEU = 0xCE;
     static final int JVI = 0xD0;
     static final int JVO = 0xD1;
     static final int JNVI = 0xD8;
@@ -375,8 +375,8 @@ final class ArchitectureTestSupport {
 
         private boolean isJump(int instruction) {
             return switch (instruction) {
-                case JMP, JZ, JN, JP, JEQ, JLT_U, JGT_U, JNZ, JNN, JNP,
-                        JNE, JGE_U, JLE_U, JVI, JVO, JNVI, JNVO,
+                case JMP, JZ, JN, JP, JEQ, JLTU, JGTU, JNZ, JNN, JNP,
+                        JNE, JGEU, JLEU, JVI, JVO, JNVI, JNVO,
                         JLT, JGT, JGE, JLE -> true;
                 default -> false;
             };
@@ -394,10 +394,10 @@ final class ArchitectureTestSupport {
                 case JNP -> r0 == 0 || (r0 & 0x80) != 0;
                 case JEQ -> r0 == memoryValue;
                 case JNE -> r0 != memoryValue;
-                case JLT_U -> r0 < memoryValue;
-                case JGT_U -> r0 > memoryValue;
-                case JGE_U -> r0 >= memoryValue;
-                case JLE_U -> r0 <= memoryValue;
+                case JLTU -> r0 < memoryValue;
+                case JGTU -> r0 > memoryValue;
+                case JGEU -> r0 >= memoryValue;
+                case JLEU -> r0 <= memoryValue;
                 case JLT -> (byte) r0 < (byte) memoryValue;
                 case JGT -> (byte) r0 > (byte) memoryValue;
                 case JGE -> (byte) r0 >= (byte) memoryValue;

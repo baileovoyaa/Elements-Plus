@@ -920,9 +920,9 @@
   "gui.elements-plus.file.asm.error.mov_operands": "MOV 需要两个寄存器操作数，例如 MOV R0, R1",
   "gui.elements-plus.file.asm.error.mov_register": "MOV 的操作数必须是 R0~R3",
   "gui.elements-plus.file.asm.error.no_operands": "%s 不接受操作数",
-  "gui.elements-plus.file.asm.error.jump_operands": "%s 不接受操作数；条件跳转的目标要先用 SETTARGET 设置 TR",
-  "gui.elements-plus.file.asm.error.settarget_operands": "SETTARGET 需要一个目标，例如 SETTARGET R0 或 SETTARGET #label",
-  "gui.elements-plus.file.asm.error.settarget_r3": "SETTARGET R3 是保留编码，请使用 R0/R1/R2",
+  "gui.elements-plus.file.asm.error.jump_operands": "%s 不接受操作数；条件跳转的目标要先用 SETTR 设置 TR",
+  "gui.elements-plus.file.asm.error.settarget_operands": "SETTR 需要一个目标，例如 SETTR R0 或 SETTR #label",
+  "gui.elements-plus.file.asm.error.settarget_r3": "SETTR R3 是保留编码，请使用 R0/R1/R2",
   "gui.elements-plus.file.asm.error.target_operand": "目标需要写作 #label 或 #0xNN",
   "gui.elements-plus.file.asm.error.target_range": "目标地址范围是 0x00~0xFF",
   "gui.elements-plus.file.asm.error.target_invalid": "无效的目标 \"%s\"",
@@ -998,6 +998,8 @@
   "gui.elements-plus.mcu_status.unavailable": "单片机状态不可用",
   "gui.elements-plus.experiment_table.test_re": "RE",
   "experiment.elements-plus.programming.device_changed": "外接设备内容发生变化，实验已中断",
-  "gui.elements-plus.mcu_status.assembly": "汇编"
+  "gui.elements-plus.mcu_status.assembly": "汇编",
+  "gui.elements-plus.crystallizer.piston_hint": "放入活塞",
+  "gui.elements-plus.metal_catalyst.catalyst_hint": "放入催化剂"
 
 }

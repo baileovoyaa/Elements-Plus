@@ -17,6 +17,7 @@ public class CrystallizerScreen extends AbstractContainerScreen<CrystallizerMenu
     private static final ResourceLocation LIT_PROGRESS_SPRITE = ResourceLocation.withDefaultNamespace("container/furnace/lit_progress");
     private static final ResourceLocation BURN_PROGRESS_SPRITE = ResourceLocation.withDefaultNamespace("container/furnace/burn_progress");
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(MOD_ID, "textures/gui/crystallizer.png");
+    private static final ResourceLocation PISTON_SLOT = ResourceLocation.fromNamespaceAndPath(MOD_ID, "textures/gui/slot/piston.png");
 
     public CrystallizerScreen(CrystallizerMenu furnaceMenu, Inventory inventory, Component component) {
         super(furnaceMenu, inventory, component);
@@ -51,11 +52,25 @@ public class CrystallizerScreen extends AbstractContainerScreen<CrystallizerMenu
             int startColor = Mth.lerpInt(this.menu.getPressureProgress(), 0x00, 0xFF);
             guiGraphics.fillGradient(leftPos + 28, topPos + 44 - pressure, leftPos + 39, topPos + 44, 0xFF0000FF | (startColor << 8), 0xFF0000FF);
         }
+
+        var pistonSlot = this.menu.getSlot(3);
+        if (pistonSlot.getItem().isEmpty()) {
+            guiGraphics.blit(PISTON_SLOT, leftPos + pistonSlot.x, topPos + pistonSlot.y,
+                    0, 0, 16, 16, 16, 16);
+        }
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
         super.render(guiGraphics, mouseX, mouseY, delta);
-        this.renderTooltip(guiGraphics, mouseX, mouseY);
+        var pistonSlot = this.menu.getSlot(3);
+        if (pistonSlot.getItem().isEmpty()
+                && this.isHovering(pistonSlot.x, pistonSlot.y, 16, 16, mouseX, mouseY)) {
+            guiGraphics.renderTooltip(this.font,
+                    Component.translatable("gui.elements-plus.crystallizer.piston_hint"),
+                    mouseX, mouseY);
+        } else {
+            this.renderTooltip(guiGraphics, mouseX, mouseY);
+        }
     }
 }

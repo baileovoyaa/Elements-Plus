@@ -6,10 +6,10 @@ Instruction fetch is unchanged: `PC` goes to the virtual program ROM and `INS` i
 
 An 8-bit instruction has no room for a full 8-bit address, so jumps do not encode the target in the instruction. Instead, the target is first written into a separate 8-bit register `TR` (the jump target register).
 
-- `SETTARGET Rs`: `1110 00RR`, copies register `Rs` into `TR`.
+- `SETTR Rs`: `1110 00RR`, copies register `Rs` into `TR`.
 - `Rs` may be `R0`, `R1`, or `R2`; `R3` is IO and its encoding is reserved.
-- `SETTARGET R0` = `0xE0`, `SETTARGET R1` = `0xE1`, `SETTARGET R2` = `0xE2`; `SETTARGET R3` = `0xE3` is reserved.
-- `SETTARGET R2` reads `mem[R1]` and can be used for jump tables.
+- `SETTR R0` = `0xE0`, `SETTR R1` = `0xE1`, `SETTR R2` = `0xE2`; `SETTR R3` = `0xE3` is reserved.
+- `SETTR R2` reads `mem[R1]` and can be used for jump tables.
 - `TR` updates on the clock edge, so the next tick's jump can use the new value.
 
 Every jump performs:
@@ -19,7 +19,7 @@ if condition is true: PC <- TR
 else:                 PC <- PC + 1
 ```
 
-`SETTARGET` itself does not change `PC`; it only sets the target. The actual jump is performed by a later `JMP` or conditional jump.
+`SETTR` itself does not change `PC`; it only sets the target. The actual jump is performed by a later `JMP` or conditional jump.
 
 ## Jump Instructions
 
@@ -36,10 +36,10 @@ else:                 PC <- PC + 1
 | `JNP` | `0xCB` | `R0 <= 0` (signed) |
 | `JEQ` | `0xC4` | `R0 == mem[R1]` |
 | `JNE` | `0xCC` | `R0 != mem[R1]` |
-| `JLT.U` | `0xC5` | `R0 < mem[R1]` (unsigned) |
-| `JGT.U` | `0xC6` | `R0 > mem[R1]` (unsigned) |
-| `JGE.U` | `0xCD` | `R0 >= mem[R1]` (unsigned) |
-| `JLE.U` | `0xCE` | `R0 <= mem[R1]` (unsigned) |
+| `JLTU` | `0xC5` | `R0 < mem[R1]` (unsigned) |
+| `JGTU` | `0xC6` | `R0 > mem[R1]` (unsigned) |
+| `JGEU` | `0xCD` | `R0 >= mem[R1]` (unsigned) |
+| `JLEU` | `0xCE` | `R0 <= mem[R1]` (unsigned) |
 | `JLT` | `0xE4` | `R0 < mem[R1]` (signed) |
 | `JGT` | `0xE5` | `R0 > mem[R1]` (signed) |
 | `JGE` | `0xE6` | `R0 >= mem[R1]` (signed) |
@@ -52,7 +52,7 @@ else:                 PC <- PC + 1
 About comparisons:
 
 - `JN`/`JP`/`JNN`/`JNP` interpret `R0` as an 8-bit two's-complement value and compare only with 0.
-- `JLT.U`/`JGT.U`/`JGE.U`/`JLE.U` compare with `mem[R1]` as **unsigned** 8-bit values.
+- `JLTU`/`JGTU`/`JGEU`/`JLEU` compare with `mem[R1]` as **unsigned** 8-bit values.
 - `JLT`/`JGT`/`JGE`/`JLE` compare with `mem[R1]` as **signed two's-complement** values.
 - `JEQ`/`JNE` compare equality regardless of sign.
 
@@ -60,24 +60,24 @@ Use the unsigned versions for non-negative values such as addresses and lengths;
 
 ## Setting the Jump Target
 
-The jump target must first be placed in a register, then `SETTARGET` is used. For example, to jump to address `0x1A`:
+The jump target must first be placed in a register, then `SETTR` is used. For example, to jump to address `0x1A`:
 
 ```text
 LDL R0, #0xA    ; 0x4A
 LDH R0, #0x1    ; 0x81, R0 = 0x1A
-SETTARGET R0    ; 0xE0, TR = 0x1A
+SETTR R0    ; 0xE0, TR = 0x1A
 JMP             ; 0xC0, PC = TR
 ```
 
 In assembly, labels represent addresses; in the actual program, the target address is split into low and high 4 bits and loaded with `LDL`/`LDH`. The later assembly chapter explains how labels and pseudo-instructions simplify this.
 
-Preparing the target occupies a register (note that `SETTARGET` itself does not modify its source register):
+Preparing the target occupies a register (note that `SETTR` itself does not modify its source register):
 
 - Loading the target into `R0` overwrites the previous value in `R0`.
 - Loading it into `R1` overwrites the address register.
-- The target can also be placed in memory and loaded with `SETTARGET R2`; this does not overwrite a general-purpose register, but `R1` must already point to the target table.
+- The target can also be placed in memory and loaded with `SETTR R2`; this does not overwrite a general-purpose register, but `R1` must already point to the target table.
 
-`SETTARGET Rs` only copies `Rs` into `TR`; it does not modify `Rs`. A common pattern is therefore: **prepare and set TR first, then prepare comparison values/data**. If the data is already computed, store it in memory first or use another register for the target.
+`SETTR Rs` only copies `Rs` into `TR`; it does not modify `Rs`. A common pattern is therefore: **prepare and set TR first, then prepare comparison values/data**. If the data is already computed, store it in memory first or use another register for the target.
 
 ## Waiting for Input
 
@@ -87,7 +87,7 @@ Preparing the target occupies a register (note that `SETTARGET` itself does not 
 ; First load the address 0x1A of wait_vi into R0 and set TR
 LDL R0, #0xA    ; 0x4A
 LDH R0, #0x1    ; 0x81, R0 = 0x1A
-SETTARGET R0    ; 0xE0
+SETTR R0    ; 0xE0
 
 wait_vi:
     JNVI            ; 0xD8, jump back to wait_vi when VI=0
@@ -96,7 +96,7 @@ wait_vi:
 
 When `VI=0`, `JNVI` sets `PC` back to `TR` and checks again next tick. When `VI=1`, the condition is false and the next `MOV` executes. The `MOV` raises `RI` in the same tick and reads `DI` into `R0`.
 
-If `R0` already holds data you need to keep, use `R1` for the target, use `SETTARGET R2` with the target in memory, or store the data in memory first.
+If `R0` already holds data you need to keep, use `R1` for the target, use `SETTR R2` with the target in memory, or store the data in memory first.
 
 ## Waiting for Output
 
@@ -106,7 +106,7 @@ If `R0` already holds data you need to keep, use `R1` for the target, use `SETTA
 ; R0 holds the result; R1 is temporarily used to set the target
 LDL R1, #0x4    ; 0x54
 LDH R1, #0x2    ; 0x92, R1 = 0x24
-SETTARGET R1    ; 0xE1
+SETTR R1    ; 0xE1
 
 wait_vo:
     JVO             ; 0xD1, jump back to wait_vo when VO=1
@@ -122,7 +122,7 @@ If `R1` is also needed for a data address, store the result in `mem[R1]` first, 
 ## Notes
 
 - Jump targets come from `TR`, not from an immediate in the instruction; a loop usually only needs `TR` set once outside the loop.
-- `SETTARGET` updates `TR` on the clock edge and it becomes visible next tick; an immediately following jump uses the new value.
+- `SETTR` updates `TR` on the clock edge and it becomes visible next tick; an immediately following jump uses the new value.
 - Conditional jumps only compare `R0` with 0, compare `R0` with `mem[R1]`, or test `VI`/`VO`; there are no flags.
 - This chapter has no call/return or stack; jumps rely only on `TR` and conditions.
 - Conditional jumps may go forward or backward, so `PC` is no longer monotonic; test programs use loops and branches to verify this.

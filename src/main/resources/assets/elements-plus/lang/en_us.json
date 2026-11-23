@@ -921,9 +921,9 @@
   "gui.elements-plus.file.asm.error.mov_operands": "MOV needs two registers, e.g. MOV R0, R1",
   "gui.elements-plus.file.asm.error.mov_register": "MOV operands must be R0~R3",
   "gui.elements-plus.file.asm.error.no_operands": "%s takes no operands",
-  "gui.elements-plus.file.asm.error.jump_operands": "%s takes no operands; set TR with SETTARGET first",
-  "gui.elements-plus.file.asm.error.settarget_operands": "SETTARGET needs a target, e.g. SETTARGET R0 or SETTARGET #label",
-  "gui.elements-plus.file.asm.error.settarget_r3": "SETTARGET R3 is reserved; use R0/R1/R2",
+  "gui.elements-plus.file.asm.error.jump_operands": "%s takes no operands; set TR with SETTR first",
+  "gui.elements-plus.file.asm.error.settarget_operands": "SETTR needs a target, e.g. SETTR R0 or SETTR #label",
+  "gui.elements-plus.file.asm.error.settarget_r3": "SETTR R3 is reserved; use R0/R1/R2",
   "gui.elements-plus.file.asm.error.target_operand": "Target must be written as #label or #0xNN",
   "gui.elements-plus.file.asm.error.target_range": "Target address range is 0x00~0xFF",
   "gui.elements-plus.file.asm.error.target_invalid": "Invalid target \"%s\"",
@@ -999,6 +999,8 @@
   "gui.elements-plus.mcu_status.unavailable": "MCU state unavailable",
   "gui.elements-plus.experiment_table.test_re": "RE",
   "experiment.elements-plus.programming.device_changed": "External device contents changed; experiment interrupted",
-  "gui.elements-plus.mcu_status.assembly": "Assembly"
+  "gui.elements-plus.mcu_status.assembly": "Assembly",
+  "gui.elements-plus.crystallizer.piston_hint": "Insert a piston",
+  "gui.elements-plus.metal_catalyst.catalyst_hint": "Insert a catalyst"
 
 }

@@ -18,6 +18,7 @@ public class MetalCatalystScreen extends AbstractContainerScreen<MetalCatalystMe
     private static final ResourceLocation LIT_PROGRESS_SPRITE = ResourceLocation.withDefaultNamespace("container/furnace/lit_progress");
     private static final ResourceLocation BURN_PROGRESS_SPRITE = ResourceLocation.withDefaultNamespace("container/furnace/burn_progress");
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(MOD_ID, "textures/gui/metal_catalyst.png");
+    private static final ResourceLocation CATALYST_SLOT = ResourceLocation.fromNamespaceAndPath(MOD_ID, "textures/gui/slot/catalyst.png");
 
     public MetalCatalystScreen(MetalCatalystMenu menu, Inventory inventory, Component component) {
         super(menu, inventory, component);
@@ -61,11 +62,25 @@ public class MetalCatalystScreen extends AbstractContainerScreen<MetalCatalystMe
                     0xFF000000 | (r << 16), 0xFF000000
             );
         }
+
+        var catalystSlot = this.menu.getSlot(3);
+        if (catalystSlot.getItem().isEmpty()) {
+            guiGraphics.blit(CATALYST_SLOT, leftPos + catalystSlot.x, topPos + catalystSlot.y,
+                    0, 0, 16, 16, 16, 16);
+        }
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
         super.render(guiGraphics, mouseX, mouseY, delta);
-        this.renderTooltip(guiGraphics, mouseX, mouseY);
+        var catalystSlot = this.menu.getSlot(3);
+        if (catalystSlot.getItem().isEmpty()
+                && this.isHovering(catalystSlot.x, catalystSlot.y, 16, 16, mouseX, mouseY)) {
+            guiGraphics.renderTooltip(this.font,
+                    Component.translatable("gui.elements-plus.metal_catalyst.catalyst_hint"),
+                    mouseX, mouseY);
+        } else {
+            this.renderTooltip(guiGraphics, mouseX, mouseY);
+        }
     }
 }

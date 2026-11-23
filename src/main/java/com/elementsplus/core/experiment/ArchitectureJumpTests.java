@@ -16,7 +16,7 @@ final class ArchitectureJumpTests {
 
     static List<TestCase> build() {
         return List.of(
-                // JMP / SETTARGET R0
+                // JMP / SETTR R0
                 branchCase(JMP, 0, false, 0, 0, false, 0),
 
                 // R0 与 0 的条件
@@ -34,11 +34,11 @@ final class ArchitectureJumpTests {
                 branchCase(JEQ, 0x12, true, 0x34, 0, false, 0),
                 branchCase(JNE, 0x12, true, 0x34, 0, false, 0),
                 branchCase(JNE, 0x12, true, 0x12, 0, false, 0),
-                branchCase(JLT_U, 0x01, true, 0x80, 0, false, 0),
-                branchCase(JLT_U, 0x80, true, 0x01, 0, false, 0),
-                branchCase(JGT_U, 0x80, true, 0x01, 0, false, 0),
-                branchCase(JGE_U, 0x80, true, 0x80, 0, false, 0),
-                branchCase(JLE_U, 0x01, true, 0x80, 0, false, 0),
+                branchCase(JLTU, 0x01, true, 0x80, 0, false, 0),
+                branchCase(JLTU, 0x80, true, 0x01, 0, false, 0),
+                branchCase(JGTU, 0x80, true, 0x01, 0, false, 0),
+                branchCase(JGEU, 0x80, true, 0x80, 0, false, 0),
+                branchCase(JLEU, 0x01, true, 0x80, 0, false, 0),
                 branchCase(JLT, 0x80, true, 0x01, 0, false, 0),
                 branchCase(JLT, 0x01, true, 0x80, 0, false, 0),
                 branchCase(JGT, 0x01, true, 0x80, 0, false, 0),
@@ -59,7 +59,7 @@ final class ArchitectureJumpTests {
                 inputWaitLoop(),
                 outputWaitLoop(),
 
-                // SETTARGET R1/R2
+                // SETTR R1/R2
                 setTargetR1(),
                 setTargetR2()
         );
@@ -150,7 +150,7 @@ final class ArchitectureJumpTests {
         return ArchitectureTestSupport.buildCase(program, schedule, true);
     }
 
-    /** SETTARGET R1：用 R1 保存目标地址，不覆盖 R0。 */
+    /** SETTR R1：用 R1 保存目标地址，不覆盖 R0。 */
     private static TestCase setTargetR1() {
         ProgramBuilder program = new ProgramBuilder();
         program.setTargetLabel(R1, "target");
@@ -170,7 +170,7 @@ final class ArchitectureJumpTests {
         return finish(program);
     }
 
-    /** SETTARGET R2：把目标地址写到 mem[0x40]，再从 R2 装入 TR。 */
+    /** SETTR R2：把目标地址写到 mem[0x40]，再从 R2 装入 TR。 */
     private static TestCase setTargetR2() {
         ProgramBuilder program = new ProgramBuilder();
         program.ldiLabel(R0, "target");

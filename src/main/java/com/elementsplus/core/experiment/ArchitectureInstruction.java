@@ -45,7 +45,7 @@ public final class ArchitectureInstruction {
             return ALU_NAMES[ins - 0x20];
         }
         if (ins >= 0xE0 && ins <= 0xE2) {
-            return "SETTARGET R" + (ins & 0x3);
+            return "SETTR R" + (ins & 0x3);
         }
         return switch (ins) {
             case 0xC0 -> "JMP";
@@ -53,14 +53,14 @@ public final class ArchitectureInstruction {
             case 0xC2 -> "JN";
             case 0xC3 -> "JP";
             case 0xC4 -> "JEQ";
-            case 0xC5 -> "JLT.U";
-            case 0xC6 -> "JGT.U";
+            case 0xC5 -> "JLTU";
+            case 0xC6 -> "JGTU";
             case 0xC9 -> "JNZ";
             case 0xCA -> "JNN";
             case 0xCB -> "JNP";
             case 0xCC -> "JNE";
-            case 0xCD -> "JGE.U";
-            case 0xCE -> "JLE.U";
+            case 0xCD -> "JGEU";
+            case 0xCE -> "JLEU";
             case 0xD0 -> "JVI";
             case 0xD1 -> "JVO";
             case 0xD8 -> "JNVI";
