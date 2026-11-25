@@ -52,4 +52,4 @@ outline: [1, 2]
 
 如果你在使用过程中遇到了任何问题，或者有更好的建议，欢迎提 [Issue](https://github.com/baileovoyaa/Elements-Plus/issues)。
 
-如果你认为有能力自行解决并希望贡献项目代码，可以提 [PR](https://github.com/baileovoyaa/Elements-Plus/pulls)，在正式提交贡献之前，请确保先阅读了 [贡献指南](../contributing.md)。有关代码实现的更多细节，可参考 [开发文档](../dev)。
+如果你认为有能力自行解决并希望贡献项目代码，可以提 [PR](https://github.com/baileovoyaa/Elements-Plus/pulls)，在正式提交贡献之前，请确保先阅读了 [贡献指南](../contributing.md)。有关代码实现的更多细节，可参考 [开发文档](../dev/)。

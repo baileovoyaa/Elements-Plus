@@ -1,0 +1,231 @@
+; ============================================================
+; 十进制加法器：读 A、B，输出 A+B 的十进制阿拉伯数字
+; 共享内存 / 程序数据分离 两种模式均可运行
+;
+; 输入：A、B 为十进制数字串，中间用任意非数字分隔；
+;       行首/数字之间多余的非数字会被跳过。
+; 输出：每轮先输出一个换行，再输出和的十进制数字。
+;
+; 数据 RAM：0xF0~0xFC
+;   0xF0 当前输入字节/数字
+;   0xF1 常数 1
+;   0xF2 常数 10
+;   0xF3 常数 100
+;   0xF4 字符 '0'
+;   0xF5 当前解析累加器 ACC
+;   0xF6 A
+;   0xF7 返回地址 RET
+;   0xF8 和 / 个位
+;   0xF9 百位
+;   0xFA 十位
+;   0xFB 临时值 TMP
+;   0xFC 是否已读到数字 STARTED
+; ============================================================
+
+start:
+    ; 常数：1, 10, 100, '0'
+    LDI R0, #0x01
+    LDI R1, #0xF1
+    MOV R2, R0
+    LDI R0, #0x0A
+    LDI R1, #0xF2
+    MOV R2, R0
+    LDI R0, #0x64
+    LDI R1, #0xF3
+    MOV R2, R0
+    LDI R0, #0x30
+    LDI R1, #0xF4
+    MOV R2, R0
+
+round:
+    ; A = 0, ACC = 0
+    LDI R0, #0x00
+    LDI R1, #0xF6
+    MOV R2, R0
+    LDI R1, #0xF5
+    MOV R2, R0
+
+    ; 每轮开头输出换行，兼作结果之间的分隔
+    LDI R0, #0x0A
+    MOV R3, R0
+
+    ; 解析 A，结束后跳到 afterA
+    SETTARGET #afterA
+    LDI R1, #0xF7
+    MOV R2, R0
+    SETTARGET #parse_entry
+    JMP
+
+afterA:
+    ; A = ACC
+    LDI R1, #0xF5
+    MOV R0, R2
+    LDI R1, #0xF6
+    MOV R2, R0
+    ; ACC = 0
+    LDI R0, #0x00
+    LDI R1, #0xF5
+    MOV R2, R0
+    ; 解析 B，结束后跳到 afterB
+    SETTARGET #afterB
+    LDI R1, #0xF7
+    MOV R2, R0
+    SETTARGET #parse_entry
+    JMP
+
+afterB:
+    ; S = A + ACC(B)
+    LDI R1, #0xF6
+    MOV R0, R2
+    LDI R1, #0xF5
+    ADD
+    LDI R1, #0xF8
+    MOV R2, R0
+
+    ; H = 0, T = 0
+    LDI R0, #0x00
+    LDI R1, #0xF9
+    MOV R2, R0
+    LDI R1, #0xFA
+    MOV R2, R0
+
+    ; ---------- 百位 ----------
+h_loop:
+    SETTARGET #h_done
+    LDI R1, #0xF8
+    MOV R0, R2
+    LDI R1, #0xF3
+    JLT.U
+    SUB
+    LDI R1, #0xF8
+    MOV R2, R0
+    ; H++
+    LDI R1, #0xF9
+    MOV R0, R2
+    LDI R1, #0xF1
+    ADD
+    LDI R1, #0xF9
+    MOV R2, R0
+    SETTARGET #h_loop
+    JMP
+h_done:
+
+    ; ---------- 十位 ----------
+t_loop:
+    SETTARGET #t_done
+    LDI R1, #0xF8
+    MOV R0, R2
+    LDI R1, #0xF2
+    JLT.U
+    SUB
+    LDI R1, #0xF8
+    MOV R2, R0
+    ; T++
+    LDI R1, #0xFA
+    MOV R0, R2
+    LDI R1, #0xF1
+    ADD
+    LDI R1, #0xFA
+    MOV R2, R0
+    SETTARGET #t_loop
+    JMP
+t_done:
+
+    ; ---------- 输出，带前导零抑制 ----------
+    ; H + T == 0 时只输出个位
+    SETTARGET #ones
+    LDI R1, #0xF9
+    MOV R0, R2
+    LDI R1, #0xFA
+    ADD
+    JZ
+
+    ; H != 0 时输出百位
+    SETTARGET #skip_h
+    LDI R1, #0xF9
+    MOV R0, R2
+    JZ
+    LDI R1, #0xF4
+    ADD
+    MOV R3, R0
+skip_h:
+    ; 输出十位
+    LDI R1, #0xFA
+    MOV R0, R2
+    LDI R1, #0xF4
+    ADD
+    MOV R3, R0
+ones:
+    ; 输出个位
+    LDI R1, #0xF8
+    MOV R0, R2
+    LDI R1, #0xF4
+    ADD
+    MOV R3, R0
+
+    ; 下一轮（换行在 round 开头输出）
+    SETTARGET #round
+    JMP
+
+; ---------- 解析一个十进制数 ----------
+; 先把 STARTED 清 0；跳过前导非数字；遇到数字后累加到 0xF5；
+; 再遇到非数字时跳转到 0xF7 中保存的返回地址。
+parse_entry:
+    LDI R0, #0x00
+    LDI R1, #0xFC
+    MOV R2, R0
+parse_loop:
+    JNVI
+    LDI R1, #0xF0
+    MOV R2, R3
+    ; digit = byte - '0'
+    MOV R0, R2
+    LDI R1, #0xF4
+    SUB
+    LDI R1, #0xF0
+    MOV R2, R0
+    ; digit > 9 -> 非数字
+    SETTARGET #nondigit
+    LDI R0, #0x09
+    JLT.U
+    ; 有效数字：STARTED = 1
+    LDI R0, #0x01
+    LDI R1, #0xFC
+    MOV R2, R0
+    ; ACC = ACC*2 + ACC*8 + digit
+    ; TMP = 2*ACC
+    LDI R1, #0xF5
+    MOV R0, R2
+    ADD
+    LDI R1, #0xFB
+    MOV R2, R0
+    ; R0 = TMP*4 = 8*ACC
+    LDI R1, #0xFB
+    MOV R0, R2
+    LDI R1, #0xF1
+    SHL
+    SHL
+    ; R0 += TMP + digit
+    LDI R1, #0xFB
+    ADD
+    LDI R1, #0xF0
+    ADD
+    LDI R1, #0xF5
+    MOV R2, R0
+    SETTARGET #parse_loop
+    JMP
+
+nondigit:
+    ; 还没读到数字：忽略这个非数字，继续找数字
+    SETTARGET #parse_loop
+    LDI R1, #0xFC
+    MOV R0, R2
+    JZ
+    ; 已经读到过数字：这个非数字就是数字的结束
+    SETTARGET #sep
+    JMP
+
+sep:
+    LDI R1, #0xF7
+    SETTARGET R2
+    JMP

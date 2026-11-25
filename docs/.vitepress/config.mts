@@ -112,73 +112,91 @@ const devSidebar: DefaultTheme.SidebarItem[] = [
                 link: '/dev/phases/v1.0.0/',
                 collapsed: false,
                 items: [
-                    {
-                        text: '电路说明与元件列表',
-                        link: '/dev/phases/v1.0.0/001-电路说明与元件列表/电路说明与元件列表'
-                    },
-                    {
-                        text: '关于玩家元件列表',
-                        link: '/dev/phases/v1.0.0/002-关于玩家元件列表/关于玩家元件列表'
-                    },
-                    {
-                        text: '实验桌基本功能',
-                        link: '/dev/phases/v1.0.0/003-实验桌基本功能/实验桌基本功能'
-                    },
-                    {
-                        text: '光刻机制造页',
-                        items: [
-                            {
-                                text: '光刻机芯片制造功能',
-                                link: '/dev/phases/v1.0.0/004-光刻机制造页/光刻机芯片制造功能'
-                            },
-                            {
-                                text: '光刻机电路图复制功能',
-                                link: '/dev/phases/v1.0.0/004-光刻机制造页/光刻机电路图复制功能'
-                            }
-                        ]
-                    },
-                    {
-                        text: '实验桌8位组合实验支持',
-                        link: '/dev/phases/v1.0.0/005-实验桌8位组合实验支持/实验桌8位组合实验支持'
-                    },
-                    {text: '加压机', link: '/dev/phases/v1.0.0/006-加压机/加压机'},
-                    {
-                        text: '自定义元件与分离存储',
-                        link: '/dev/phases/v1.0.0/007-自定义元件与分离存储/自定义元件与分离存储'
-                    },
-                    {
-                        text: '架构测例',
-                        link: '/dev/phases/v1.0.0/008-架构测例/架构测例'
-                    },
-                    {
-                        text: '光刻机帮助页',
-                        link: '/dev/phases/v1.0.0/009-光刻机帮助页/光刻机帮助页'
-                    },
-                    {
-                        text: '光刻机ROM行视图',
-                        link: '/dev/phases/v1.0.0/010-光刻机ROM行视图/光刻机ROM行视图'
-                    },
-                    {
-                        text: '网页汇编解释器',
-                        link: '/dev/phases/v1.0.0/011-网页汇编解释器/网页汇编解释器'
-                    },
-                    {
-                        text: '红石接口',
-                        link: '/dev/phases/v1.0.0/012-红石接口/红石接口'
-                    },
-                    {
-                        text: '电路板',
-                        link: '/dev/phases/v1.0.0/013-电路板/电路板'
-                    }
+                    {text: '电路说明与元件列表', link: '/dev/phases/v1.0.0/001-电路说明与元件列表/'},
+                    {text: '关于玩家元件列表', link: '/dev/phases/v1.0.0/002-关于玩家元件列表/'},
+                    {text: '实验桌基本功能', link: '/dev/phases/v1.0.0/003-实验桌基本功能/'},
+                    {text: '光刻机制造页', link: '/dev/phases/v1.0.0/004-光刻机制造页/'},
+                    {text: '实验桌8位组合实验支持', link: '/dev/phases/v1.0.0/005-实验桌8位组合实验支持/'},
+                    {text: '加压机', link: '/dev/phases/v1.0.0/006-加压机/'},
+                    {text: '自定义元件与分离存储', link: '/dev/phases/v1.0.0/007-自定义元件与分离存储/'},
+                    {text: '架构测例', link: '/dev/phases/v1.0.0/008-架构测例/'},
+                    {text: '光刻机帮助页', link: '/dev/phases/v1.0.0/009-光刻机帮助页/'},
+                    {text: '光刻机ROM行视图', link: '/dev/phases/v1.0.0/010-光刻机ROM行视图/'},
+                    {text: '网页汇编解释器', link: '/dev/phases/v1.0.0/011-网页汇编解释器/'},
+                    {text: '红石接口', link: '/dev/phases/v1.0.0/012-红石接口/'},
+                    {text: '电路板', link: '/dev/phases/v1.0.0/013-电路板/'},
+                    {text: '实验桌编程页与文件系统', link: '/dev/phases/v1.0.0/014-实验桌编程页与文件系统/'},
+                    {text: '容器接口', link: '/dev/phases/v1.0.0/015-容器接口/'}
                 ]
             }
         ]
     },
     {
         text: '参考',
+        collapsed: true,
         items: [
-            {text: '参考算法描述', link: '/dev/reference/电路/参考算法描述'},
-            {text: '8位指令集', link: '/dev/reference/8位指令集'}
+            {
+                text: '指令集与 IO 接口',
+                collapsed: true,
+                items: [
+                    {text: '指令集描述', link: '/dev/reference/指令集与IO接口/指令集描述'},
+                    {text: '8 位指令集', link: '/dev/reference/指令集与IO接口/架构/8位指令集'},
+                    {text: '8 位高级指令集', link: '/dev/reference/指令集与IO接口/架构/8位高级指令集'},
+                    {text: '16 位指令集', link: '/dev/reference/指令集与IO接口/架构/16位指令集'},
+                    {text: '网页汇编解释器', link: '/dev/reference/指令集与IO接口/网页汇编解释器'},
+                    {text: '容器接口', link: '/dev/reference/指令集与IO接口/接口/容器接口'},
+                    {text: '红石接口', link: '/dev/reference/指令集与IO接口/接口/红石接口'},
+                    {text: '机器人指令集设计', link: '/dev/reference/指令集与IO接口/接口/机器人指令集'}
+                ]
+            },
+            {
+                text: '电路',
+                collapsed: true,
+                items: [
+                    {text: '参考算法描述', link: '/dev/reference/电路/参考算法描述'},
+                    {text: '元件列表', link: '/dev/reference/电路/元件列表'},
+                    {text: '电路模拟', link: '/dev/reference/电路/模拟'},
+                    {text: '分离存储', link: '/dev/reference/电路/分离存储'},
+                    {text: '电路板', link: '/dev/reference/电路/载体/电路板'}
+                ]
+            },
+            {
+                text: '实验',
+                collapsed: true,
+                items: [
+                    {text: '电路实验', link: '/dev/reference/实验/电路实验'},
+                    {text: '自定义元件', link: '/dev/reference/实验/自定义元件'}
+                ]
+            },
+            {
+                text: '实验桌',
+                collapsed: true,
+                items: [
+                    {text: '基本功能', link: '/dev/reference/实验桌/'},
+                    {text: '编程页与文件系统', link: '/dev/reference/实验桌/编程页与文件系统'}
+                ]
+            },
+            {
+                text: '光刻机',
+                collapsed: true,
+                items: [
+                    {text: '元件列表', link: '/dev/reference/光刻机/元件列表'},
+                    {text: '制造', link: '/dev/reference/光刻机/制造'},
+                    {text: '存储器视图', link: '/dev/reference/光刻机/存储器视图'},
+                    {text: '帮助页', link: '/dev/reference/光刻机/帮助页'}
+                ]
+            },
+            {
+                text: '文件系统',
+                collapsed: true,
+                items: [
+                    {text: '文件系统', link: '/dev/reference/文件系统/'},
+                    {text: '文件系统路径', link: '/dev/reference/文件系统/路径'}
+                ]
+            },
+            {text: '加压机', link: '/dev/reference/加压机/'},
+            {text: '参考 HTML 实现', link: '/dev/reference/电路/参考HTML实现.html', target: '_self'},
+            {text: '协作编辑器', link: '/dev/reference/文件系统/协作编辑器/index.html', target: '_self'}
         ]
     },
     {text: '路线图', link: '/dev/roadmap'}
@@ -197,6 +215,7 @@ const categorySidebars: Record<string, DefaultTheme.SidebarItem[]> = {
 const themeConfig = {
     nav: [
         {text: 'Home', link: '/'},
+        {text: '概述', link: '/outline'},
         {text: '用户文档', link: '/user/'},
         {text: '开发文档', link: '/dev/'},
         // demo 是 public 下的独立静态页面，不能走 SPA 路由（会去找同名的 .md 而 404），
@@ -239,10 +258,11 @@ export default defineConfig({
     markdown: {
         config(md) {
             // ```epp-experiments 渲染成带图标/可选标志的实验条目
+            // @ts-ignore
             md.use(experimentsPlugin, {base})
             // ![alt](src){.spoiler} 渲染成可点击的剧透图
             md.use(spoilerPlugin)
         }
     },
-    ignoreDeadLinks: true
+    ignoreDeadLinks: [/\.py$/]
 })

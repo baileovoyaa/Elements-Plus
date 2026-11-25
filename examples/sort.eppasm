@@ -1,0 +1,114 @@
+; ============================================================
+; 8 位汇编：读入 n 与 n 个字节，排序后输出，然后循环
+;
+; 输入：先 1 字节 n，再 n 字节数据（n = 1..128）
+; 输出：n 字节，从小到大
+;
+; 数据区：0x80~0xFF，数据紧贴在高地址端，从 0x100-n 开始
+; 变量区：0x7A~0x7F（程序不会执行到这里）
+;   0x7A = ONE(1)        0x7B = P0(数据起点)
+;   0x7C = P(扫描指针)   0x7D = MIN(当前最小值)
+;   0x7E = MINP(最小值地址)  0x7F = N(剩余轮数)
+;
+; 注意：0x7A~0x7F 是硬编码地址；若在 start 之前增删指令，
+;       需要同步修改下面所有 0x7A~0x7F。
+;
+; 算法：选择排序。每轮扫描 n 个字节找最小值，输出后把它
+;       标记成 0xFF；重复 n 轮，输出即为升序。
+; ============================================================
+
+start:
+    ; 常量 1（0x7A）
+    LDI R0, #0x01
+    LDI R1, #0x7A
+    MOV R2, R0
+
+read_round:
+    ; 等待并读入 n
+    SETTARGET #wait_n
+wait_n:
+    JNVI
+    MOV R0, R3
+    LDI R1, #0x7F          ; N
+    MOV R2, R0             ; N = n
+    SETTARGET #start
+    LDI R0, #0x00
+    LDI R1, #0x7F
+    SUB                    ; R0 = 0 - n = 0x100-n
+    MOV R1, R0             ; R1 = 数据起始地址
+    LDI R1, #0x7B          ; P0
+    MOV R2, R0             ; P0 = 数据起始地址
+    MOV R1, R0             ; R1 = 数据起始地址
+    JZ                     ; n == 0 -> 回到开头
+
+    ; 读入 n 个字节，存到 0x100-n .. 0xFF
+    SETTARGET #read_wait
+read_wait:
+    JNVI
+    MOV R2, R3             ; [R1] = DI
+    MOV R0, R1
+    LDI R1, #0x7A
+    ADD
+    MOV R1, R0
+    JNZ                    ; 指针回绕到 0 时读完
+
+round:
+    ; 每轮开始：P = P0, MIN = 0xFF
+    LDI R1, #0x7B
+    MOV R0, R2
+    LDI R1, #0x7C
+    MOV R2, R0             ; P = P0
+    LDI R0, #0xFF
+    LDI R1, #0x7D
+    MOV R2, R0             ; MIN = 0xFF
+
+scan:
+    SETTARGET #next
+    LDI R1, #0x7C
+    MOV R1, R2             ; R1 = P
+    MOV R0, R2             ; R0 = a[i]
+    LDI R1, #0x7D
+    JGT.U                  ; a[i] > MIN -> 不更新
+    MOV R2, R0             ; MIN = a[i]
+    LDI R1, #0x7C
+    MOV R1, R2
+    MOV R0, R1
+    LDI R1, #0x7E
+    MOV R2, R0             ; MINP = P
+next:
+    SETTARGET #scan
+    LDI R1, #0x7C
+    MOV R1, R2
+    MOV R0, R1
+    LDI R1, #0x7A
+    ADD
+    MOV R1, R0
+    LDI R1, #0x7C
+    MOV R2, R0
+    JNZ                    ; P 回绕 -> 本轮扫描结束
+
+    ; 输出最小值
+    SETTARGET #wait_out
+wait_out:
+    JVO
+    LDI R1, #0x7D
+    MOV R0, R2
+    MOV R3, R0
+
+    ; 把最小值标记为已用（0xFF）
+    LDI R1, #0x7E
+    MOV R1, R2
+    LDI R0, #0xFF
+    MOV R2, R0
+
+    ; 共 n 轮；N 减到 0 后进入下一轮输入
+    SETTARGET #round
+    LDI R1, #0x7F
+    MOV R0, R2
+    LDI R1, #0x7A
+    SUB
+    LDI R1, #0x7F
+    MOV R2, R0
+    JNZ
+done:
+    JMP #read_round
