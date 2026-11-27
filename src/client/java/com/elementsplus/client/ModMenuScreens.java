@@ -25,6 +25,7 @@ public class ModMenuScreens {
         MenuScreens.register(ModMenuTypes.LITHOGRAPHY_MACHINE, LithographyMachineScreen::new);
         MenuScreens.register(ModMenuTypes.EXPERIMENT_TABLE, ExperimentTableScreen::new);
         MenuScreens.register(ModMenuTypes.REDSTONE_INTERFACE, RedstoneInterfaceScreen::new);
+        MenuScreens.register(ModMenuTypes.CONTAINER_INTERFACE, RedstoneInterfaceScreen::new);
         MenuScreens.register(ModMenuTypes.CIRCUIT_ALBUM, CircuitAlbumScreen::new);
         MenuScreens.register(ModMenuTypes.FILE_FOLDER, FileFolderScreen::new);
         MenuScreens.register(ModMenuTypes.PAPER_TAPE_READER, PaperTapeReaderScreen::new);

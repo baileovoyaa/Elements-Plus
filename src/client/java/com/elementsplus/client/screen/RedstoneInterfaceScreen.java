@@ -5,6 +5,7 @@ import com.elementsplus.blocks.entity.RedstoneInterfaceBlockEntity;
 import com.elementsplus.client.gui.GuiUtil;
 import com.elementsplus.client.gui.IconButton;
 import com.elementsplus.core.circuit.CircuitComponent;
+import com.elementsplus.menu.ContainerInterfaceMenu;
 import com.elementsplus.menu.RedstoneInterfaceMenu;
 import com.elementsplus.network.RedstoneInterfaceActionPayload;
 import net.fabricmc.api.EnvType;
@@ -111,6 +112,10 @@ public class RedstoneInterfaceScreen extends AbstractContainerScreen<RedstoneInt
         if (menu.isHibernating()) {
             g.drawString(font, Component.translatable("gui.elements-plus.redstone_interface.hibernating"),
                     x + 110, y + 24, 0xFFFF5555, true);
+        }
+        if (menu instanceof ContainerInterfaceMenu && menu.slots.size() > ContainerInterfaceMenu.IS_SLOT_INDEX
+                && menu.slots.get(ContainerInterfaceMenu.IS_SLOT_INDEX).getItem().isEmpty()) {
+            g.drawString(font, "IS", x + 184, y + 24, 0xFF808080, false);
         }
         if (draggingPin >= 0 && be != null) {
             drawDragGhost(g, be, mouseX, mouseY, x, y);

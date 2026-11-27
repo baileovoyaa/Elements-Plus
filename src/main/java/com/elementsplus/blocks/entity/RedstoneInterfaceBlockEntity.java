@@ -671,6 +671,68 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
         return null;
     }
 
+    /** 子类可把某些标签的引脚作为内部架构引脚，不显示/不能分配。 */
+    protected boolean isInternalPin(String label) {
+        return false;
+    }
+
+    protected @Nullable CircuitSimulator getSimulator() {
+        return simulator;
+    }
+
+    /** 供子类在电路 step 前写入按标签定位的内部输入引脚。 */
+    protected void setInputPinValue(String label, int value) {
+        if (diagram == null || simulator == null) {
+            return;
+        }
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (CircuitDiagram.Component component : chunk.components) {
+                if (component.component != BuiltinCircuitComponents.INPUT
+                        && component.component != BuiltinCircuitComponents.INPUT_8) {
+                    continue;
+                }
+                String componentLabel = component.instance instanceof InputComponentInstance input
+                        ? input.getLabel()
+                        : component.instance instanceof Input8ComponentInstance input8
+                        ? input8.getLabel() : "";
+                if (!label.equals(componentLabel)) {
+                    continue;
+                }
+                if (component.instance instanceof InputComponentInstance input) {
+                    input.setSignal(value & 1);
+                } else if (component.instance instanceof Input8ComponentInstance input8) {
+                    input8.setValue(value & 0xFF);
+                }
+                return;
+            }
+        }
+    }
+
+    /** 供子类在电路 step 后读取按标签定位的内部输出引脚。 */
+    protected int getOutputPinValue(String label) {
+        if (diagram == null || simulator == null) {
+            return 0;
+        }
+        for (CircuitDiagram.Chunk chunk : diagram.chunks.values()) {
+            for (CircuitDiagram.Component component : chunk.components) {
+                if (component.component != BuiltinCircuitComponents.OUTPUT
+                        && component.component != BuiltinCircuitComponents.OUTPUT_8) {
+                    continue;
+                }
+                String componentLabel = component.instance instanceof OutputComponentInstance output
+                        ? output.getLabel()
+                        : component.instance instanceof Output8ComponentInstance output8
+                        ? output8.getLabel() : "";
+                if (label.equals(componentLabel)) {
+                    return component.component == BuiltinCircuitComponents.OUTPUT_8
+                            ? simulator.getComponentBusValue(component.x, component.y) & 0xFF
+                            : simulator.getComponentValue(component.x, component.y) & 0xFF;
+                }
+            }
+        }
+        return 0;
+    }
+
     private void buildPins() {
         pins.clear();
         List<PinInfo> found = new ArrayList<>();
@@ -704,6 +766,10 @@ public class RedstoneInterfaceBlockEntity extends BaseContainerBlockEntity imple
                 }
                 if (label == null) {
                     label = "";
+                }
+                if (isInternalPin(label)) {
+                    // 部分接口的 6 个架构引脚不参与面板分配。
+                    continue;
                 }
                 found.add(new PinInfo(0, label, type, width, component.x, component.y));
             }

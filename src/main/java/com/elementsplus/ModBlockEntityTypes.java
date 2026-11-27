@@ -18,6 +18,7 @@ public class ModBlockEntityTypes {
     public static final BlockEntityType<PressureMachineBlockEntity> PRESSURE_MACHINE = register("pressure_machine", PressureMachineBlockEntity::new, ModBlocks.PRESSURE_MACHINE);
     public static final BlockEntityType<ExperimentTableBlockEntity> EXPERIMENT_TABLE = register("experiment_table", ExperimentTableBlockEntity::new, ModBlocks.EXPERIMENT_TABLE);
     public static final BlockEntityType<RedstoneInterfaceBlockEntity> REDSTONE_INTERFACE = register("redstone_interface", RedstoneInterfaceBlockEntity::new, ModBlocks.REDSTONE_INTERFACE);
+    public static final BlockEntityType<com.elementsplus.blocks.entity.ContainerInterfaceBlockEntity> CONTAINER_INTERFACE = register("container_interface", com.elementsplus.blocks.entity.ContainerInterfaceBlockEntity::new, ModBlocks.CONTAINER_INTERFACE);
 
     private static <T extends BlockEntity> BlockEntityType<T> register(String name, BlockEntityType.BlockEntitySupplier<T> entityFactory, Block... blocks) {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(ElementsPlus.MOD_ID, name);

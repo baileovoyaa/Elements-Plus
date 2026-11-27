@@ -27,6 +27,8 @@ public class ModMenuTypes {
     public static final MenuType<LithographyMachineMenu> LITHOGRAPHY_MACHINE = register("lithography_machine", LithographyMachineMenu::new);
     public static final MenuType<ExperimentTableMenu> EXPERIMENT_TABLE = register("experiment_table", ExperimentTableMenu::new);
     public static final MenuType<RedstoneInterfaceMenu> REDSTONE_INTERFACE = register("redstone_interface", RedstoneInterfaceMenu::new);
+    public static final MenuType<com.elementsplus.menu.ContainerInterfaceMenu> CONTAINER_INTERFACE =
+            register("container_interface", com.elementsplus.menu.ContainerInterfaceMenu::new);
     public static final MenuType<CircuitAlbumMenu> CIRCUIT_ALBUM = register("circuit_album", CircuitAlbumMenu::new);
     public static final MenuType<FileFolderMenu> FILE_FOLDER = register("file_folder", FileFolderMenu::new);
     public static final MenuType<com.elementsplus.menu.PaperTapeReaderMenu> PAPER_TAPE_READER =

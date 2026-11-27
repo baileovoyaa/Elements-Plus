@@ -21,11 +21,17 @@ public class RedstoneInterfaceMenu extends AbstractContainerMenu {
     private final ContainerData data;
 
     public RedstoneInterfaceMenu(int id, Inventory inventory) {
-        this(id, inventory, new SimpleContainer(8), new SimpleContainerData(12));
+        this(ModMenuTypes.REDSTONE_INTERFACE, id, inventory,
+                new SimpleContainer(8), new SimpleContainerData(12));
     }
 
     public RedstoneInterfaceMenu(int id, Inventory inventory, Container container, ContainerData data) {
-        super(ModMenuTypes.REDSTONE_INTERFACE, id);
+        this(ModMenuTypes.REDSTONE_INTERFACE, id, inventory, container, data);
+    }
+
+    protected RedstoneInterfaceMenu(net.minecraft.world.inventory.MenuType<?> type, int id,
+                                    Inventory inventory, Container container, ContainerData data) {
+        super(type, id);
         checkContainerSize(container, 8);
         checkContainerDataCount(data, 12);
         this.container = container;

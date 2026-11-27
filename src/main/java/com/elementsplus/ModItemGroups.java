@@ -78,6 +78,7 @@ public class ModItemGroups {
                 ModBlocks.LITHOGRAPHY_MACHINE,
                 ModBlocks.EXPERIMENT_TABLE,
                 ModBlocks.REDSTONE_INTERFACE,
+                ModBlocks.CONTAINER_INTERFACE,
                 ModItems.AMETHYST_TRANSISTOR,
                 ModItems.AMETHYST_DIODE,
                 ModItems.AMETHYST_CAPACITOR,

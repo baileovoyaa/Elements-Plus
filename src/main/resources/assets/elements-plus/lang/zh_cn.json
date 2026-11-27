@@ -1000,6 +1000,8 @@
   "experiment.elements-plus.programming.device_changed": "外接设备内容发生变化，实验已中断",
   "gui.elements-plus.mcu_status.assembly": "汇编",
   "gui.elements-plus.crystallizer.piston_hint": "放入活塞",
-  "gui.elements-plus.metal_catalyst.catalyst_hint": "放入催化剂"
+  "gui.elements-plus.metal_catalyst.catalyst_hint": "放入催化剂",
+  "block.elements-plus.container_interface": "容器接口",
+  "container.elements-plus.container_interface": "容器接口"
 
 }

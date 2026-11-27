@@ -1001,6 +1001,8 @@
   "experiment.elements-plus.programming.device_changed": "External device contents changed; experiment interrupted",
   "gui.elements-plus.mcu_status.assembly": "Assembly",
   "gui.elements-plus.crystallizer.piston_hint": "Insert a piston",
-  "gui.elements-plus.metal_catalyst.catalyst_hint": "Insert a catalyst"
+  "gui.elements-plus.metal_catalyst.catalyst_hint": "Insert a catalyst",
+  "block.elements-plus.container_interface": "Container Interface",
+  "container.elements-plus.container_interface": "Container Interface"
 
 }
