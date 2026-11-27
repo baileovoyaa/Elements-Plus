@@ -75,6 +75,8 @@ dependencies {
 
     modCompileOnly "mezz.jei:jei-${minecraft_version}-fabric-api:${jei_version}"
     modRuntimeOnly "mezz.jei:jei-${minecraft_version}-fabric:${jei_version}"
+
+    testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
 }
 
 processResources {
@@ -83,6 +85,16 @@ processResources {
 
     filesMatching("fabric.mod.json") {
         expand "version": version
+    }
+}
+
+// 单元测试：fabric-loader-junit 通过 ServiceLoader 引导 Fabric Loader，
+// 因此这里只需要启用 JUnit Platform，测试类无需额外注解。
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "failed"
+        exceptionFormat "full"
     }
 }
 
