@@ -147,26 +147,80 @@ public final class MemoryFileSystem {
 
     /** 写入文件，必要时自动创建父文件夹。容量不足或路径非法时返回失败原因。 */
     public WriteResult write(String path, byte[] data) {
+        byte[] content = data == null ? new byte[0] : data;
         String normalized = FilePaths.normalize(path);
+        WriteResult check = checkWrite(normalized, content.length, List.of());
+        if (!check.success()) {
+            return check;
+        }
+        ensureFolders(FilePaths.parent(normalized));
+        files.put(normalized, content);
+        return WriteResult.ok();
+    }
+
+    /**
+     * 预检一次写入：路径合法、未被文件夹占用、父级未被文件占用、容量足够。
+     * 不修改任何状态，因此调用方可以“先预检、确认能成功后再删除旧目标”。
+     *
+     * @param freedPaths 即将被释放的路径（移动的源、被覆盖的目标），其自身与整个子树都不计入占用
+     */
+    private WriteResult checkWrite(@Nullable String normalized, int contentLength, List<String> freedPaths) {
         if (normalized == null || normalized.isEmpty()) {
             return WriteResult.invalidPath();
         }
         if (folders.contains(normalized)) {
             return WriteResult.pathOccupied();
         }
-        byte[] content = data == null ? new byte[0] : data;
-        int old = files.containsKey(normalized) ? files.get(normalized).length : -1;
-        int nextUsed = usedBytes() - (old < 0 ? 0 : old + FileHeader.sizeFor(FilePaths.name(normalized)))
-                + content.length + FileHeader.sizeFor(FilePaths.name(normalized));
-        if (nextUsed > capacity) {
+        List<String> freed = freedPaths;
+        if (files.containsKey(normalized)) {
+            // 覆盖同名文件时旧内容会被替换，先视为已释放
+            freed = new ArrayList<>(freedPaths);
+            freed.add(normalized);
+        }
+        int next = usedBytesExcluding(freed) + FileHeader.sizeFor(FilePaths.name(normalized)) + contentLength;
+        if (next > capacity) {
             return WriteResult.noSpace();
         }
-        String parent = FilePaths.parent(normalized);
-        if (!parent.isEmpty() && !ensureFolders(parent)) {
+        if (!canEnsureFolders(FilePaths.parent(normalized))) {
             return WriteResult.invalidPath();
         }
-        files.put(normalized, content);
         return WriteResult.ok();
+    }
+
+    /** {@link #ensureFolders} 的只读预检：父级路径中不能有同名文件。 */
+    private boolean canEnsureFolders(String path) {
+        StringBuilder current = new StringBuilder();
+        for (String part : FilePaths.components(path)) {
+            if (!current.isEmpty()) {
+                current.append('/');
+            }
+            current.append(part);
+            if (files.containsKey(current.toString())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 已占用字节数，但跳过等于 {@code freed} 中任一项或位于其下的文件（这些字节即将被释放）。 */
+    private int usedBytesExcluding(List<String> freed) {
+        int used = 0;
+        for (Map.Entry<String, byte[]> entry : files.entrySet()) {
+            if (isFreed(entry.getKey(), freed)) {
+                continue;
+            }
+            used += FileHeader.sizeFor(FilePaths.name(entry.getKey())) + entry.getValue().length;
+        }
+        return used;
+    }
+
+    private static boolean isFreed(String path, List<String> freed) {
+        for (String candidate : freed) {
+            if (candidate != null && !candidate.isEmpty() && FilePaths.isUnder(path, candidate)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 新建空文件；同名文件已存在时失败。 */
@@ -257,115 +311,121 @@ public final class MemoryFileSystem {
     /**
      * 把文件/文件夹移动到目标目录。
      *
-     * @param source   源路径
+     * <p>容量按“操作完成后的状态”计算：移动的源与被覆盖的目标都不计入占用，因此
+     * 容量已满时移动文件仍然成功。覆盖目标时先预检容量、确认能写成功后才删除旧目标，
+     * 任何失败都不会丢失原有内容。</p>
+     *
+     * @param source    源路径
      * @param targetDir 目标目录
-     * @param copy     {@code true} 复制，{@code false} 移动
+     * @param copy      {@code true} 复制，{@code false} 移动
+     * @param overwrite 目标同名项已存在时是否覆盖
      */
-    public boolean transfer(String source, String targetDir, boolean copy) {
+    public WriteResult transfer(String source, String targetDir, boolean copy, boolean overwrite) {
         String from = FilePaths.normalize(source);
         String dir = FilePaths.normalizeDir(targetDir);
-        if (from == null || from.isEmpty() || dir.equals(from) || FilePaths.isUnder(dir, from)) {
-            return false;
+        if (from == null || from.isEmpty()) {
+            return WriteResult.invalidPath();
+        }
+        if (dir.equals(from) || FilePaths.isUnder(dir, from)) {
+            return WriteResult.invalidPath();
         }
         String to = FilePaths.join(dir, FilePaths.name(from));
         if (to.equals(from)) {
-            return true;
+            return WriteResult.ok();
         }
-        if (exists(to)) {
-            return false;
-        }
-        if (files.containsKey(from)) {
-            byte[] data = files.get(from);
-            WriteResult result = write(to, data);
-            if (!result.success()) {
-                return false;
-            }
-            if (!copy) {
-                files.remove(from);
-            }
-            return true;
-        }
-        if (!folders.contains(from)) {
-            return false;
-        }
-        if (copy) {
-            for (Map.Entry<String, byte[]> entry : new ArrayList<>(files.entrySet())) {
-                String path = entry.getKey();
-                if (!FilePaths.isUnder(path, from)) {
-                    continue;
-                }
-                String targetPath = to + path.substring(from.length());
-                WriteResult result = write(targetPath, entry.getValue());
-                if (!result.success()) {
-                    delete(to);
-                    return false;
-                }
-            }
-            for (String folder : new ArrayList<>(folders)) {
-                if (FilePaths.isUnder(folder, from)) {
-                    folders.add(to + folder.substring(from.length()));
-                }
-            }
-            return true;
-        }
-        remap(from, to, true);
-        return true;
+        return transferInternal(from, to, copy, overwrite);
     }
 
     /** 复制/移动到明确的完整目标路径，用于粘贴重命名。 */
-    public boolean transferTo(String sourcePath, String targetPath, boolean copy, boolean overwrite) {
+    public WriteResult transferTo(String sourcePath, String targetPath, boolean copy, boolean overwrite) {
         String from = FilePaths.normalize(sourcePath);
         String to = FilePaths.normalize(targetPath);
-        if (from == null || from.isEmpty() || to == null || to.isEmpty() || from.equals(to)) {
-            return from != null && from.equals(to);
+        if (from == null || from.isEmpty() || to == null || to.isEmpty()) {
+            return WriteResult.invalidPath();
+        }
+        if (from.equals(to)) {
+            return WriteResult.ok();
         }
         if (FilePaths.isUnder(to, from)) {
-            return false;
+            return WriteResult.invalidPath();
         }
+        return transferInternal(from, to, copy, overwrite);
+    }
+
+    private WriteResult transferInternal(String from, String to, boolean copy, boolean overwrite) {
         boolean targetExists = exists(to);
         if (targetExists && !overwrite) {
-            return false;
+            return WriteResult.alreadyExists();
+        }
+        List<String> freed = new ArrayList<>();
+        if (!copy) {
+            freed.add(from);
+        }
+        if (targetExists) {
+            freed.add(to);
+        }
+        if (files.containsKey(from)) {
+            byte[] data = files.get(from);
+            WriteResult check = checkWrite(to, data.length, freed);
+            if (!check.success()) {
+                return check;
+            }
+            // 走到这里不可能再失败：先删旧目标，再写入。
+            if (targetExists) {
+                delete(to);
+            }
+            ensureFolders(FilePaths.parent(to));
+            files.put(to, data);
+            if (!copy) {
+                files.remove(from);
+            }
+            return WriteResult.ok();
+        }
+        if (!folders.contains(from)) {
+            return WriteResult.notFound();
+        }
+        if (!copy) {
+            if (targetExists) {
+                delete(to);
+            }
+            remap(from, to, true);
+            return WriteResult.ok();
+        }
+        return copyFolderInto(from, to, targetExists);
+    }
+
+    /** 复制文件夹到 {@code to}：先整体预检容量与旧目标占用，再删除旧目标并写入。 */
+    private WriteResult copyFolderInto(String from, String to, boolean targetExists) {
+        List<Map.Entry<String, byte[]>> sources = new ArrayList<>();
+        int required = 0;
+        for (Map.Entry<String, byte[]> entry : files.entrySet()) {
+            if (!FilePaths.isUnder(entry.getKey(), from)) {
+                continue;
+            }
+            sources.add(entry);
+            required += FileHeader.sizeFor(FilePaths.name(entry.getKey())) + entry.getValue().length;
+        }
+        List<String> freed = new ArrayList<>();
+        freed.add(to);
+        if (usedBytesExcluding(freed) + required > capacity) {
+            return WriteResult.noSpace();
         }
         if (targetExists) {
             delete(to);
         }
-        if (files.containsKey(from)) {
-            byte[] data = files.get(from);
-            WriteResult result = write(to, data);
-            if (!result.success()) {
-                return false;
-            }
-            if (!copy) {
-                files.remove(from);
-            }
-            return true;
+        folders.add(to);
+        for (Map.Entry<String, byte[]> entry : sources) {
+            String targetPath = to + entry.getKey().substring(from.length());
+            ensureFolders(FilePaths.parent(targetPath));
+            // 复制时写入副本，避免两个路径共享同一个可变数组
+            files.put(targetPath, entry.getValue().clone());
         }
-        if (!folders.contains(from)) {
-            return false;
-        }
-        if (copy) {
-            folders.add(to);
-            for (Map.Entry<String, byte[]> entry : new ArrayList<>(files.entrySet())) {
-                String path = entry.getKey();
-                if (!FilePaths.isUnder(path, from)) {
-                    continue;
-                }
-                String target = to + path.substring(from.length());
-                WriteResult result = write(target, entry.getValue());
-                if (!result.success()) {
-                    delete(to);
-                    return false;
-                }
+        for (String folder : new ArrayList<>(folders)) {
+            if (FilePaths.isUnder(folder, from)) {
+                folders.add(to + folder.substring(from.length()));
             }
-            for (String folder : new ArrayList<>(folders)) {
-                if (FilePaths.isUnder(folder, from)) {
-                    folders.add(to + folder.substring(from.length()));
-                }
-            }
-            return true;
         }
-        remap(from, to, true);
-        return true;
+        return WriteResult.ok();
     }
 
     /** 把以 {@code from} 为前缀的所有路径替换为 {@code to} 前缀。 */
@@ -458,7 +518,8 @@ public final class MemoryFileSystem {
             INVALID_PATH,
             ALREADY_EXISTS,
             PATH_OCCUPIED,
-            NO_SPACE
+            NO_SPACE,
+            NOT_FOUND
         }
 
         public static WriteResult ok() {
@@ -479,6 +540,10 @@ public final class MemoryFileSystem {
 
         public static WriteResult noSpace() {
             return new WriteResult(false, Failure.NO_SPACE);
+        }
+
+        public static WriteResult notFound() {
+            return new WriteResult(false, Failure.NOT_FOUND);
         }
 
         public String failureKey() {

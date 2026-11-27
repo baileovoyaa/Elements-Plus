@@ -414,13 +414,18 @@ public final class ExperimentTableFiles {
         if (root != FileRoot.TABLE_MEMORY) {
             return "gui.elements-plus.file.error.not_allowed";
         }
-        String source = payload.paths().isEmpty() ? "" : payload.paths().get(0);
+        String source = FilePaths.normalize(payload.paths().isEmpty() ? "" : payload.paths().get(0));
         String target = FilePaths.normalize(payload.target());
-        if (target == null || target.isEmpty()) {
+        if (source == null || source.isEmpty() || target == null || target.isEmpty()) {
             return "gui.elements-plus.file.error.invalid_path";
         }
-        if (!memory.transferTo(source, target, payload.copy(), payload.overwrite())) {
-            return "gui.elements-plus.file.error.already_exists";
+        MemoryFileSystem.WriteResult result =
+                memory.transferTo(source, target, payload.copy(), payload.overwrite());
+        if (!result.success()) {
+            return result.failureKey();
+        }
+        if (!payload.copy()) {
+            remapOpenSessions(source, target);
         }
         return null;
     }
@@ -441,24 +446,18 @@ public final class ExperimentTableFiles {
                 any = true;
                 continue;
             }
-            if (memory.isFolder(path)
-                    && (targetDir.equals(path) || FilePaths.isUnder(targetDir, path))) {
+            if (memory.isFolder(path) && (targetDir.equals(path) || FilePaths.isUnder(targetDir, path))) {
                 return "gui.elements-plus.file.error.into_self";
             }
-            if (memory.exists(target)) {
-                if (!payload.overwrite()) {
-                    return "gui.elements-plus.file.error.already_exists";
-                }
-                memory.delete(target);
+            // 容量按操作完成后的状态计算；覆盖时由文件系统先预检再删除旧目标，失败不会丢数据。
+            MemoryFileSystem.WriteResult result =
+                    memory.transfer(path, targetDir, payload.copy(), payload.overwrite());
+            if (!result.success()) {
+                return result.failureKey();
             }
-            if (memory.transfer(path, targetDir, payload.copy())) {
-                any = true;
-                if (!payload.copy()) {
-                    remapOpenSessions(path, target);
-                }
-            } else {
-                return memory.exists(target) ? "gui.elements-plus.file.error.already_exists"
-                        : "gui.elements-plus.file.error.no_space";
+            any = true;
+            if (!payload.copy()) {
+                remapOpenSessions(path, target);
             }
         }
         return any ? null : "gui.elements-plus.file.error.not_found";
