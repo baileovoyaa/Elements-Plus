@@ -31,7 +31,8 @@ public record BoardPickComponentPayload(ResourceLocation componentId) implements
 
     public static void handle(BoardPickComponentPayload payload, ServerPlayNetworking.Context context) {
         ServerPlayer player = context.player();
-        if (!(player.containerMenu instanceof LithographyMachineMenu menu)
+        LithographyMachineMenu menu = ServerPayloadGate.menu(player, LithographyMachineMenu.class);
+        if (menu == null
                 || player.isCreative()
                 || !menu.diagramSlot.getItem().is(ModItems.CIRCUIT_BOARD)
                 || !menu.getCarried().isEmpty()) {

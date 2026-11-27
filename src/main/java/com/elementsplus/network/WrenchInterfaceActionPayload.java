@@ -76,11 +76,9 @@ public record WrenchInterfaceActionPayload(BlockPos pos, Direction face, Action 
 
     public static void handle(WrenchInterfaceActionPayload payload, ServerPlayNetworking.Context context) {
         ServerPlayer player = context.player();
-        if (!(player.level().getBlockEntity(payload.pos()) instanceof RedstoneInterfaceBlockEntity entity)) {
-            return;
-        }
-        if (player.distanceToSqr(payload.pos().getX() + 0.5, payload.pos().getY() + 0.5,
-                payload.pos().getZ() + 0.5) > 64 * 64) {
+        RedstoneInterfaceBlockEntity entity =
+                ServerPayloadGate.blockEntity(player, payload.pos(), RedstoneInterfaceBlockEntity.class);
+        if (entity == null) {
             return;
         }
         Direction face = payload.face();

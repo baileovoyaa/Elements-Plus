@@ -18,6 +18,7 @@ import com.elementsplus.item.SyringeChargeManager;
 import com.elementsplus.item.SyringeItem;
 import com.elementsplus.menu.CircuitAlbumMenu;
 import com.elementsplus.menu.ExperimentTableMenu;
+import com.elementsplus.menu.FileFolderMenu;
 import com.elementsplus.menu.LithographyMachineMenu;
 import com.elementsplus.network.AdvancementActionPayload;
 import com.elementsplus.network.BoardEditResultPayload;
@@ -42,6 +43,7 @@ import com.elementsplus.network.RedstoneInterfaceActionPayload;
 import com.elementsplus.network.ReturnCarriedPayload;
 import com.elementsplus.network.WrenchInterfaceActionPayload;
 import com.elementsplus.network.ServerConfigSyncPayload;
+import com.elementsplus.network.ServerPayloadGate;
 import com.elementsplus.network.SyringeChargePayload;
 import com.elementsplus.network.ToolboxRequestPayload;
 import com.elementsplus.network.ToolboxSyncPayload;
@@ -183,15 +185,17 @@ public class ElementsPlus implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(CircuitAlbumActionPayload.TYPE, CircuitAlbumActionPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(CircuitAlbumRequestPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
-                    if (context.player().containerMenu instanceof CircuitAlbumMenu menu
-                            && menu.containerId == payload.containerId()) {
+                    CircuitAlbumMenu menu = ServerPayloadGate.menu(context.player(), CircuitAlbumMenu.class,
+                            payload.containerId());
+                    if (menu != null) {
                         menu.sendContents(context.player());
                     }
                 }));
         ServerPlayNetworking.registerGlobalReceiver(CircuitAlbumActionPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
-                    if (!(context.player().containerMenu instanceof CircuitAlbumMenu menu)
-                            || menu.containerId != payload.containerId()) {
+                    CircuitAlbumMenu menu = ServerPayloadGate.menu(context.player(), CircuitAlbumMenu.class,
+                            payload.containerId());
+                    if (menu == null) {
                         return;
                     }
                     switch (payload.action()) {
@@ -206,15 +210,17 @@ public class ElementsPlus implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(FileFolderActionPayload.TYPE, FileFolderActionPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(FileFolderRequestPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
-                    if (context.player().containerMenu instanceof com.elementsplus.menu.FileFolderMenu menu
-                            && menu.containerId == payload.containerId()) {
+                    FileFolderMenu menu = ServerPayloadGate.menu(context.player(), FileFolderMenu.class,
+                            payload.containerId());
+                    if (menu != null) {
                         menu.sendContents(context.player());
                     }
                 }));
         ServerPlayNetworking.registerGlobalReceiver(FileFolderActionPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
-                    if (!(context.player().containerMenu instanceof com.elementsplus.menu.FileFolderMenu menu)
-                            || menu.containerId != payload.containerId()) {
+                    FileFolderMenu menu = ServerPayloadGate.menu(context.player(), FileFolderMenu.class,
+                            payload.containerId());
+                    if (menu == null) {
                         return;
                     }
                     switch (payload.action()) {
@@ -233,7 +239,8 @@ public class ElementsPlus implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(ReturnCarriedPayload.TYPE, ReturnCarriedPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ReturnCarriedPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
-                    if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
+                    LithographyMachineMenu menu = ServerPayloadGate.menu(context.player(), LithographyMachineMenu.class);
+                    if (menu != null) {
                         menu.returnCarriedToInventory();
                     }
                 }));
@@ -258,8 +265,9 @@ public class ElementsPlus implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(UpdateCircuitDiagramPayload.TYPE, UpdateCircuitDiagramPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(UpdateCircuitDiagramPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
-                    if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
-                        ItemStack stack = menu.slots.get(36).getItem();
+                    LithographyMachineMenu menu = ServerPayloadGate.menu(context.player(), LithographyMachineMenu.class);
+                    if (menu != null) {
+                        ItemStack stack = menu.diagramSlot.getItem();
                         if (stack.get(ModDataComponents.CIRCUIT_DIAGRAM) == null) {
                             return;
                         }
@@ -305,7 +313,8 @@ public class ElementsPlus implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(CopyCompiledSettingPayload.TYPE, CopyCompiledSettingPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(CopyCompiledSettingPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
-                    if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
+                    LithographyMachineMenu menu = ServerPayloadGate.menu(context.player(), LithographyMachineMenu.class);
+                    if (menu != null) {
                         menu.setCopyCompiled(payload.copyCompiled());
                     }
                 }));
@@ -313,7 +322,8 @@ public class ElementsPlus implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(LithographyTabPayload.TYPE, LithographyTabPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(LithographyTabPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
-                    if (context.player().containerMenu instanceof LithographyMachineMenu menu) {
+                    LithographyMachineMenu menu = ServerPayloadGate.menu(context.player(), LithographyMachineMenu.class);
+                    if (menu != null) {
                         menu.setDesignTab(payload.designTab());
                     }
                 }));
@@ -322,7 +332,8 @@ public class ElementsPlus implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(CustomComponentCompilePayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
                     ServerPlayer player = context.player();
-                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
+                    ExperimentTableBlockEntity table = ServerPayloadGate.openExperimentTable(player, payload.pos());
+                    if (table != null) {
                         table.compileCustomComponent(payload, player);
                     }
                 }));
@@ -360,54 +371,47 @@ public class ElementsPlus implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileSystemRequestPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> {
                     ServerPlayer player = context.player();
-                    if (!isOpenTable(player, payload.pos())) {
-                        return;
-                    }
-                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
+                    ExperimentTableBlockEntity table = ServerPayloadGate.openExperimentTable(player, payload.pos());
+                    if (table != null) {
                         table.fileSystem().handleRequest(payload, player);
                     }
                 }));
         ServerPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileActionPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> {
                     ServerPlayer player = context.player();
-                    if (!isOpenTable(player, payload.pos())) {
-                        return;
-                    }
-                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
+                    ExperimentTableBlockEntity table = ServerPayloadGate.openExperimentTable(player, payload.pos());
+                    if (table != null) {
                         table.fileSystem().handleAction(payload, player);
                     }
                 }));
         ServerPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileFolderPastePayload.TYPE,
                 (payload, context) -> context.server().execute(() -> {
                     ServerPlayer player = context.player();
-                    if (!isOpenTable(player, payload.pos())) {
+                    ExperimentTableBlockEntity table = ServerPayloadGate.openExperimentTable(player, payload.pos());
+                    if (table == null) {
                         return;
                     }
-                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
-                        String error = table.fileSystem().pasteFolder(payload, player);
-                        if (error == null) {
-                            ServerPlayNetworking.send(player,
-                                    com.elementsplus.network.FileActionResultPayload.ok(
-                                            payload.pos(),
-                                            com.elementsplus.core.file.FilePaths.join(
-                                                    payload.targetDir(), payload.folderName())));
-                        } else {
-                            ServerPlayNetworking.send(player,
-                                    com.elementsplus.network.FileActionResultPayload.fail(
-                                            payload.pos(),
-                                            com.elementsplus.core.file.FilePaths.join(
-                                                    payload.targetDir(), payload.folderName()),
-                                            error));
-                        }
+                    String error = table.fileSystem().pasteFolder(payload, player);
+                    if (error == null) {
+                        ServerPlayNetworking.send(player,
+                                com.elementsplus.network.FileActionResultPayload.ok(
+                                        payload.pos(),
+                                        com.elementsplus.core.file.FilePaths.join(
+                                                payload.targetDir(), payload.folderName())));
+                    } else {
+                        ServerPlayNetworking.send(player,
+                                com.elementsplus.network.FileActionResultPayload.fail(
+                                        payload.pos(),
+                                        com.elementsplus.core.file.FilePaths.join(
+                                                payload.targetDir(), payload.folderName()),
+                                        error));
                     }
                 }));
         ServerPlayNetworking.registerGlobalReceiver(com.elementsplus.network.FileEditorActionPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> {
                     ServerPlayer player = context.player();
-                    if (!isOpenTable(player, payload.pos())) {
-                        return;
-                    }
-                    if (player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table) {
+                    ExperimentTableBlockEntity table = ServerPayloadGate.openExperimentTable(player, payload.pos());
+                    if (table != null) {
                         table.fileSystem().handleEditor(payload, player);
                     }
                 }));
@@ -419,7 +423,8 @@ public class ElementsPlus implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(ExperimentTableControlPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
                     ServerPlayer player = context.player();
-                    if (!(player.level().getBlockEntity(payload.pos()) instanceof ExperimentTableBlockEntity table)) {
+                    ExperimentTableBlockEntity table = ServerPayloadGate.openExperimentTable(player, payload.pos());
+                    if (table == null) {
                         return;
                     }
                     switch (payload.action()) {
@@ -433,10 +438,11 @@ public class ElementsPlus implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(ExperimentTableDataRequestPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
                     ServerPlayer player = context.player();
-                    BlockPos pos = ExperimentTableMenu.getOpenTable(player.getUUID());
-                    if (pos == null || !(player.level().getBlockEntity(pos) instanceof ExperimentTableBlockEntity table)) {
+                    ExperimentTableBlockEntity table = ServerPayloadGate.openExperimentTable(player);
+                    if (table == null) {
                         return;
                     }
+                    BlockPos pos = table.getBlockPos();
                     Set<String> completed = PlayerExperimentsAttachment.get(player);
                     Set<String> forced = PlayerExperimentsAttachment.getForced(player);
                     Set<String> unlocked = new HashSet<>();
@@ -454,7 +460,8 @@ public class ElementsPlus implements ModInitializer {
                 context.server().execute(() -> {
                     ServerPlayer player = context.player();
                     BlockPos pos = payload.pos();
-                    if (!(player.level().getBlockEntity(pos) instanceof ExperimentTableBlockEntity table)) {
+                    ExperimentTableBlockEntity table = ServerPayloadGate.openExperimentTable(player, pos);
+                    if (table == null) {
                         return;
                     }
                     Set<ExperimentChapter> unlocked = BuiltinExperimentChapters.getUnlockedByName(
@@ -1415,10 +1422,6 @@ public class ElementsPlus implements ModInitializer {
             }
         }
         return 1;
-    }
-
-    private static boolean isOpenTable(ServerPlayer player, BlockPos pos) {
-        return pos != null && pos.equals(ExperimentTableMenu.getOpenTable(player.getUUID()));
     }
 
     private static ServerConfigSyncPayload serverConfigPayload() {
