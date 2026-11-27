@@ -140,22 +140,30 @@ const devSidebar: DefaultTheme.SidebarItem[] = [
                 collapsed: true,
                 items: [
                     {text: '指令集描述', link: '/dev/reference/指令集与IO接口/指令集描述'},
-                    {text: '8 位指令集', link: '/dev/reference/指令集与IO接口/架构/8位指令集'},
-                    {text: '8 位高级指令集', link: '/dev/reference/指令集与IO接口/架构/8位高级指令集'},
-                    {text: '16 位指令集', link: '/dev/reference/指令集与IO接口/架构/16位指令集'},
                     {text: '网页汇编解释器', link: '/dev/reference/指令集与IO接口/网页汇编解释器'},
-                    {text: '容器接口', link: '/dev/reference/指令集与IO接口/接口/容器接口'},
-                    {text: '红石接口', link: '/dev/reference/指令集与IO接口/接口/红石接口'},
-                    {text: '机器人指令集设计', link: '/dev/reference/指令集与IO接口/接口/机器人指令集'}
+                    {
+                        text: '架构', collapsed: false, items: [
+                            {text: '8 位指令集', link: '/dev/reference/指令集与IO接口/架构/8位指令集'},
+                            {text: '8 位高级指令集', link: '/dev/reference/指令集与IO接口/架构/8位高级指令集'},
+                            {text: '16 位指令集', link: '/dev/reference/指令集与IO接口/架构/16位指令集'},
+                        ]
+                    },
+                    {
+                        text: '接口', collapsed: false, items: [
+                            {text: '容器接口', link: '/dev/reference/指令集与IO接口/接口/容器接口'},
+                            {text: '红石接口', link: '/dev/reference/指令集与IO接口/接口/红石接口'},
+                            {text: '机器人指令集设计', link: '/dev/reference/指令集与IO接口/接口/机器人指令集'}
+                        ]
+                    },
                 ]
             },
             {
                 text: '电路',
                 collapsed: true,
                 items: [
+                    {text: '电路模拟', link: '/dev/reference/电路/模拟'},
                     {text: '参考算法描述', link: '/dev/reference/电路/参考算法描述'},
                     {text: '元件列表', link: '/dev/reference/电路/元件列表'},
-                    {text: '电路模拟', link: '/dev/reference/电路/模拟'},
                     {text: '分离存储', link: '/dev/reference/电路/分离存储'},
                     {text: '电路板', link: '/dev/reference/电路/载体/电路板'}
                 ]
@@ -171,8 +179,8 @@ const devSidebar: DefaultTheme.SidebarItem[] = [
             {
                 text: '实验桌',
                 collapsed: true,
+                link: '/dev/reference/实验桌/',
                 items: [
-                    {text: '基本功能', link: '/dev/reference/实验桌/'},
                     {text: '编程页与文件系统', link: '/dev/reference/实验桌/编程页与文件系统'}
                 ]
             },
@@ -189,14 +197,12 @@ const devSidebar: DefaultTheme.SidebarItem[] = [
             {
                 text: '文件系统',
                 collapsed: true,
+                link: '/dev/reference/文件系统/',
                 items: [
-                    {text: '文件系统', link: '/dev/reference/文件系统/'},
                     {text: '文件系统路径', link: '/dev/reference/文件系统/路径'}
                 ]
             },
             {text: '加压机', link: '/dev/reference/加压机/'},
-            {text: '参考 HTML 实现', link: '/dev/reference/电路/参考HTML实现.html', target: '_self'},
-            {text: '协作编辑器', link: '/dev/reference/文件系统/协作编辑器/index.html', target: '_self'}
         ]
     },
     {text: '路线图', link: '/dev/roadmap'}

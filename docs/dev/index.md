@@ -21,22 +21,22 @@ author: me
 
 ### 电路
 
-- [参考算法描述](/dev/reference/电路/参考算法描述)
-- [元件列表](/dev/reference/电路/元件列表)
 - [电路模拟](/dev/reference/电路/模拟)
+- [参考算法描述](/dev/reference/电路/参考算法描述)
+  - [参考 HTML 实现](/ref-demo/circuit.html){target="_self"}
+- [元件列表](/dev/reference/电路/元件列表)
 - [分离存储](/dev/reference/电路/分离存储)
-- [电路板](/dev/reference/电路/载体/电路板)
-- [参考 HTML 实现](/dev/reference/电路/参考HTML实现.html){target="_self"}
+- 载体
+  - [电路板](/dev/reference/电路/载体/电路板)
 
 ### 实验
 
 - [电路实验](/dev/reference/实验/电路实验)
+  - [8 位加法器测例生成.py](/ref-scripts/8位加法器测例生成.py){target="_self"}
 - [自定义元件](/dev/reference/实验/自定义元件)
-- [8 位加法器测例生成.py](/dev/reference/实验/电路/8位加法器测例生成.py)
 
-### 实验桌
+### [实验桌](/dev/reference/实验桌/)
 
-- [基本功能](/dev/reference/实验桌/)
 - [编程页与文件系统](/dev/reference/实验桌/编程页与文件系统)
 
 ### 光刻机
@@ -46,26 +46,25 @@ author: me
 - [存储器视图](/dev/reference/光刻机/存储器视图)
 - [帮助页](/dev/reference/光刻机/帮助页)
 
-### 加压机
-
-- [加压机](/dev/reference/加压机/)
+### [加压机](/dev/reference/加压机/)
 
 ### 指令集与 IO 接口
 
 - [指令集描述](/dev/reference/指令集与IO接口/指令集描述)
-- [8 位指令集](/dev/reference/指令集与IO接口/架构/8位指令集)
-- [8 位高级指令集](/dev/reference/指令集与IO接口/架构/8位高级指令集)
-- [16 位指令集](/dev/reference/指令集与IO接口/架构/16位指令集)
 - [网页汇编解释器](/dev/reference/指令集与IO接口/网页汇编解释器)
-- [容器接口](/dev/reference/指令集与IO接口/接口/容器接口)
-- [红石接口](/dev/reference/指令集与IO接口/接口/红石接口)
-- [机器人指令集设计](/dev/reference/指令集与IO接口/接口/机器人指令集)
+- 架构
+  - [8 位指令集](/dev/reference/指令集与IO接口/架构/8位指令集)
+  - [8 位高级指令集](/dev/reference/指令集与IO接口/架构/8位高级指令集)
+  - [16 位指令集](/dev/reference/指令集与IO接口/架构/16位指令集)
+- 接口
+  - [容器接口](/dev/reference/指令集与IO接口/接口/容器接口)
+  - [红石接口](/dev/reference/指令集与IO接口/接口/红石接口)
+  - [机器人指令集设计](/dev/reference/指令集与IO接口/接口/机器人指令集)
 
-### 文件系统
+### [文件系统](/dev/reference/文件系统/)
 
-- [文件系统](/dev/reference/文件系统/)
 - [文件系统路径](/dev/reference/文件系统/路径)
-- [协作编辑器](/dev/reference/文件系统/协作编辑器/index.html){target="_self"}
+- [协作编辑器](https://github.com/baileovoyaa/Elements-Plus/tree/main/docs/public/ref-demo/co-editor)
 
 ## 路线图
 
