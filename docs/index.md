@@ -1,7 +1,6 @@
 ---
 # https://vitepress.dev/reference/default-theme-home-page
 layout: home
-title: 文档索引
 
 hero:
   name: "Elements Plus"

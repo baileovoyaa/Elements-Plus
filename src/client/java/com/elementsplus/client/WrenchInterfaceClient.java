@@ -68,7 +68,8 @@ public final class WrenchInterfaceClient {
                 || !minecraft.player.getMainHandItem().is(ModItems.WRENCH)
                 || !(minecraft.hitResult instanceof BlockHitResult hit)
                 || hit.getType() != HitResult.Type.BLOCK
-                || !minecraft.level.getBlockState(hit.getBlockPos()).is(ModBlocks.REDSTONE_INTERFACE)
+                || !(minecraft.level.getBlockState(hit.getBlockPos()).getBlock()
+                instanceof com.elementsplus.blocks.RedstoneInterfaceBlock)
                 || !(minecraft.level.getBlockEntity(hit.getBlockPos()) instanceof RedstoneInterfaceBlockEntity entity)) {
             return null;
         }

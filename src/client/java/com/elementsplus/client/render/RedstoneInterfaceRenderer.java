@@ -13,13 +13,14 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
 
 @Environment(EnvType.CLIENT)
-public class RedstoneInterfaceRenderer implements BlockEntityRenderer<RedstoneInterfaceBlockEntity> {
+public class RedstoneInterfaceRenderer<T extends RedstoneInterfaceBlockEntity>
+        implements BlockEntityRenderer<T> {
 
     public RedstoneInterfaceRenderer(BlockEntityRendererProvider.Context context) {
     }
 
     @Override
-    public void render(RedstoneInterfaceBlockEntity blockEntity, float partialTick, PoseStack poseStack,
+    public void render(T blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         VertexConsumer consumer = bufferSource.getBuffer(RenderType.debugQuads());
         for (Direction face : RedstoneInterfaceBlockEntity.FACES) {

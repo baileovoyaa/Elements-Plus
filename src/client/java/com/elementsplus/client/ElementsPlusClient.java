@@ -116,6 +116,8 @@ public class ElementsPlusClient implements ClientModInitializer {
                 (context) -> new ThrownItemRenderer<SyringeProjectile>(context));
         BlockEntityRendererRegistry.register(ModBlockEntityTypes.REDSTONE_INTERFACE,
                 com.elementsplus.client.render.RedstoneInterfaceRenderer::new);
+        BlockEntityRendererRegistry.register(ModBlockEntityTypes.CONTAINER_INTERFACE,
+                com.elementsplus.client.render.RedstoneInterfaceRenderer::new);
 
         ItemProperties.register(
                 ModItems.CIRCUIT_DIAGRAM,
@@ -263,7 +265,8 @@ public class ElementsPlusClient implements ClientModInitializer {
         AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
             if (world.isClientSide && hand == InteractionHand.MAIN_HAND
                     && player.getMainHandItem().is(ModItems.WRENCH)
-                    && world.getBlockState(pos).is(ModBlocks.REDSTONE_INTERFACE)) {
+                    && world.getBlockState(pos).getBlock()
+                    instanceof com.elementsplus.blocks.RedstoneInterfaceBlock) {
                 WrenchInterfaceClient.beginModeSelection(Screen.hasShiftDown());
                 return InteractionResult.FAIL;
             }
@@ -274,7 +277,8 @@ public class ElementsPlusClient implements ClientModInitializer {
             if (!world.isClientSide || hand != InteractionHand.MAIN_HAND
                     || !player.getMainHandItem().is(ModItems.WRENCH)
                     || hitResult.getType() != HitResult.Type.BLOCK
-                    || !world.getBlockState(hitResult.getBlockPos()).is(ModBlocks.REDSTONE_INTERFACE)) {
+                    || !(world.getBlockState(hitResult.getBlockPos()).getBlock()
+                    instanceof com.elementsplus.blocks.RedstoneInterfaceBlock)) {
                 return InteractionResult.PASS;
             }
             return WrenchInterfaceClient.handleUse((BlockHitResult) hitResult)
